@@ -78,7 +78,7 @@
     rc = rebase --continue
 
     st = !git status --short |\
-        grep -E -v '^[^ ]{2,} .*/.*(-localer|logback-test).(xml|ya?ml|properties)$'
+        grep -E -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|.DS_Store)$'
 
 [blame]
     coloring = highlightRecent

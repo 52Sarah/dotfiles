@@ -1,42 +1,194 @@
 [alias]
-    br = branch
+
+    a = add --verbose
+
+    # -C - detect moved or copied lines, even from other files in the same commit
+    # -w - ignore whitespace
+    bl = blame -C -w --abbrev=3
+
+    b = branch --ignore-case
+    br = branch --ignore-case -vv
+
+    # local branches' refname start with ref/heads; remote, refs/remotes
+    # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(color:blue)%(end)
+    # %(if)%(HEAD)%(then)* %(else)  %(end)
+    # %(color:green)%(objectname:short)
+    # %(color:normal)%(align:60,left)%(refname:short)%(end)
+    # %(color:normal)%(align:16,left)%(authorname)%(end)
+    # %(color:yellow)%(authordate:format:%a %m/%d %H:%M)
+    # %(color:yellow bold)(%(authordate:relative))
+    brr = branch --ignore-case --list --all \
+        --sort='-authordate' --sort='refname:rstrip=-3' \
+        --format='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:magenta)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:normal)%(else)%(color:green)%(end)%(end)%(objectname:short) %(if)%(HEAD)%(then)* %(else)  %(end)%(align:60,left)%(refname:short)%(end)  %(align:15,left)%(authorname)%(end)  %(color:yellow)%(authordate:format:%a %m/%d %H:%M)  %(align:15,left)%(color:yellow bold)%(authordate:relative)%(end)' \
+        'm*' 'u*' 'x*' 'o*/HEAD' 'o*/master' 'o*/user/pierz*'
+
     co = checkout
-    st = status
+    com = checkout master
+
+    cp = cherry-pick
     
-    unstage = reset HEAD
-    log1 = log --pretty=briefest
-    log2 = log --pretty=briefer
-    log3 = log --pretty=brief
+    ds = diff --stat --compact-summary
+
+
+    # Insert command line arguments at the end of the log command rather than at the end of the entire command
+    # line, since they would be applied to less there.
+    # echo = !"a=; while [[ "$1" ]]; do echo "\\$1=$1"; echo "\\$@=$@"; a="\"$a $1\""; echo "a=$a"; shift 1; done; echo "a=/$a/""
+    # echo = !args="\"${@:--10}\"" && echo "args=/$args/" && shift "$#" && echo "\\$@=/$@/"
+    # echo = !args="\"${@:--10}\"" && shift "$#"
+
+    log1 = !args="\"${@:--10}\"" && shift "$#" &&\
+        git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
+        sed -E \
+            -e 's:HEAD -> :H->:' \
+            -e "s:user/$USER:\\$US:g" \
+            -e 's:origin:$OR:g' \
+            -e 's/tag: /t:/g'  |\
+        less
+    log2 = !args="\"${@:--10}\"" && shift "$#" &&\
+        git log --pretty=briefer "$args"  |\
+        sed -E \
+            -e 's:HEAD -> :H->:' \
+            -e "s:user/$USER:\\$US:g" \
+            -e 's:origin:$OR:g' \
+            -e 's/tag: /t:/g'  |\
+        less
+    log3 = !args="\"${@:--10}\"" && shift "$#" &&\
+        git log --pretty=brief --compact-summary "$args"  |\
+        sed -E \
+            -e 's:HEAD -> :H->:' \
+            -e "s:user/$USER:\\$US:g" \
+            -e 's:origin:$OR:g' \
+            -e 's/tag: /t:/g'  |\
+        less
+
+    l = log1
+    ll = log2
+    lll = log3
+
+
+    popb = !g.popb
+    unco = !g.popb
+
+    pff   = pull --ff-only
+    pullf = pull --ff-only
+    pullr = pull --rebase
+
+    puh = push --set-upstream origin HEAD
+
+    rc = rebase --continue
+
+    st = !git status --short |\
+        grep -E -v '^[^ ]{2,} .*/.*(-localer|logback-test).(xml|ya?ml|properties)$'
+
+[blame]
+    coloring = highlightRecent
+    date = format:%a %D %H:%M  # Thu 10/11/18 18:31
+
+[branch]
+    autoSetupMerge  = false
+    autoSetupRebase = always
+    sort = refname
+
 
 [color]
-    ui = always
+    branch = always
+    diff   = always
+    grep   = always
+    ui     = always
+
+[color.blame]
+    highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
+    repeatedLines = green  # seems to have no effect
+
+[color.branch]
+    current = green
+    local = normal
+    remote = magenta
+    upstream = red
+    plain = yellow
+
+[color.status]
+    branch = green
+  
 
 [core]
     editor = subl
+    excludesFile = ~/.gitignore
+    pager = less  #default
+    whitespace = -trailing-space,tab-in-indent,tabwidth=2
+    # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
 
 [diff]
+    renames = copies
+    relative = true
+    statGraphWidth = 20
     tool = bc3
 
+[fetch]
+    prune = true  # default
+    showForcedUpdates = true
+    writeCommitGraph = true  # default
+
 [log]
-    # Thu 10/11/18 18:31
-    date = format:%a %D %H:%M
+    abbrevCommit = true
+    date = format:%a %D %H:%M  # Thu 10/11/18 18:31
+    decorate = short
+    mailmap = false
+
+[mailmap]
+    file = ~/.mailmap
 
 [merge]
+    ff = only
     tool = bc3
 
 [mergetool "bc3"]
     trustExitCode = true
 
+# %h  - abbrev hash
+# %C  - color or reset
+# %cn - committer name
+# %cN - committer name, via .mailmap
+# %ce - committer email
+# %cE - committer email, via .mailmap
+# %cl - committer email local part
+# %cl - committer local part, via .mailmap
+# %cd - commit date in --date's format
+# %cr - commit date (relative)
+# %D  - ref name(s)
+# %s  - subject line
 [pretty]
-    # commit(abbrev), author, date, subject, [ref names]
-    briefest = %Cgreen%h%Creset  %<(15,trunc)%cn  %cd  %<(64,trunc)%s %>>(1)%Cblue%d%Creset
+    # commit(abbrev), author (mailmap), date, subject, [ref names]
+    briefest = %Cgreen%h%Creset  %<(10,trunc)%cN  %C(yellow)%cd  %<(15)%C(bold yellow)%cr%Creset %<(64,trunc)%s %>>(1)%Cblue%d%Creset
 
     # commit(abbrev), author, date (rel date), [ref names]; subject
-    briefer = %Cgreen%h%Creset  %<(20,trunc)%cn  %cd (%cr) %>>(1)%Cblue%d%Creset%n    %s
+    briefer = %Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
 
-    # commit(abbrev), author, date (rel date), [ref names]; subject; blank
-    brief = %Cgreen%h%Creset  %<(20,trunc)%cn  %cd (%cr) %>>(1)%Cblue%d%Creset%n    %s%n
+    # commit(abbrev), author, date (rel date), [ref names]; subject; summary
+    brief = %n%Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
+
+[pull]
+    ff = only
+    rebase = true
+
+[rebase]
+    stat = true
+
+[status]
+    aheadBehind = true
+    branch = true
+    renames = copies
+    short = false  # default
+    showStash = false  # default
+    showUntrackedFiles = normal  # default
 
 [user]
     name = Todd Pierzina
-    email = tpierzina@eversightlabs.com
+    email = Pierzina_Todd@cat.com
+
+
+#
+### available colors, attributes
+#
+# normal, black, red, green, yellow, blue, magenta, cyan, or white
+# bold, dim, ul (underline), blink, and reverse

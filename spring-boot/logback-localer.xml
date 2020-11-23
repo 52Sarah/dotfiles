@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>L%d{HH:mm:ss.SSS} [%thread] %-5level %logger - %msg%n
+      </pattern>
+    </encoder>
+  </appender>
+
+  <root level="WARN">
+    <appender-ref ref="CONSOLE"/>
+  </root>
+
+  <logger name="io" level="WARN"/>
+
+  <logger name="org" level="WARN"/>
+  <logger name="org.flywaydb" level="INFO"/>
+
+  <logger name="com" level="WARN"/>
+  <logger name="com.amazonaws" level="WARN"/>
+
+  <logger name="com.cat" level="DEBUG"/>
+
+</configuration>

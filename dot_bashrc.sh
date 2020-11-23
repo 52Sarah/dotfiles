@@ -9,6 +9,9 @@
 # gets run. It gets set to .bashrc at the top of .bashrc.
 export BASH_ENV="$HOME/.bashrc"
 
+# Don't show the 'zsh is the default shell' message.
+export BASH_SILENCE_DEPRECATION_WARNING=1
+
 
 # If debugging is not enabled, overwrite __echo with a no-op.
 . $HOME/.__login.debug ".bashrc" || __echo() { :; }
@@ -24,20 +27,17 @@ export BAK="$HOME/bak"
 export BIN="$HOME/bin"
 export DOTFILES="$HOME/dotfiles"
 export PREFS="$HOME/prefs"
-export BACKUP_LOCAL="/usr/local/backup"
-
-alias cd.bak='cd "$BAK"'
-alias cd.bin='cd "$BIN"'
-alias cd.dotfiles='cd "$DOTFILES"'
-alias cd.prefs='cd "$PREFS"'
 
 
-# Put my homemade scripts and other miscellany here at the end of the classpath.
-[[ -d "$HOME/bin" ]] && export PATH="$PATH:$HOME/bin"
+# Put my homemade scripts and other miscellany here at the start of the classpath.
+[[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
+
+
+alias .reload-bashrc=". $HOME/.bashrc"
 
 
 # Load over-engineered shell functions and aliases.
-ls "$HOME/.bash_profile__*" >& /dev/null && \
+ls $HOME/.bashrc__* >& /dev/null && \
 	for dotpath in $HOME/.bashrc__*; do
 	    dotfile="$(basename "$dotpath")"
 	    __echo "[.bashrc] sourcing $dotfile"

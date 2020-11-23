@@ -15,7 +15,7 @@ __echo() {
 # return status 0 if debugging should be enabled
 dot___login_debug() {
     [[ "$1" = "--debug" ]] && shift && return 0
-    [[ -n "$SH_DEBUG" || -e "$HOME/__login.debug" ]] && return 0
+    [[ -n "$SH_DEBUG" || -e "$HOME/.__login.debug" ]] && return 0
 
     local script="$1"
     [[ -n "$script" && -e "$script.debug" ]] && return 0

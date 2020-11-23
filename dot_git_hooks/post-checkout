@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+prev_head="$1" && shift
+new_head="$1" && shift
+branch_checkout_flag=$1 && shift
+
+((SH_VERBOSE)) && echo "prev_head='$prev_head', new_head='$new_head', branch_checkout_flag=$branch_checkout_flag"
+
+if ((branch_checkout_flag)); then
+	export GITBR="$(git branch --show-current)"
+	
+	((SH_VERBOSE)) && echo "GITBR='$GITBR'"
+
+	head_history_file="$(git rev-parse --git-dir)/head_history";
+  echo "$GITBR" >> "$head_history_file" \
+  		&& uniq "$head_history_file" > "${head_history_file}.tmp" \
+  		&& mv -f "${head_history_file}.tmp" "$head_history_file"
+
+ 	((SH_VERBOSE)) && echo "$head_history_file:" && cat "$head_history_file"
+fi

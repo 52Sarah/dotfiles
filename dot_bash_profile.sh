@@ -15,10 +15,19 @@ __echo "----------------"
 __echo "[.bash_profile] starting; pid: $$, PS1='$PS1'"
 
 
+# Source .bashrc if present.
+if [[ -e "$HOME/.bashrc" ]]; then
+     __echo "[.bash_profile] sourcing .bashrc"
+     . "$HOME/.bashrc"
+fi
+
+
 set -o vi
 export EDITOR=vim
 export CLICOLOR=true
 
+export LESS='--quit-at-eof --quit-if-one-screen --hilite-search --LONG-PROMPT --RAW --squeeze --HILITE-UNREAD --no-init --shift=.25'
+export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
 
 shopt -s extglob
 
@@ -39,20 +48,88 @@ export HISTTIMEFORMAT=' %F %T  '
 
 # Exclude from tab completion
 export FIGNORE='DS_Store:'
+\
+#
+###  AWS
+#
+# Enable aws cli completion.
+2>&1 command -v aws_completer 1>/dev/null && \
+complete -C '/usr/local/bin/aws_completer' aws
 
 
-[[ -e "$HOME/git-completion.sh" ]] && . "$HOME/git-completion.sh"
+#
+###  GIT
+#
+alias g='git'
+
+# Enable git completion and prompt if installed.
+# https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
+if [[ -e "$HOME/.git-completion.sh" ]]; then
+    . "$HOME/.git-completion.sh"
+fi
+if [[ -e "$HOME/.git-prompt.sh" ]]; then
+    export GIT_PS1_SHOWDIRTYSTATE=1
+    export GIT_PS1_SHOWUNTRACKEDFILES=1
+    export GIT_PS1_SHOWUPSTREAM="verbose"
+    . "$HOME/.git-prompt.sh"
+fi
+
+# Enhance git checkout with post-update hook, which pushes branch names for this function to pop.
+g.popb() {
+    local head_history_file="$(git rev-parse --git-dir)/head_history"
+    [[ ! -s "$head_history_file" ]] && eecho "g.popb: no branches to pop" && return 1
+    sed -i -e '$ d' "$head_history_file"
+    [[ ! -s "$head_history_file" ]] && eecho "g.popb: no branches to pop" && return 1
+
+    export GITBR="$(tail -n 1 "$head_history_file")"
+    git checkout "$GITBR" && git st
+} \
+&& alias g.unco='g.popb'
+
+
+#
+### POSTGRES
+#
+if [[ -e "/usr/local/opt/postgresql@10/bin/psql" ]]; then
+    export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
+fi
+
+
+#
+### PYTHON ONLY
+#
+# Enable pip completion if Python installed.
+if command -v pip 1>/dev/null 2>&1; then
+    eval "$(python -m pip completion --bash)"
+
+    # Avoid pip/python version mismatch message.
+    alias pip='python -m pip'
+    alias venv='python -m venv'
+
+    # init the "toxx" helper functions which operate on multiple tox.ini fils at a time,
+    # but only within a venv.
+    . "$HOME/bin/toxx.sh"
+fi
+
+# Enable pyenv completion and add shims to PATH.
+if [[ -d "$HOME/.pyenv" ]]; then
+    export PYENV_ROOT="$HOME/.pyenv"
+    export PATH="$PYENV_ROOT/bin:$PATH"
+    if command -v pyenv 1>/dev/null 2>&1; then
+        eval "$(pyenv init -)"
+    fi
+fi
 
 
 # Change PS1 command line prompt:
-# - if unset, leave unset (non-interactive shell)
+## # - if unset, leave unset (non-interactive shell)
 # - if last command was in error, display !$ instead of $.
 # - `history -a` explicitly flushes the session history to the history file
 # - \u = user, \h = hostname, \w = working dir
 reset_prompt() {
-    : ${PS1:?}
+    # [[ -z "$PS1" ]] && return 0
     export PROMPT_COMMAND='(($?)) && _prompt_symbol="!\$" || _prompt_symbol="\$"; history -a'
-    export PS1='\w $ '
+    export PS1='$(__git_ps1 "[%s]") \w $_prompt_symbol '
 }
 reset_prompt
 
@@ -64,9 +141,6 @@ alias llsr='ls -ohFSr'
 alias la='ls -AohF'
 alias lA='ls -aohF'
 alias latr='ls -AohFtr'
-
-# Try and use gnu ls if possible, flexibler date formatting.
-type gls >& /dev/null && ls() { gls --color=auto --group-directories-first "$@"; }
 
 # Thinkl "ll and la but narrower": cut out permissions, link count and owner
 lln() {
@@ -84,6 +158,7 @@ lan() {
 # Display permissions in octal, from: http://askubuntu.com/a/152005
 # I've tried to figure out how this works but have no fucking clue.
 lso() {
+    ls -ohF "$@" | awk '{k=0;for(i=0;i<=8;i++)k+=((substr($1,i+2,1)~/[rwx]/)*2^(8-i));if(k)printf(" %0o ",k);print}';
     ls -ohF "$@" | awk '{k=0;for(i=0;i<=8;i++)k+=((substr($1,i+2,1)~/[rwx]/)*2^(8-i));if(k)printf(" %0o ",k);print}';
 }
 
@@ -1595,36 +1670,6 @@ export_hotkeys() {
     iecho "Wrote $(grep -E -c '=.+;$' "$OUT") key mappings to $OUT"
 }
 
-# usage: list_hotkeys [domain]
-#        Default is to list all hotkeys
-list_hotkeys() {
-    local domain="$1"; shift 1
-
-    if [[ -z "$domain" ]]; then
-        defaults find NSUserKeyEquivalents | sed -E \
-            -e '/:|=.+;$/! d;' \
-            -e "/^Found 1 keys in domain '[^']+': \{$/ s/^.+ '([^']+)'.+$/\1:/" \
-            -e 's/"\\033/"/g; s/\\033/ -> /g' \
-            -e 's/ = "/ = /;' \
-            -e 's/";$//;' \
-            -e 's/( = .*)@/\1Command-/;' \
-            -e 's/( = .*)~/\1Option-/;' \
-            -e 's/( = .*)\^/\1Control-/;' \
-            -e 's/( = .*)\$/\1Shift-/;'
-    else
-        echo "${domain}:"
-        defaults read "$domain" NSUserKeyEquivalents | sed -E \
-            -e '/:|=.+;$/! d;' \
-            -e 's/"\\033/"/g; s/\\033/ -> /g' \
-            -e 's/ = "/ = /;' \
-            -e 's/";$//;' \
-            -e 's/( = .*)@/\1Command-/;' \
-            -e 's/( = .*)~/\1Option-/;' \
-            -e 's/( = .*)\^/\1Control-/;' \
-            -e 's/( = .*)\$/\1Shift-/;'
-    fi
-}
-
 
 # svn info returns, e.g., Working Copy Root Path: /Users/tpierzina/svn/ucp/ucp-alfresco-liferay/ucp-olc-2017
 branch_name() {
@@ -1688,7 +1733,7 @@ which ffprobe >& /dev/null && vdim() {
         grep -E "^height=|^width="
 }
 
-alias .reload_bash_profile=". $HOME/.bash_profile"
+alias .reload-bash-profile=". $HOME/.bash_profile"
 
 # Source over-engineered shell variables and aliases.
 if glob_exists $HOME/.bash_profile__*; then
@@ -1700,10 +1745,8 @@ if glob_exists $HOME/.bash_profile__*; then
 fi
 
 
-# Source .bashrc
- __echo "[.bash_profile] sourcing .bashrc"
- . $HOME/.bashrc
-
-
 __echo "[.bash_profile] finished"
 __echo "----------------"$'\n'
+
+test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+

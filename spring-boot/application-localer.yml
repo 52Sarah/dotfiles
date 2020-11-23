@@ -1,0 +1,44 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: test123
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+logging:
+  config: classpath:logback-localer.xml
+#  level:
+#    org.hibernate.SQL: DEBUG
+#    org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+
+# Spring Cloud
+cloud:
+  aws:
+    credentials:
+      access-key: test
+      secret-key: test
+
+# ======================
+# App Specific:
+# ======================
+
+proxy:
+  enable: false
+
+asset-id:
+  url: http://localhost:4011
+
+asset-association:
+  url: http://localhost:4010
+
+assets:
+  url: http://localhost:4012
+
+kinesis:
+  endpoint: http://localhost:4566
+  dynamodb:
+    endpoint: http://localhost:4566

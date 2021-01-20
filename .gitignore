@@ -1,5 +1,4 @@
-# Java Decompiler, Sublime binaries
-jd
-subl
+dot_bash_profile__cat.sh
+dot_bashrc__cat.sh
+dot_mailmap
 
-*.sublime-workspace

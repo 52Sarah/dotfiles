@@ -1,84 +1,123 @@
 [alias]
 
-    a = add --verbose
+  a = add --verbose
 
-    # -C - detect moved or copied lines, even from other files in the same commit
-    # -w - ignore whitespace
-    bl = blame -C -w --abbrev=3
+  # -C - detect moved or copied lines, even from other files in the same commit
+  # -w - ignore whitespace
+  bl = blame -C -w --abbrev=3
 
-    b = branch --ignore-case
-    br = branch --ignore-case -vv
+  b = branch
+  br = branch
 
-    # local branches' refname start with ref/heads; remote, refs/remotes
-    # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(color:blue)%(end)
-    # %(if)%(HEAD)%(then)* %(else)  %(end)
-    # %(color:green)%(objectname:short)
-    # %(color:normal)%(align:60,left)%(refname:short)%(end)
-    # %(color:normal)%(align:16,left)%(authorname)%(end)
-    # %(color:yellow)%(authordate:format:%a %m/%d %H:%M)
-    # %(color:yellow bold)(%(authordate:relative))
-    brr = branch --ignore-case --list --all \
-        --sort='-authordate' --sort='refname:rstrip=-3' \
-        --format='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:magenta)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:normal)%(else)%(color:green)%(end)%(end)%(objectname:short) %(if)%(HEAD)%(then)* %(else)  %(end)%(align:60,left)%(refname:short)%(end)  %(align:15,left)%(authorname)%(end)  %(color:yellow)%(authordate:format:%a %m/%d %H:%M)  %(align:15,left)%(color:yellow bold)%(authordate:relative)%(end)' \
-        'm*' 'u*' 'x*' 'o*/HEAD' 'o*/master' 'o*/user/pierz*'
+  # %(color:reset)
+  # %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)
+  #   %(color:blue)
+  # %(else)
+  #   %(color:white)
+  # %(end)
+  # %(if)%(HEAD)%(then)
+  #   %(color:bold green)
+  #   %(objectname:short)
+  #    _*_
+  # %(else)
+  #   %(objectname:short)
+  #   ___
+  # %(end)
+  # ___%(align:48,left)%(refname:short)%(end)
+  # ___%(align:15,left)%(authordate:relative)%(end)
+  # ___%(contents:subject)
+  brr = !git branch --ignore-case --list \
+      --sort='-authordate' \
+      --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
+      'master' 'user*' |\
+    awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
-    co = checkout
-    com = checkout master
+  # local branches' refname start with ref/heads; remote, refs/remotes
+  #
+  # %(color:reset)
+  # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
+  #   %(color:red)
+  # %(else)
+  #   %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)
+  #     %(color:blue)
+  #   %(else)
+  #     %(color:normal)
+  #   %(end)
+  # %(end)
+  # %(if)%(HEAD)%(then)
+  #   %(color:bold green)%
+  #   _*_
+  # %(else)
+  #   ___
+  # %(end)
+  # %(objectname:short)
+  # %(align:48,left)%(refname:short)%(end)
+  # __%(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)
+  # __%(align:21,left)%(authorname)%(end)
+  # __%(contents:subject)
+  brrr = !git branch --ignore-case --list --all \
+    --sort='-authordate' --sort='refname:rstrip=-3' \
+    --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
+    awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
-    cp = cherry-pick
-    
-    ds = diff --stat --compact-summary
+  co = checkout
+  com = checkout master
+
+  cp = cherry-pick
+  
+  ds = diff --stat --compact-summary
+
+  f = fetch
+
+  # Insert command line arguments at the end of the log command rather than at the end of the entire command
+  # line, since they would be applied to less there.
+  # echo = !"a=; while [[ "$1" ]]; do echo "\\$1=$1"; echo "\\$@=$@"; a="\"$a $1\""; echo "a=$a"; shift 1; done; echo "a=/$a/""
+  # echo = !args="\"${@:--10}\"" && echo "args=/$args/" && shift "$#" && echo "\\$@=/$@/"
+  # echo = !args="\"${@:--10}\"" && shift "$#"
+
+  l = !args="\"${@:--10}\"" && shift "$#" &&\
+    git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g'  |\
+    less
+  ll = !args="\"${@:--10}\"" && shift "$#" &&\
+    git log --pretty=briefer "$args"  |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g'  |\
+    less
+  lll = !args="\"${@:--10}\"" && shift "$#" &&\
+    git log --pretty=brief --compact-summary "$args"  |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g'  |\
+    less
 
 
-    # Insert command line arguments at the end of the log command rather than at the end of the entire command
-    # line, since they would be applied to less there.
-    # echo = !"a=; while [[ "$1" ]]; do echo "\\$1=$1"; echo "\\$@=$@"; a="\"$a $1\""; echo "a=$a"; shift 1; done; echo "a=/$a/""
-    # echo = !args="\"${@:--10}\"" && echo "args=/$args/" && shift "$#" && echo "\\$@=/$@/"
-    # echo = !args="\"${@:--10}\"" && shift "$#"
+  # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
+  # for this function to pop.
+  popb = !git-popb.sh
 
-    log1 = !args="\"${@:--10}\"" && shift "$#" &&\
-        git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
-        sed -E \
-            -e 's:HEAD -> :H->:' \
-            -e "s:user/$USER:\\$US:g" \
-            -e 's:origin:$OR:g' \
-            -e 's/tag: /t:/g'  |\
-        less
-    log2 = !args="\"${@:--10}\"" && shift "$#" &&\
-        git log --pretty=briefer "$args"  |\
-        sed -E \
-            -e 's:HEAD -> :H->:' \
-            -e "s:user/$USER:\\$US:g" \
-            -e 's:origin:$OR:g' \
-            -e 's/tag: /t:/g'  |\
-        less
-    log3 = !args="\"${@:--10}\"" && shift "$#" &&\
-        git log --pretty=brief --compact-summary "$args"  |\
-        sed -E \
-            -e 's:HEAD -> :H->:' \
-            -e "s:user/$USER:\\$US:g" \
-            -e 's:origin:$OR:g' \
-            -e 's/tag: /t:/g'  |\
-        less
+  pff   = pull --ff-only
+  pullf = pull --ff-only
+  pullr = pull --rebase
 
-    l = log1
-    ll = log2
-    lll = log3
+  puh = push --set-upstream origin HEAD
 
+  rc = rebase --continue
 
-    popb = !g.popb
-    unco = !g.popb
-
-    pff   = pull --ff-only
-    pullf = pull --ff-only
-    pullr = pull --rebase
-
-    puh = push --set-upstream origin HEAD
-
-    rc = rebase --continue
-
-    st = !git status --short |\
-        grep -E -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|.DS_Store)$'
+  s = status
+  st = !git status --short  |\
+    grep -E \
+        -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.DS_Store|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
+  stt = status -uno
 
 [blame]
     coloring = highlightRecent
@@ -88,7 +127,6 @@
     autoSetupMerge  = false
     autoSetupRebase = always
     sort = refname
-
 
 [color]
     branch = always
@@ -174,12 +212,13 @@
 [rebase]
     stat = true
 
+# by default, full "status" command is complete; "st" alias is terse
 [status]
     aheadBehind = true
     branch = true
     renames = copies
     short = false  # default
-    showStash = false  # default
+    showStash = true
     showUntrackedFiles = normal  # default
 
 [user]
@@ -190,5 +229,6 @@
 #
 ### available colors, attributes
 #
+
 # normal, black, red, green, yellow, blue, magenta, cyan, or white
 # bold, dim, ul (underline), blink, and reverse

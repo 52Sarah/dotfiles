@@ -8,39 +8,61 @@
 	    // folder_exclude_patterns and file_exclude_patterns control which files
 	    // are listed in folders on the side bar. These can also be set on a per-
 	    // project basis.
-	    "folder_exclude_patterns": [".svn", ".git", ".hg", "CVS"],
-	    "file_exclude_patterns": ["*.pyc", "*.pyo", "*.exe", "*.dll", "*.obj","*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", "*.class", "*.psd", "*.db", "*.sublime-workspace"],
+	    "folder_exclude_patterns": [
+	    	"*.BAK.*", 
+	    	".git", ".svn", "CVS",
+	    ],
+	    "file_exclude_patterns": [
+	    	"*.pyc", "*.pyo", 
+	    	"*.exe", "*.dll", "*.obj",
+	    	"*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.class",
+	    	"*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", "*.psd", "*.db", 
+	    	"*.sublime-workspace",
+	    ],
 	    
 	    // These files will still show up in the side bar, but won't be included in
 	    // Goto Anything or Find in Files
-	    "binary_file_patterns": ["*.BAK*", "*.jpg", "*.jpeg", "*.png", "*.gif", "*.ttf", "*.tga", "*.dds", "*.ico", "*.eot", "*.pdf", "*.swf", "*.jar", "*.zip"],
+	    "binary_file_patterns": [
+	    	"*.BAK*", 
+	    	"*.jpg", "*.jpeg", "*.png", "*.gif", 
+	    	"*.ttf", "*.tga", "*.dds", "*.ico", 
+	    	"*.eot", 
+	    	"*.pdf", "*.swf", 
+	    	"*.jar", "*.tar", "*.Z", "*.zip",
+	    ],
 
 	},
 	"folders":
 	[
 		{
-			"name": "bin",
-			"path": "~/bin"
-		},
-		{
-			"name": "dotfiles",
+			"name": "DOTFILES",
 			"path": "~/dotfiles"
 		},
 		{
-			"name": "prefs",
-			"path": "~/prefs"
+			"name": "~/bin",
+			"path": "~/bin"
 		},
 		{
-			"name": "bak",
-			"path": "~/bak"
+			"name": "~/prefs",
+			"path": "~/prefs",
+			"folder_exclude_patterns": ["sublime/User"],
 		},
 		{
-			"name": "log",
-			"path": "~/log"
+			"name": "~/prefs/sublime/User",
+			"path": "~/prefs/sublime/User",
 		},
 		{
-			"name": "[sublime | packages]",
+			"name": "~/Library/AppSupport/Sublime/Pkgs",
 			"path": "~/Library/Application Support/Sublime Text 3/Packages"
+		},
+		{
+			"name": "~/Library/AppSupport/Sublime",
+			"path": "~/Library/Application Support/Sublime Text 3"
+		},
+		{
+			"name": "~/bak",
+			"path": "~/bak"
 		},
 	]
 }
+

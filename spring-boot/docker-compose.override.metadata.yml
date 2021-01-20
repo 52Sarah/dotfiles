@@ -1,0 +1,6 @@
+services:
+  mockMetadata:
+    image: stoplight/prism:4
+    ports: ["4014:4014"]
+    command: mock -h 0.0.0.0 -p 4014 "/tmp/mock-metadata-localer-oas.yaml"
+    volumes: ["./oas:/tmp"]

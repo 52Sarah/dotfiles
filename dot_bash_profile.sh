@@ -6,26 +6,25 @@
 #
 # All non-interactive shells inherit environment variables BUT NOT FUNCTIONS. Further, by default Bash
 # doesn't load ANY login files unless BASH_ENV is set to one; then it calls it when, for instance, a script
-# gets run. It gets set to .bashrc at the top of .bashrc.
+# gets run. It gets set to .bashrc before calling .bashrc from here.
 
 
-# If debugging is not enabled, overwrite __echo with a no-op.
+# If debugging is not enabled, overwrite __echo with a no-op
 . $HOME/.__login.debug ".bash_profile" || __echo() { :; }
 __echo "----------------"
-__echo "[.bash_profile] starting; pid: $$, PS1='$PS1'"
+__echo "[.bash_profile] starting; pid: $$, ppid: $PPID, -='$-', SHLVL=$SHLVL, PS1='$PS1'"
 
 
-# Source .bashrc if present.
-if [[ -e "$HOME/.bashrc" ]]; then
-     __echo "[.bash_profile] sourcing .bashrc"
-     . "$HOME/.bashrc"
-fi
+# Source .bashrc if present
+export BASH_ENV="$HOME/.bashrc"
+[[ -e "$BASH_ENV" ]] && . "$BASH_ENV"
 
 
 set -o vi
 export EDITOR=vim
-export CLICOLOR=true
+export CLICOLOR=1
 
+# See: https://ss64.com/bash/less.html
 export LESS='--quit-at-eof --quit-if-one-screen --hilite-search --LONG-PROMPT --RAW --squeeze --HILITE-UNREAD --no-init --shift=.25'
 export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
 
@@ -47,60 +46,90 @@ export HISTFILESIZE=$HISTSIZE
 export HISTTIMEFORMAT=' %F %T  '
 
 # Exclude from tab completion
-export FIGNORE='DS_Store:'
-\
+export FIGNORE='DS_Store:Icon?'
+
+#
+### PS1 COMMAND LINE PROMPT
+#
+# - if unset, leave unset (non-interactive shell)
+# - if last command was in error, display "!" prefix before "$" and before line sep
+# - `history -a` explicitly flushes the session history to the history file
+# __git_ps1 shows the current git branch, if any, and is configured below
+# - \u = user, \h = hostname, \w = working dir
+#
+reset_prompt() {
+    [[ -z "$PS1" ]] && return 0
+    # export PROMPT_COMMAND='(($?)) && _pprefix="!\$" || _pprefix="\$"; history -a'
+    # export PS1='--\n$(__git_ps1 "[%s]") \w $_pprefix '
+    export GITBR="$(git branch --show-current 2> /dev/null)"
+    export PROMPT_COMMAND='(($?)) && _pprefix="!" _sep="!..." || _pprefix= _sep="____"; \
+        history -a; \
+        export GITBR="$(git branch --show-current 2> /dev/null)"; \
+        __git_ps1 "$_sep\n" " \w $_pprefix\$ " "[%s]"'
+}
+reset_prompt
+
+
 #
 ###  AWS
 #
-# Enable aws cli completion.
-2>&1 command -v aws_completer 1>/dev/null && \
-complete -C '/usr/local/bin/aws_completer' aws
+[[ -d "$HOME/.aws" ]] && \
+aws.read.credentials() {
+  export AWS_CREDENTIALS="$HOME/.aws/credentials"
+  [[ ! -s "$AWS_CREDENTIALS" ]] && 1>&2 iecho "aws.read.credentials: $AWS_CREDENTIALS not found or empty" && return 1
 
+  export AWS_ACCESS_KEY_ID="$(awk -F= '/^aws_access_key_id=/ {print $2}' $AWS_CREDENTIALS)"
+  export AWS_SECRET_ACCESS_KEY="$(awk -F= '/^aws_secret_access_key=/ {print $2}' $AWS_CREDENTIALS)"
+  export AWS_SESSION_TOKEN="$(awk -F= '/^aws_session_token=/ {print $2}' $AWS_CREDENTIALS)"
+  
+  (( ! SH_QUIET )) && for var in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN; do
+    printf '# %-22s %s\n' "${var}:" "${!var}"
+  done
+} && \
+SH_QUIET=1 aws.read.credentials
+#
+# Enable aws cli completion.
+2>&1 command -v aws_completer 1>/dev/null && complete -C '/usr/local/bin/aws_completer' aws
 
 #
 ###  GIT
 #
 alias g='git'
-
-# Enable git completion and prompt if installed.
+#
+# Enable git prompt and completion if installed.
 # https://raw.githubusercontent.com/git/git/master/contrib/completion/git-prompt.sh
-if [[ -e "$HOME/.git-completion.sh" ]]; then
-    . "$HOME/.git-completion.sh"
-fi
+#   - GIT_PS1_SHOWDIRTYSTATE=1        unstaged (*), staged (+)
+#   - GIT_PS1_SHOWUNTRACKEDFILES=1    untracked (%)
+#   - GIT_PS1_SHOWUPSTREAM=1          behind (<), ahead, (>), diverged, (<>), caught up (=)
+#                                     instead of 1, value of 'verbose [name]' gives number of commits and upstream name
+#   - GIT_PS1_DESCRIBE_STYLE='branch' controls what detached commits are shown relative to; e.g., "branch" is next newer branch or tag
+#   - GIT_PS1_HIDE_IF_PWD_IGNORED=1   if PWD is an ignored directory, suppress the git prompt
+#
 if [[ -e "$HOME/.git-prompt.sh" ]]; then
-    export GIT_PS1_SHOWDIRTYSTATE=1
-    export GIT_PS1_SHOWUNTRACKEDFILES=1
-    export GIT_PS1_SHOWUPSTREAM="verbose"
-    . "$HOME/.git-prompt.sh"
+  export GIT_PS1_SHOWDIRTYSTATE=1 GIT_PS1_SHOWUNTRACKEDFILES=1 GIT_PS1_SHOWUPSTREAM=1 GIT_PS1_SHOWCOLORHINTS=1
+  export GIT_PS1_STATESEPARATOR='|' GIT_PS1_DESCRIBE_STYLE='branch' GIT_PS1_HIDE_IF_PWD_IGNORED=1
+  . "$HOME/.git-prompt.sh"
 fi
+safe_source_script "$HOME/.git-completion.sh"
 
-# Enhance git checkout with post-update hook, which pushes branch names for this function to pop.
-g.popb() {
-    local head_history_file="$(git rev-parse --git-dir)/head_history"
-    [[ ! -s "$head_history_file" ]] && eecho "g.popb: no branches to pop" && return 1
-    sed -i -e '$ d' "$head_history_file"
-    [[ ! -s "$head_history_file" ]] && eecho "g.popb: no branches to pop" && return 1
-
-    export GITBR="$(tail -n 1 "$head_history_file")"
-    git checkout "$GITBR" && git st
-} \
-&& alias g.unco='g.popb'
-
+#
+### MAVEN
+#
+safe_source_script "/usr/local/etc/bash_completion.d/maven"
 
 #
 ### POSTGRES
 #
-if [[ -e "/usr/local/opt/postgresql@10/bin/psql" ]]; then
-    export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
-fi
-
+[[ -e "/usr/local/opt/postgresql@10/bin/psql" ]] && export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
 
 #
 ### PYTHON ONLY
 #
 # Enable pip completion if Python installed.
-if command -v pip 1>/dev/null 2>&1; then
-    eval "$(python -m pip completion --bash)"
+if type pip 1>/dev/null 2>&1; then
+    # __echo "[.bash_profile] about to load pip completion"
+    # eval "$(python -m pip completion --bash)"
+    # __echo "[.bash_profile] loaded pip completion"
 
     # Avoid pip/python version mismatch message.
     alias pip='python -m pip'
@@ -110,28 +139,16 @@ if command -v pip 1>/dev/null 2>&1; then
     # but only within a venv.
     . "$HOME/bin/toxx.sh"
 fi
-
+#
 # Enable pyenv completion and add shims to PATH.
 if [[ -d "$HOME/.pyenv" ]]; then
-    export PYENV_ROOT="$HOME/.pyenv"
-    export PATH="$PYENV_ROOT/bin:$PATH"
-    if command -v pyenv 1>/dev/null 2>&1; then
-        eval "$(pyenv init -)"
-    fi
+    __echo "[.bash_profile] starting pyenv and completion setup"
+    export PYENV_HOME="$HOME/.pyenv" PATH="$PYENV_HOME/bin:$PATH"
+    # if type pyenv 1>/dev/null 2>&1; then
+    #     eval "$(pyenv init -)"
+    # fi
+    __echo "[.bash_profile] completed pyenv and completion setup"
 fi
-
-
-# Change PS1 command line prompt:
-## # - if unset, leave unset (non-interactive shell)
-# - if last command was in error, display !$ instead of $.
-# - `history -a` explicitly flushes the session history to the history file
-# - \u = user, \h = hostname, \w = working dir
-reset_prompt() {
-    # [[ -z "$PS1" ]] && return 0
-    export PROMPT_COMMAND='(($?)) && _prompt_symbol="!\$" || _prompt_symbol="\$"; history -a'
-    export PS1='$(__git_ps1 "[%s]") \w $_prompt_symbol '
-}
-reset_prompt
 
 
 # -o show owner (-l includes group), -h human file sizes, -F suffix (/@)
@@ -142,7 +159,7 @@ alias la='ls -AohF'
 alias lA='ls -aohF'
 alias latr='ls -AohFtr'
 
-# Thinkl "ll and la but narrower": cut out permissions, link count and owner
+# Think "ll and la but narrower": cut out permissions, link count and owner
 lln() {
     #ls -ohF "$@" | sed -E -e '/^total .+$/d' -e 's/^.+ .+ .+ (.+) (.+ .+ .+) (.+)$/\1'$'\t''\2'$'\t''\3/'
     local -a args=("$@")
@@ -200,59 +217,6 @@ mans() {
     man "$@" | col -b | subl --stay &
 }
 
-
-# Simplify embeddeding newlines in strings and setting IFS.
-CR=$'\n'
-
-# error, info, verbose and debug levels; uses SH_ vars which can be set pre-execution or via -q, -v and -d
-iecho() { [[ -z "$SH_QUIET" ]] && echo_with_optional_nl "$@"; return 0; }
-eecho() { >&2 echo_with_optional_nl "$@"; return 0; }  # to stderr
-vecho() { ([[ -n "$SH_VERBOSE" ]] || [[ -n "$SH_DEBUG" ]]) && echo_with_optional_nl "$@"; return 0; }
-decho() { [[ -n "$SH_DEBUG" ]] && echo_with_optional_nl "$@"; return 0; }
-evecho() { ([[ -n "$SH_VERBOSE" ]] || [[ -n "$SH_DEBUG" ]]) && >&2 echo_with_optional_nl "$@"; return 0; }
-echo_with_optional_nl() { if [[ "$1" = "-n" ]]; then shift; echo -n "$*"; else echo "$*"; fi }
-
-# If $1, $2 are --echo xecho then use 'xecho' instead of 'echo', where x is i, v, d or e
-echo_and_eval()  {
-    local echo_fn="echo"
-    [[ "$1" == "--echo" ]] && echo_fn="$2" && shift 2
-    local cmd="$(strip_prefix "$*" "$ ")"
-    $echo_fn "$ $cmd"
-    eval "$cmd"
-}
-eecho_and_eval() { echo_and_eval --echo eecho "$@"; }
-iecho_and_eval() { echo_and_eval --echo iecho "$@"; }
-vecho_and_eval() { echo_and_eval --echo vecho "$@"; }
-decho_and_eval() { echo_and_eval --echo decho "$@"; }
-
-# "What-if" echo: if WHAT_IF env var is set, simply echo the given command; else iecho then execute it.
-wecho_and_eval() {
-    local cmd="$*"
-    [[ -n "$SH_WHATIF" && ! "${SH_WHATIF,,}" =~ 0|false ]] && echo "# WHATIF> $cmd" && return 0
-    iecho_and_eval "$cmd"
-}
-alias wecho='wecho_and_eval'
-
-is_macos()  { [[ "$(uname -s)" == "Darwin" ]]; }
-is_cygwin() { [[ "$(uname -s | tr '[:upper:]' '[:lower:]')" =~ ^cygwin.* ]]; }
-is_ubuntu() { grep -s "ID=.?ubuntu.?" /etc/os-release >& /dev/null; }
-is_centos() { grep -E -s "ID=.?centos.?" /etc/os-release >& /dev/null; }
-is_amazon() { grep -E -s "ID=.?amzn.?" /etc/os-release >& /dev/null; }
-
-# If $1 is defined, echo "alias", "keyword", "function", "builtin" or "file".
-# If not defined, echo "" and return error status.
-typeof_command() {
-    type -t "$1"
-    return  # type -t fails silently if not defined
-}
-alias_defined() { [[ "$(typeof_command "$1")" = "alias" ]]; }
-function_defined() { [[ "$(typeof_command "$1")" = "function" ]]; }
-executable_exists() { [[ "$(typeof_command "$1")" = "file" ]]; }
-
-is_valid_symlink() {
-    [[ ! "$1" ]] && eecho "is_broken_link: missing argument" && return 1
-    [[ -L "$1" && -e "$1" ]] 
-}
 
 is_image_file() { [[ "$1" =~ ^.+\.(jpe?g|JPE?G|png|PNG)$ ]]; }
 is_video_file() { [[ "$1" =~ ^.+\.(mov|MOV|avi|AVI|m4v|M4V|mp4|MP4)$ ]]; }
@@ -744,185 +708,6 @@ lhs="${lhs%/*}"  # %/* = before last /
 done
 }
 
-
-# For each variable name, echo as "var = value"; display arrays and hashes nicely.
-echo_vars() {
-    local USAGE=$(cat <<-EOF
-	echo_vars: usage: echo_vars [-e env_prefix] [-t title -p prefix -q quote -w nchars -h] var [var ...]
-	In addition to switches, corresponding env vars can be set:
-	-e --env-prefix ECHO_VARS_ENV_PREFIX  V for vecho, D for decho, W for wecho; prefix for env vars
-	E.g., use VECHO_VARS_TITLE if env-prefix is 'V'
-	-t --title      ECHO_VARS_TITLE       Row written above the loop, with no added indentation
-	-p --prefix     ECHO_VARS_PREFIX      Text, often whitespace, to write at start of each line
-	-q --quote      ECHO_VARS_QUOTE       Delimit each value with single quotes
-	-w --width      ECHO_VARS_WIDTH       Minimum width for variable name; default is 8
-	-h --home       ECHO_VARS_HOME        Substitue ~ for $HOME
-	-n --noblanks   ECHO_VARS_NOBLANKS    Suppress blank/undefined variables
-	-f --files      ECHO_VARS_FILES       Note existing filenames with [*] at end
-	EOF
-    )
-
-    # Incoming environment variables act as defaults. The prefix allows the caller to have different
-    # defaults in place for each command.
-    if [[ "$1" =~ ^-e|^--env-prefix ]]; then
-        ECHO_VARS_ENV_PREFIX="$2" && shift 2
-    fi
-    if [[ -n "$ECHO_VARS_ENV_PREFIX" ]]; then
-        for var in  ECHO_VARS_TITLE ECHO_VARS_PREFIX ECHO_VARS_QUOTE ECHO_VARS_WIDTH ECHO_VARS_HOME ECHO_VARS_NOBLANKS; do
-            # Excellent or horriblw bash scripting...basically doing this, for each ECHO_VARS_ variable (assuming prefix V):
-            # if [[ -n "$VECHO_VARS_TITLE" ]]; then ECHO_VARS_TITLE="$VECHO_VARS_TITLE"; fi
-            if [[ -n $(eval echo "\$$ECHO_VARS_ENV_PREFIX$var") ]]; then
-                eval "${var}=\$$ECHO_VARS_ENV_PREFIX$var"
-            fi
-        done
-        # decho "After ECHO_VARS_ prefix copying:"
-        # [[ -n "$ECHO_VARS_ENV_PREFIX" ]] && decho "  ECHO_VARS_ENV_PREFIX = $ECHO_VARS_ENV_PREFIX"
-        # [[ -n "$ECHO_VARS_TITLE" ]] && decho "  ECHO_VARS_TITLE = $ECHO_VARS_TITLE"
-        # [[ -n "$ECHO_VARS_PREFIX" ]] && decho "  ECHO_VARS_PREFIX = $ECHO_VARS_PREFIX"
-        # [[ -n "$ECHO_VARS_QUOTE" ]] && decho "  ECHO_VARS_QUOTE = $ECHO_VARS_QUOTE"
-        # [[ -n "$ECHO_VARS_WIDTH" ]] && decho "  ECHO_VARS_WIDTH = $ECHO_VARS_WIDTH"
-        # [[ -n "$ECHO_VARS_HOME" ]] && decho "  ECHO_VARS_HOME = $ECHO_VARS_HOME"
-        # [[ -n "$ECHO_VARS_NOBLANKS" ]] && decho "  ECHO_VARS_NOBLANKS = $ECHO_VARS_NOBLANKS"
-    fi
-
-    while [[ "$1" =~ ^- ]]; do
-        case "$1" in
-            -t|--title )    ECHO_VARS_TITLE="$2" && shift  ;;
-            -p|--prefix )   ECHO_VARS_PREFIX="$2" && shift  ;;
-            -q|--quote )    ECHO_VARS_QUOTE=1  ;;
-            -w|--width )    ECHO_VARS_WIDTH="$2" && shift  ;;
-            -h|--home )     ECHO_VARS_SUB_HOME=1  ;;
-            -n|--noblanks ) ECHO_VARS_NOBLANKS=1  ;;
-            -f|--files )    ECHO_VARS_FILES=1  ;;
-            -v|--verbose )  SH_VERBOSE=1  ;;
-            -- )            break  ;;
-            * )             eecho "Unexpected switch: '$1'" && return 1  ;;
-        esac
-        shift
-    done
-    [[ -z "$1" ]] && echo "$USAGE" && return 1
-
-    ECHO_VARS_WIDTH=$(( - ${ECHO_VARS_WIDTH:-0} ))  #left-justify
-    [[ -n "$ECHO_VARS_QUOTE" ]] && ECHO_VARS_QUOTE="'"
-    # decho "After options parsed:"
-    # decho "  ECHO_VARS_TITLE = $ECHO_VARS_TITLE"
-    # decho "  ECHO_VARS_PREFIX = $ECHO_VARS_PREFIX"
-    # decho "  ECHO_VARS_QUOTE = $ECHO_VARS_QUOTE"
-    # decho "  ECHO_VARS_WIDTH = $ECHO_VARS_WIDTH"
-    # decho "  ECHO_VARS_HOME = $ECHO_VARS_HOME"
-    # decho "  ECHO_VARS_NOBLANKS = $ECHO_VARS_NOBLANKS"
-
-    [[ -n "$ECHO_VARS_TITLE" ]] && echo "$ECHO_VARS_TITLE"
-    for var in "$@"; do
-        #local var="$(echo "$var" | xargs)"
-
-        local var_typeof=$(eval "typeof $var")
-        if [[ "$var_typeof" =~ undefined|null ]]; then
-            [[ -z "$ECHO_VARS_NOBLANKS" ]] && printf "%s%${ECHO_VARS_WIDTH}s = %s\\n" "$ECHO_VARS_PREFIX" "$var" "<$var_typeof>"
-            continue
-        fi
-
-        local var_array="$(eval "echo \$\\{${var}[@]\\}")"
-        local var_array_length="$(eval "echo \$\\{#${var}[@]\\}")"
-        local var_array_length_value="$(eval "echo $var_array_length")"
-        ## decho "var: $var, _typeof: $var_typeof, _array: $var_array, _length: $var_array_length, _value: $var_array_length_value"
-
-        local var_array_value="$(eval "echo $var_array")"
-        [[ -n "$ECHO_VARS_SUB_HOME" ]] && var_array_value="${var_array_value/$HOME/\~}"
-        local var_array_keys="$(eval "echo \$\\{!${var}[@]\\}")"
-        local var_array_keys_value="$(eval "echo $var_array_keys")"
-        ## decho "var: $var, _array_value: $var_array_value, _array_keys: $var_array_keys, _value: $var_array_keys_value"
-
-        # empty array or hash
-        if [[ $var_array_length_value -eq 0 && -z "$ECHO_VARS_NOBLANKS" ]]; then
-            if [[ "$var_typeof" = "array" ]]; then
-                printf "%s%${ECHO_VARS_WIDTH}s = %s\\n" "$ECHO_VARS_PREFIX" "$var" "[]"
-                continue
-            elif [[ "$var_typeof" = "hash" ]]; then
-                printf "%s%${ECHO_VARS_WIDTH}s = %s\\n" "$ECHO_VARS_PREFIX" "$var" "{}"
-                continue
-            fi
-        fi
-
-        # scalar
-        if [[ "$var_array_keys_value" = "0" ]]; then
-            ## decho "scalar: var = $var, var_array_keys_value = '$var_array_keys_value'"
-            if [[ -n "$var_array_value" || -z "$ECHO_VARS_NOBLANKS" ]]; then
-                # note if this is an existing filename
-                if [[ -n "$ECHO_VARS_FILES" && -e "$var_array_value" ]]; then
-                    if [[ -L "$var_array_value" ]]; then
-                        var_array_value="$var_array_value [l]"
-                    elif [[ -d "$var_array_value" ]]; then
-                        var_array_value="$var_array_value [d]"
-                    else
-                        var_array_value="$var_array_value [f]"
-                    fi
-                fi
-                printf "%s%${ECHO_VARS_WIDTH}s = ${ECHO_VARS_QUOTE}%s${ECHO_VARS_QUOTE}\\n" \
-                "$ECHO_VARS_PREFIX" "$var" "$var_array_value"
-            fi
-            continue
-        fi
-
-        # array or hash
-        # local maxlen=$(( 0 - $ECHO_VARS_WIDTH))
-        # for k in $(eval echo "$var_array_keys"); do
-        #   [[ $maxlen -lt ${#k} ]] && maxlen=${#k}
-        # done
-        # decho -n "$ECHO_VARS_PREFIX" && echo -n "$var = "
-        echo -n "$var "
-        [[ "${var_array_keys_value:0:2}" = "0 " ]] && echo "[" || echo "{"
-        for k in $(eval echo "$var_array_keys"); do
-            local val_cmd="printf '%s' \"\${${var}[$k]}\""
-            ## decho "echo_vars: val_cmd: '$val_cmd'"
-
-            local val="$(eval "$val_cmd")"
-            [[ -n "$SH_DEBUG" ]] && printf "echo_vars: k: '%s', val: '%s'\\n" "$k" "$val"
-
-            # note if this is an existing filename
-            if [[ -n "$ECHO_VARS_FILES" && -e "$val" ]]; then
-                if [[ -L "$val" ]]; then
-                    val="$val [l]"
-                elif [[ -d "$val" ]]; then
-                    val="$val [d]"
-                else
-                    val="$val [f]"
-                fi
-            fi
-            printf "%s  %${ECHO_VARS_WIDTH}s : ${ECHO_VARS_QUOTE}%s${ECHO_VARS_QUOTE}\\n" \
-            "$ECHO_VARS_PREFIX" "$k" "$val"
-        done
-        [[ "${var_array_keys_value:0:2}" = "0 " ]] && echo "$ECHO_VARS_PREFIX]" || echo "$ECHO_VARS_PREFIX}"
-
-    done
-}
-iecho_vars() { [[ -z "$SH_QUIET" ]] && echo_vars -e I "$@"; return 0; }
-eecho_vars() { >&2 echo_vars -e E "$@"; }
-vecho_vars() { ([[ -n "$SH_VERBOSE"||-n "$SH_DEBUG" ]]) && echo_vars -e V "$@"; return 0; }
-decho_vars() { [[ -n "$SH_DEBUG" ]] && echo_vars -e D "$@"; return 0; }
-
-# Returns 1 of:
-# - undefined
-# - null
-# - scalar
-# - array
-# - hash
-# - unknown
-typeof() {
-    local var="$1"
-    [[ -z "$var" ]] && eecho "usage: typeof var" && return 1
-
-    read -r opt expr <<< "$(declare -p "$var" 2> /dev/null | cut -d' ' -f 2-3)"
-    #decho "var=$var, opt=$opt, expr=$expr"
-    [[ -z "$opt$expr" ]] && echo "undefined" && return 0
-    [[ "$opt" = "-A" ]] && echo "hash" && return 0
-    [[ "$opt" = "-a" ]] && echo "array" && return 0
-    [[ "$expr" =~ .+=.+ ]] && echo "scalar" && return 0
-    [[ "$expr" =~ .+ ]] && echo "null" && return 0
-    echo "unknown"
-}
-
-
 # Usage: xgrep [-d dir --no-log|-nl] pattern [--include|-i EXT1 [--include|-i EXT2] ...] [--exclude EXT1 [--exclude EXT2] ...]
 #   -d dir  - optional root directory, default is PWD
 #   --no-logs - exclude .log, .out, .csv
@@ -1174,143 +959,6 @@ from_stdin() {
     read -r piped_in
     echo -n "${piped_in}"
 }
-
-# Inspect $1 and, using javascript-like truthy rules, return status 0 (true) or 1 (false).
-# Usage: parse_bool [--echo] value
-# If --echo is specified, 1 or nothing is echoed to stdout; else just the status is returned.
-# Examples, in each case leaving some_var == 1 (if value is true) or empty (false).
-# - parse_bool "true" && some_var=1
-# - some_var=$(parse_bool --echo "true")
-# Truthiness:
-# - false: <unset>, "", "0", "false", "no", "null" or "undefined"
-# - true:  any non-blank that doesn't evaluate to false is true
-parse_bool() {
-    [[ "$1" =~ -?-e(cho)? ]] && do_echo=1 && shift
-    val="$1"; shift
-
-    # ret=0: true; ret=1: false; but echo 1 for true, nothing for false. Nice.
-    ret=0
-    [[ -z "$val" || "$val" =~ ^(0|false|no|null|undefined)$ ]] && ret=1
-
-    [[ -n "$do_echo" && $ret == 0 ]] && echo "1"
-    return $ret
-}
-
-join_array() {
-    local delim="$1" && shift
-    local i_first=1
-    [[ -n "$SH_DEBUG" ]] && echo_vars delim i_first "$@"
-    for i in "$@"; do
-        [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
-        [[ -n "$i_first" ]] && printf "%s" "$i" && unset i_first || printf "%s%s" "$delim" "$i"
-    done
-    printf '\n'
-}
-
-uniq_array() {
-    local i_first=1
-    [[ -n "$SH_DEBUG" ]] && eecho_vars delim i_first "$@"
-    local buff=
-    for i in "$@"; do
-        [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
-        if (( i_first )); then
-            buff="$i"
-            unset i_first
-        else
-            buff="$(printf '%s\n%s' "$buff" "$i")"
-        fi
-    done
-    echo "$buff" | sort -s | uniq
-}
-
-strip_prefix() {
-    text="$1" && shift
-    prefix="$1" && shift
-    ([[ -z "$text" ]] || [[ -z "$prefix" ]]) && eecho "ERROR: Usage strip_prefix text prefix" && return 1
-    echo "$text" | sed -E -e "s:^${prefix//\:\\:}::; s:^${prefix//\$/\\$}::;"
-}
-
-# Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
-join_lines() {
-    delim="${1:-, }"
-    sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do [[ -n "$not1st" ]] && printf "%s" "$delim" || not1st=1; printf "%s" "$ln"; done; printf '\n'
-}
-
-seconds_apart() {
-    local before="$1" && shift
-    local after="$1" && shift
-    echo $(( $(date +%s -d "$after") - $(date +%s -d "$before") ))
-}
-
-# Scale memory numbers to TB/GB/MB/KB; $1 = bytes, $2 = places [1]
-nice_byte_size() {
-    local orig="$(from_stdin)"
-    [[ -z "$orig" ]] && orig="$1" && shift
-    local places="${1:-1}" && shift
-
-    cleaned_orig="${orig//,/}"
-    [[ -z "$cleaned_orig" ]] && return 1
-    [[ ! $cleaned_orig =~ ^[[:digit:]]+$ ]] && echo "$orig" && return 0
-
-    local nice="$cleaned_orig"
-    if [[ $nice -ge $((1024*1024*1024*1024)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1024*1024*1024*1024)")\ TB
-    elif [[ $nice -ge $((1024*1024*1024)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1024*1024*1024)")\ GB
-    elif [[ $nice -ge $((1024*1024)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1024*1024)")\ MB
-    elif [[ $nice -ge $((1024)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1024)")\ kb
-    fi
-
-    echo "$nice"
-}
-
-# Scale milliseconds to d/h/m/s; $1 = milliseconds, $2 = places [1]
-nice_milliseconds() {
-    local orig="$1"; shift
-    local places="${1:-1}"; shift
-    cleaned_orig="${orig//,/}"
-    [[ -z "$cleaned_orig" ]] && return 1
-    [[ ! $cleaned_orig =~ ^[[:digit:]]+$ ]] && echo "$orig" && return 0
-
-    local nice=$cleaned_orig
-    if [[ $nice -gt $((1000*60*60*24)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1000*60*60*24)")d
-    elif [[ $nice -gt $((1000*60*60)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1000*60*60)")h
-    elif [[ $nice -gt $((1000*60)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1000*60)")m
-    elif [[ $nice -gt $((1000)) ]]; then
-        nice=$(bc -l <<< "scale=$places; $nice/(1000)")s
-    fi
-
-    echo "$nice"
-}
-
-# Insert commas into large numbers
-commafy() {
-    local orig="$1"; shift
-    cleaned_orig="${orig//,/}"
-    [[ -z "$cleaned_orig" ]] && return 1
-    [[ ! $cleaned_orig =~ ^[[:digit:]]+.*$ ]] && eecho "$orig" && return 1
-
-    local nice=$cleaned_orig
-    for i in {1..10}; do
-        [[ ! $nice =~ [[:digit:]]{4,} ]] && break
-        nice=$(echo "$nice" | sed -E 's/([[:digit:]])([[:digit:]]{3})([^[:digit:]]|$)/\1,\2\3/g;')
-    done
-
-    echo "$nice"
-}
-
-# Expand '~' to value of $HOME, or compress $HOME to ~
-tilde_compress() { echo "${1//$HOME/~}"; }
-tilde_expand()   { echo "${1//~/$HOME}"; }
-
-# Compress user's home folder to the literal string '$HOME' (for writing commands to a script file, generally)
-home_compress() { echo "${1//$HOME/\$HOME}"; }
-home_expand() { echo "${1//\$HOME/$HOME}"; }
 
 file_opened() {
     local file=$1
@@ -1719,28 +1367,31 @@ cssgrep() {
 # }
 
 # video's dimensions, returned as "height=H \n width=W"
-which ffprobe >& /dev/null && vdim() {
-    local USAGE="usage: vdim video_file"
-    local v_file="$1"; shift
-    [[ -z "$v_file" ]] && eecho "$USAGE" && return 1
-    [[ ! -e "$v_file" ]] && eecho "vdim: $v_file: no such file" && return 1
-    ffprobe \
-        -hide_banner \
-        -v error \
-        -select_streams v:0 \
-        -show_entries stream=width,height "$v_file" \
-    | \
-        grep -E "^height=|^width="
+which ffprobe >& /dev/null && \
+vdim() {
+  local USAGE="usage: vdim video_file"
+  local v_file="$1"; shift
+  [[ -z "$v_file" ]] && eecho "$USAGE" && return 1
+  [[ ! -e "$v_file" ]] && eecho "vdim: $v_file: no such file" && return 1
+  ffprobe \
+      -hide_banner \
+      -v error \
+      -select_streams v:0 \
+      -show_entries stream=width,height "$v_file" \
+  | \
+  grep -E "^height=|^width="
 }
 
-alias .reload-bash-profile=". $HOME/.bash_profile"
+
+alias .reload-bash-profile='. $HOME/.bash_profile'
+alias .rlbp='.reload-bash-profile'
 
 # Source over-engineered shell variables and aliases.
 if glob_exists $HOME/.bash_profile__*; then
+    __echo "[.bash_profile] sourcing files: $(tilde_compress $HOME/.bash_profile__*)"
     for dotpath in $HOME/.bash_profile__*; do
-        dotfile="$(basename "$dotpath")"
-        __echo "[.bash_profile] sourcing $dotfile"
-        . "$dotpath"
+      __echo "[.bash_profile] sourcing $(tilde_compress $dotpath)"
+      . "$dotpath"
     done
 fi
 
@@ -1748,5 +1399,4 @@ fi
 __echo "[.bash_profile] finished"
 __echo "----------------"$'\n'
 
-test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
-
+# [[ -e "$HOME/.iterm2_shell_integration.bash" ]] && . "$HOME/.iterm2_shell_integration.bash"

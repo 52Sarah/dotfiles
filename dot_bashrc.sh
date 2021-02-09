@@ -505,12 +505,15 @@ alias .rlbrc='.reload-bashrc'
 
 
 # Load over-engineered shell functions and aliases.
-ls $HOME/.bashrc__* >& /dev/null && \
+if ls $HOME/.bashrc__* >& /dev/null; then
   __echo "[.bashrc] sourcing files: $(tilde_compress $HOME/.bashrc__*)"
-	for dotpath in $HOME/.bashrc__*; do
-    __echo "[.bashrc] sourcing $(tilde_compress $dotpath)"
-    . "$dotpath"
-	done
+  for dotpath in $HOME/.bashrc__*; do
+  __echo "[.bashrc] sourcing $(tilde_compress $dotpath)"
+  . "$dotpath"
+  done
+else
+  __echo "[.bashrc] no $(tilde_compress $HOME)/.bashrc__* files to parse"
+fi
 
 
 __echo "[.bashrc] finished"

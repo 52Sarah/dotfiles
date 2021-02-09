@@ -1387,12 +1387,15 @@ alias .reload-bash-profile='. $HOME/.bash_profile'
 alias .rlbp='.reload-bash-profile'
 
 # Source over-engineered shell variables and aliases.
-if glob_exists $HOME/.bash_profile__*; then
-    __echo "[.bash_profile] sourcing files: $(tilde_compress $HOME/.bash_profile__*)"
-    for dotpath in $HOME/.bash_profile__*; do
-      __echo "[.bash_profile] sourcing $(tilde_compress $dotpath)"
-      . "$dotpath"
-    done
+# Load over-engineered shell functions and aliases.
+if ls $HOME/.bash_profile__* >& /dev/null; then
+  __echo "[.bash_profile] sourcing files: $(tilde_compress $HOME/.bash_profile__*)"
+  for dotpath in $HOME/.bash_profile__*; do
+  __echo "[.bash_profile] sourcing $(tilde_compress $dotpath)"
+  . "$dotpath"
+  done
+else
+  __echo "[.bash_profile] no $(tilde_compress $HOME)/.bash_profile__* files to parse"
 fi
 
 

@@ -28,7 +28,7 @@ export SUBLIME_PACKAGES="$HOME/Library/Application Support/Sublime Text 3/Packag
 
 
 # Put my homemade scripts and other miscellany here at the start of the classpath.
-[[ -d "$HOME/bin" ]] && export PATH="$HOME/bin:$PATH"
+[[ -d "$HOME/bin" && ! "$PATH" =~ $HOME/bin ]] && export PATH="$HOME/bin:$PATH"
 
 # Simplify embeddeding newlines in strings and setting IFS.
 CR=$'\n'

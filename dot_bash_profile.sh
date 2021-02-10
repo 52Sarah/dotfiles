@@ -113,6 +113,20 @@ fi
 safe_source_script "$HOME/.git-completion.sh"
 
 #
+### JAVA/JENV
+#
+if [[ $(type -t jenv 2> /dev/null) == "function" ]]; then
+  __echo "[.bash_profile] jenv already initialized"
+elif ! type -t jenv &> /dev/null; then
+  __echo "[.bash_profile] jenv not installed"
+else
+  __echo "[.bash_profile] initializing jenv"
+  eval "$(jenv init -)"
+  export PATH="$HOME/.jenv/bin:$PATH"
+  __echo "[.bash_profile] used jenv to set JAVA_HOME=$JAVA_HOME"
+fi
+
+#
 ### MAVEN
 #
 safe_source_script "/usr/local/etc/bash_completion.d/maven"
@@ -120,7 +134,11 @@ safe_source_script "/usr/local/etc/bash_completion.d/maven"
 #
 ### POSTGRES
 #
-[[ -e "/usr/local/opt/postgresql@10/bin/psql" ]] && export PATH="/usr/local/opt/postgresql@10/bin:$PATH"
+export POSTGRES_HOME="/usr/local/opt/postgresql@10"
+if [[ -e "$POSTGRES_HOME/bin/psql" && ! "$PATH" =~ bin/psql ]]; then
+  export PATH="$POSTGRES_HOME/bin:$PATH"
+  __echo "[.bash_profile] added $POSTGRES_HOME/bin to PATH"
+fi
 
 #
 ### PYTHON ONLY
@@ -141,12 +159,10 @@ if type pip 1>/dev/null 2>&1; then
 fi
 #
 # Enable pyenv completion and add shims to PATH.
-if [[ -d "$HOME/.pyenv" ]]; then
+if [[ -d "$HOME/.pyenv"  && ! "$PATH" =~ $HOME/.pyenv ]]; then
     __echo "[.bash_profile] starting pyenv and completion setup"
     export PYENV_HOME="$HOME/.pyenv" PATH="$PYENV_HOME/bin:$PATH"
-    # if type pyenv 1>/dev/null 2>&1; then
-    #     eval "$(pyenv init -)"
-    # fi
+    type -t pyenv &> /dev/null && eval "$(pyenv init -)"
     __echo "[.bash_profile] completed pyenv and completion setup"
 fi
 

@@ -9,8 +9,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 
 
 # If debugging is not enabled, overwrite __echo with a no-op.
-. $HOME/.__login.debug ".bashrc" || __echo() { :; }
-__echo $"--------"
+. $HOME/.__login.debug ".bashrc" --reset-datetime || __echo() { :; }
 __echo "[.bashrc] starting; pid: $$, ppid: $PPID, -='$-', SHLVL=$SHLVL, PS1='$PS1'"
 
 
@@ -104,6 +103,18 @@ mvnl() {
     popd > /dev/null
   done
 }
+
+### PYTHON/PYENV
+#
+# Set up Python aliases if installed.
+if ! type -t python &>/dev/null; then
+  __echo "[.bashrc] python not installed"
+else
+  # Avoid pip/python version mismatch message.
+  alias python='python3'
+  alias pip='pip3'
+  alias venv='python3 -m venv'
+fi
 
 
 # If $1, $2 are --echo xecho then use 'xecho' instead of 'echo', where x is i, v, d or e
@@ -459,6 +470,19 @@ commafy() {
     echo "$nice"
 }
 
+# Usage: [ms places] [format]
+datetime_plus_ms() {
+  local places="${1:-3}" && shift
+  local format="${1:-%D %T}" && shift
+  local ms="$(perl - <<-'EOF'
+    use Time::HiRes qw(time);
+    my $t = time;
+    printf "%06d\n", ($t - int($t)) * 1000000;
+EOF
+)00000"
+  date +"$format.${ms:0:$places}"
+}
+
 # Expand '~' to value of $HOME, or compress value of $HOME to ~
 tilde_compress() {
   [[ -z "$1" ]] && eecho "usage: tilde_compress path [...]" && return 1
@@ -516,5 +540,4 @@ else
 fi
 
 
-__echo "[.bashrc] finished"
-__echo $"--------"
+__echo ""

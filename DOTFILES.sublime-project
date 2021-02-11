@@ -35,8 +35,16 @@
 	"folders":
 	[
 		{
-			"name": "DOTFILES",
+			"name": "~/dotfiles",
 			"path": "~/dotfiles"
+		},
+		{
+			"name": "~/ch-bash-profile",
+			"path": "~/ch-bash-profile"
+		},
+		{
+			"name": "~/bak",
+			"path": "~/bak"
 		},
 		{
 			"name": "~/bin",
@@ -60,8 +68,8 @@
 			"path": "~/Library/Application Support/Sublime Text 3"
 		},
 		{
-			"name": "~/bak",
-			"path": "~/bak"
+			"name": "~/.ssh",
+			"path": "~/.ssh"
 		},
 	]
 }

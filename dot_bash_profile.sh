@@ -10,7 +10,7 @@
 
 
 # If debugging is not enabled, overwrite __echo with a no-op
-. $HOME/.__login.debug ".bash_profile" || __echo() { :; }
+. $HOME/.__login.debug ".bash_profile" --reset-datetime || __echo() { :; }
 __echo "----------------"
 __echo "[.bash_profile] starting; pid: $$, ppid: $PPID, -='$-', SHLVL=$SHLVL, PS1='$PS1'"
 
@@ -58,16 +58,17 @@ export FIGNORE='DS_Store:Icon?'
 # - \u = user, \h = hostname, \w = working dir
 #
 reset_prompt() {
-    [[ -z "$PS1" ]] && return 0
-    # export PROMPT_COMMAND='(($?)) && _pprefix="!\$" || _pprefix="\$"; history -a'
-    # export PS1='--\n$(__git_ps1 "[%s]") \w $_pprefix '
-    export GITBR="$(git branch --show-current 2> /dev/null)"
-    export PROMPT_COMMAND='(($?)) && _pprefix="!" _sep="!..." || _pprefix= _sep="____"; \
-        history -a; \
-        export GITBR="$(git branch --show-current 2> /dev/null)"; \
-        __git_ps1 "$_sep\n" " \w $_pprefix\$ " "[%s]"'
+  [[ -z "$PS1" ]] && return 0
+  # export PROMPT_COMMAND='(($?)) && _pprefix="!\$" || _pprefix="\$"; history -a'
+  # export PS1='--\n$(__git_ps1 "[%s]") \w $_pprefix '
+  export GITBR="$(git branch --show-current 2> /dev/null)"
+  export PROMPT_COMMAND='(($?)) && _pprefix="!" _sep="!..." || _pprefix= _sep="____"; \
+  history -a; \
+  export GITBR="$(git branch --show-current 2> /dev/null)"; \
+  __git_ps1 "$_sep\n" " \w $_pprefix\$ " "[%s]"'
 }
 reset_prompt
+__echo "[.bash_profile] set prompt to PS1='$PS1'"
 
 
 #
@@ -86,10 +87,12 @@ aws.read.credentials() {
     printf '# %-22s %s\n' "${var}:" "${!var}"
   done
 } && \
-SH_QUIET=1 aws.read.credentials
+SH_QUIET=1 aws.read.credentials && \
+__echo "[.bash_profile] executed aws.read.credentials"
 #
 # Enable aws cli completion.
-2>&1 command -v aws_completer 1>/dev/null && complete -C '/usr/local/bin/aws_completer' aws
+command -v aws_completer &>/dev/null && complete -C '/usr/local/bin/aws_completer' aws
+complete -p | grep -E -q 'aws$' && __echo "[.bash_profile] loaded aws cli completion"
 
 #
 ###  GIT
@@ -109,62 +112,95 @@ if [[ -e "$HOME/.git-prompt.sh" ]]; then
   export GIT_PS1_SHOWDIRTYSTATE=1 GIT_PS1_SHOWUNTRACKEDFILES=1 GIT_PS1_SHOWUPSTREAM=1 GIT_PS1_SHOWCOLORHINTS=1
   export GIT_PS1_STATESEPARATOR='|' GIT_PS1_DESCRIBE_STYLE='branch' GIT_PS1_HIDE_IF_PWD_IGNORED=1
   . "$HOME/.git-prompt.sh"
+  __echo "[.bash_profile] loaded git-prompt, PS1=$PS1"
 fi
 safe_source_script "$HOME/.git-completion.sh"
+complete -p | grep -E -q 'git$' && __echo "[.bash_profile] loaded git cli completion"
 
 #
 ### JAVA/JENV
 #
-if [[ $(type -t jenv 2> /dev/null) == "function" ]]; then
-  __echo "[.bash_profile] jenv already initialized"
-elif ! type -t jenv &> /dev/null; then
+if ! type -t jenv &>/dev/null; then
   __echo "[.bash_profile] jenv not installed"
 else
-  __echo "[.bash_profile] initializing jenv"
-  eval "$(jenv init -)"
-  export PATH="$HOME/.jenv/bin:$PATH"
-  __echo "[.bash_profile] used jenv to set JAVA_HOME=$JAVA_HOME"
+  if [[ "$(type -t jenv 2>/dev/null)" == "function" ]]; then
+    __echo "[.bash_profile] jenv already initialized"
+  else
+    __echo "[.bash_profile] initializing jenv"
+    eval "$(jenv init -)"
+    export PATH="$HOME/.jenv/bin:$PATH"
+    __echo "[.bash_profile] initialized jenv, PATH=$PATH"
+  fi
+  __echo "[.bash_profile] setting JAVA_HOME from jenv"
+  export JAVA_HOME="$(jenv javahome)"
 fi
+__echo "[.bash_profile] using JAVA_HOME=$JAVA_HOME"
 
 #
 ### MAVEN
 #
 safe_source_script "/usr/local/etc/bash_completion.d/maven"
+complete -p | grep -E -q 'mvn$' && __echo "[.bash_profile] loaded mvn cli completion"
 
 #
 ### POSTGRES
 #
 export POSTGRES_HOME="/usr/local/opt/postgresql@10"
-if [[ -e "$POSTGRES_HOME/bin/psql" && ! "$PATH" =~ bin/psql ]]; then
+if [[ ! -e "$POSTGRES_HOME/bin/psql" ]]; then
+  unset POSTGRES_HOME
+elif [[ ! "$PATH" =~ bin/psql ]]; then
   export PATH="$POSTGRES_HOME/bin:$PATH"
-  __echo "[.bash_profile] added $POSTGRES_HOME/bin to PATH"
+  __echo "[.bash_profile] added Postgres to PATH, PATH=$PATH"
 fi
+__echo "[.bash_profile] using POSTGRES_HOME=$POSTGRES_HOME"
 
 #
-### PYTHON ONLY
+### PYTHON
 #
-# Enable pip completion if Python installed.
-if type pip 1>/dev/null 2>&1; then
-    # __echo "[.bash_profile] about to load pip completion"
-    # eval "$(python -m pip completion --bash)"
-    # __echo "[.bash_profile] loaded pip completion"
+# Set up Python aliases, tools and completion if installed.
+if ! type -t python &>/dev/null; then
+  __echo "[.bash_profile] python not installed"
+else
+  # Avoid pip/python version mismatch message.
+  alias python='python3'
+  alias pip='python3 -m pip'
+  alias venv='python3 -m venv'
 
-    # Avoid pip/python version mismatch message.
-    alias pip='python -m pip'
-    alias venv='python -m venv'
+__echo "[.bash_profile] using Python version: $(python --version)"
+__echo "[.bash_profile] using pip version: $(pip --version)"
 
-    # init the "toxx" helper functions which operate on multiple tox.ini fils at a time,
-    # but only within a venv.
-    . "$HOME/bin/toxx.sh"
+  # init the "toxx" helper functions which operate on multiple tox.ini files at a time.
+  safe_source_script "$HOME/bin/toxx.sh"
+
+  __echo "[.bash_profile] initializing pip completion"
+  eval "$(python -m pip completion --bash)"
+  complete -p | grep -E -q 'pip$' && __echo "[.bash_profile] loaded pip cli completion"
 fi
 #
-# Enable pyenv completion and add shims to PATH.
-if [[ -d "$HOME/.pyenv"  && ! "$PATH" =~ $HOME/.pyenv ]]; then
-    __echo "[.bash_profile] starting pyenv and completion setup"
-    export PYENV_HOME="$HOME/.pyenv" PATH="$PYENV_HOME/bin:$PATH"
-    type -t pyenv &> /dev/null && eval "$(pyenv init -)"
-    __echo "[.bash_profile] completed pyenv and completion setup"
+# Initialize pyenv and add shims to PATH.
+if ! type -t pyenv &>/dev/null; then
+  __echo "[.bash_profile] pyenv not installed"
+else
+  if [[ "$(type -t pyenv 2>/dev/null)" == "function" ]]; then
+    __echo "[.bash_profile] pyenv already initialized"
+  else
+    __echo "[.bash_profile] initializing pyenv"
+    export PYENV_HOME="$HOME/.pyenv"
+    export PATH="$PYENV_HOME/bin:$PATH"
+    eval "$(pyenv init -)"
+    __echo "[.bash_profile] initialized pyenv, version: $(pyenv --version 2>/dev/null)"
+  fi
 fi
+#
+# from https://stackoverflow.com/a/57972514/160955
+[[ -d "$HOME/.pyenv/versions" ]] && \
+pyenv-brew-relink() {
+  rm -fv "$HOME/.pyenv/versions/*-brew"
+  for i in $(brew --cellar python)/*; do
+    echo "...linking $i"
+    ln -sv --force $i $HOME/.pyenv/versions/${i##/*/}-brew;
+  done
+}
 
 
 # -o show owner (-l includes group), -h human file sizes, -F suffix (/@)
@@ -1415,7 +1451,6 @@ else
 fi
 
 
-__echo "[.bash_profile] finished"
-__echo "----------------"$'\n'
+__echo "[.bash_profile] finished"$'\n'
 
 # [[ -e "$HOME/.iterm2_shell_integration.bash" ]] && . "$HOME/.iterm2_shell_integration.bash"

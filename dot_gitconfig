@@ -27,10 +27,10 @@
   # ___%(align:15,left)%(authordate:relative)%(end)
   # ___%(contents:subject)
   brr = !git branch --ignore-case --list \
-      --sort='-authordate' \
-      --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
-      'master' 'user*' |\
-    awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+    --sort='-authordate' \
+    --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
+    'master' 'user*' |\
+  awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
   # local branches' refname start with ref/heads; remote, refs/remotes
   #
@@ -56,9 +56,9 @@
   # __%(align:21,left)%(authorname)%(end)
   # __%(contents:subject)
   brrr = !git branch --ignore-case --list --all \
-    --sort='-authordate' --sort='refname:rstrip=-3' \
-    --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
-    awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+  --sort='-authordate' --sort='refname:rstrip=-3' \
+  --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
+  awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
   co = checkout
   com = checkout master
@@ -76,29 +76,29 @@
   # echo = !args="\"${@:--10}\"" && shift "$#"
 
   l = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
-    sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g'  |\
-    less
+  git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
+  sed -E \
+    -e 's:HEAD -> :H->:' \
+    -e "s:user/$USER:\\$US:g" \
+    -e 's:origin:$OR:g' \
+    -e 's/tag: /t:/g'  |\
+  less
   ll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --pretty=briefer "$args"  |\
-    sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g'  |\
-    less
+  git log --pretty=briefer "$args"  |\
+  sed -E \
+    -e 's:HEAD -> :H->:' \
+    -e "s:user/$USER:\\$US:g" \
+    -e 's:origin:$OR:g' \
+    -e 's/tag: /t:/g'  |\
+  less
   lll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --pretty=brief --compact-summary "$args"  |\
-    sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g'  |\
-    less
+  git log --pretty=brief --compact-summary "$args"  |\
+  sed -E \
+    -e 's:HEAD -> :H->:' \
+    -e "s:user/$USER:\\$US:g" \
+    -e 's:origin:$OR:g' \
+    -e 's/tag: /t:/g'  |\
+  less
 
 
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
@@ -115,73 +115,75 @@
 
   s = status
   st = !git status --short  |\
-    grep -E \
-        -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.DS_Store|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
+  grep -E \
+      -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.DS_Store|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
   stt = status -uno
 
 [blame]
-    coloring = highlightRecent
-    date = format:%a %D %H:%M  # Thu 10/11/18 18:31
+  coloring = highlightRecent
+  date = format:%a %D %H:%M  # Thu 10/11/18 18:31
 
 [branch]
-    autoSetupMerge  = false
-    autoSetupRebase = always
-    sort = refname
+  autoSetupMerge  = false
+  autoSetupRebase = always
+  sort = refname
 
 [color]
-    branch = always
-    diff   = always
-    grep   = always
-    ui     = always
+  branch = always
+  diff   = always
+  grep   = always
+  ui     = always
 
 [color.blame]
-    highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
-    repeatedLines = green  # seems to have no effect
+  highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
+  repeatedLines = green  # seems to have no effect
 
 [color.branch]
-    current = green
-    local = normal
-    remote = magenta
-    upstream = red
-    plain = yellow
+  current = green
+  local = normal
+  remote = magenta
+  upstream = red
+  plain = yellow
 
 [color.status]
-    branch = green
+  branch = green
   
-
 [core]
-    editor = subl
-    excludesFile = ~/.gitignore
-    pager = less  #default
-    whitespace = -trailing-space,tab-in-indent,tabwidth=2
-    # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
+  editor = subl
+  excludesFile = ~/.gitignore
+  pager = less  #default
+  whitespace = -trailing-space,tab-in-indent,tabwidth=2
+  # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
 
+[credential]
+  helper = osxkeychain
+  
 [diff]
-    renames = copies
-    relative = true
-    statGraphWidth = 20
-    tool = bc3
+  renames = copies
+  relative = true
+  statGraphWidth = 20
+  tool = bc3
 
 [fetch]
-    prune = true  # default
-    showForcedUpdates = true
-    writeCommitGraph = true  # default
+  prune = true  # default
+  showForcedUpdates = true
+  writeCommitGraph = true  # default
 
 [log]
-    abbrevCommit = true
-    date = format:%a %D %H:%M  # Thu 10/11/18 18:31
-    decorate = short
-    mailmap = false
+  abbrevCommit = true
+  date = format:%a %D %H:%M  # Thu 10/11/18 18:31
+  decorate = short
+  mailmap = false
 
 [mailmap]
-    file = ~/.mailmap
+  file = ~/.mailmap
 
 [merge]
-    ff = only
-    tool = bc3
+  ff = only
+  tool = bc3
 
 [mergetool "bc3"]
-    trustExitCode = true
+  trustExitCode = true
 
 # %h  - abbrev hash
 # %C  - color or reset
@@ -196,34 +198,34 @@
 # %D  - ref name(s)
 # %s  - subject line
 [pretty]
-    # commit(abbrev), author (mailmap), date, subject, [ref names]
-    briefest = %Cgreen%h%Creset  %<(10,trunc)%cN  %C(yellow)%cd  %<(15)%C(bold yellow)%cr%Creset %<(64,trunc)%s %>>(1)%Cblue%d%Creset
+  # commit(abbrev), author (mailmap), date, subject, [ref names]
+  briefest = %Cgreen%h%Creset  %<(10,trunc)%cN  %C(yellow)%cd  %<(15)%C(bold yellow)%cr%Creset %<(64,trunc)%s %>>(1)%Cblue%d%Creset
 
-    # commit(abbrev), author, date (rel date), [ref names]; subject
-    briefer = %Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
+  # commit(abbrev), author, date (rel date), [ref names]; subject
+  briefer = %Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
 
-    # commit(abbrev), author, date (rel date), [ref names]; subject; summary
-    brief = %n%Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
+  # commit(abbrev), author, date (rel date), [ref names]; subject; summary
+  brief = %n%Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
 
 [pull]
-    ff = only
-    rebase = true
+  ff = only
+  rebase = true
 
 [rebase]
-    stat = true
+  stat = true
 
 # by default, full "status" command is complete; "st" alias is terse
 [status]
-    aheadBehind = true
-    branch = true
-    renames = copies
-    short = false  # default
-    showStash = true
-    showUntrackedFiles = normal  # default
+  aheadBehind = true
+  branch = true
+  renames = copies
+  short = false  # default
+  showStash = true
+  showUntrackedFiles = normal  # default
 
 [user]
-    name = Todd Pierzina
-    email = todd.pierzina@collectivehealth.com
+  name = Todd Pierzina
+  email = todd.pierzina@collectivehealth.com
 
 
 #

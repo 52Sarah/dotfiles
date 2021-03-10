@@ -1,7 +1,8 @@
 {
 	"settings":
 	{
-		"color_scheme": "Packages/Color Scheme - Legacy/Twilight.tmTheme",
+		// "color_scheme": "Packages/BlackBird-ColorScheme/BlackBird-Theme.tmTheme",
+		"color_scheme": "Packages/BlackBird-ColorScheme/BlackBird-Theme.tmTheme",
 
 		"follow_symlinks": true,
 
@@ -20,17 +21,6 @@
 	    	"*.sublime-workspace",
 	    ],
 	    
-	    // These files will still show up in the side bar, but won't be included in
-	    // Goto Anything or Find in Files
-	    "binary_file_patterns": [
-	    	"*.BAK*", 
-	    	"*.jpg", "*.jpeg", "*.png", "*.gif", 
-	    	"*.ttf", "*.tga", "*.dds", "*.ico", 
-	    	"*.eot", 
-	    	"*.pdf", "*.swf", 
-	    	"*.jar", "*.tar", "*.Z", "*.zip",
-	    ],
-
 	},
 	"folders":
 	[
@@ -40,36 +30,30 @@
 		},
 		{
 			"name": "~/ch-bash-profile",
-			"path": "~/ch-bash-profile"
+			"path": "~/ch-bash-profile",
+	    "file_exclude_patterns": [
+	    	".zprofile*", ".zshrc*",
+	    ],
 		},
 		{
-			"name": "~/bak",
-			"path": "~/bak"
-		},
-		{
-			"name": "~/bin",
-			"path": "~/bin"
-		},
-		{
-			"name": "~/prefs",
-			"path": "~/prefs",
-			"folder_exclude_patterns": ["sublime/User"],
-		},
-		{
-			"name": "~/prefs/sublime/User",
-			"path": "~/prefs/sublime/User",
-		},
-		{
-			"name": "~/Library/AppSupport/Sublime/Pkgs",
-			"path": "~/Library/Application Support/Sublime Text 3/Packages"
-		},
-		{
-			"name": "~/Library/AppSupport/Sublime",
-			"path": "~/Library/Application Support/Sublime Text 3"
-		},
-		{
-			"name": "~/.ssh",
-			"path": "~/.ssh"
+			"name": "~",
+			"path": "~",
+			"folder_include_patterns": [
+				"bak",
+				"bin",
+				".docker",
+				".jenv",
+				".m2",
+				"prefs",
+				".pyenv",
+				".ssh"
+			],
+			"file_include_patterns": [
+				".bash_profile*",
+				".git*",
+				".tick",
+				".vault-token",
+			],
 		},
 	]
 }

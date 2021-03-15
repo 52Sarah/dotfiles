@@ -9,20 +9,12 @@
   b = branch
   br = branch
 
+  # $ git brr
+  # SHA....8 * branch_name...................................48   authrdt__rel.15   subject...
+  #
   # %(color:reset)
-  # %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)
-  #   %(color:blue)
-  # %(else)
-  #   %(color:white)
-  # %(end)
-  # %(if)%(HEAD)%(then)
-  #   %(color:bold green)
-  #   %(objectname:short)
-  #    _*_
-  # %(else)
-  #   %(objectname:short)
-  #   ___
-  # %(end)
+  # %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:white)%(end)
+  # %(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)
   # ___%(align:48,left)%(refname:short)%(end)
   # ___%(align:15,left)%(authordate:relative)%(end)
   # ___%(contents:subject)
@@ -30,35 +22,29 @@
     --sort='-authordate' \
     --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
     'master' 'user*' |\
-  awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+    awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
+  # $ git brrr
+  # SHA....8 * branch_name...................................48  authrdt__iso.15  author_name........21  subject...
+  #
   # local branches' refname start with ref/heads; remote, refs/remotes
   #
   # %(color:reset)
   # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
   #   %(color:red)
   # %(else)
-  #   %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)
-  #     %(color:blue)
-  #   %(else)
-  #     %(color:normal)
-  #   %(end)
+  #   %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)
   # %(end)
-  # %(if)%(HEAD)%(then)
-  #   %(color:bold green)%
-  #   _*_
-  # %(else)
-  #   ___
-  # %(end)
+  # %(if)%(HEAD)%(then)%(color:bold green)% * %(else)   %(end)
   # %(objectname:short)
   # %(align:48,left)%(refname:short)%(end)
   # __%(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)
   # __%(align:21,left)%(authorname)%(end)
   # __%(contents:subject)
   brrr = !git branch --ignore-case --list --all \
-  --sort='-authordate' --sort='refname:rstrip=-3' \
-  --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
-  awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+    --sort='-authordate' --sort='refname:rstrip=-3' \
+    --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
+    awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
   co = checkout
   com = checkout master
@@ -71,34 +57,32 @@
 
   # Insert command line arguments at the end of the log command rather than at the end of the entire command
   # line, since they would be applied to less there.
-  # echo = !"a=; while [[ "$1" ]]; do echo "\\$1=$1"; echo "\\$@=$@"; a="\"$a $1\""; echo "a=$a"; shift 1; done; echo "a=/$a/""
-  # echo = !args="\"${@:--10}\"" && echo "args=/$args/" && shift "$#" && echo "\\$@=/$@/"
-  # echo = !args="\"${@:--10}\"" && shift "$#"
-
   l = !args="\"${@:--10}\"" && shift "$#" &&\
-  git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args"  |\
-  sed -E \
-    -e 's:HEAD -> :H->:' \
-    -e "s:user/$USER:\\$US:g" \
-    -e 's:origin:$OR:g' \
-    -e 's/tag: /t:/g'  |\
-  less
+    git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args" |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g' |\
+    less
+
   ll = !args="\"${@:--10}\"" && shift "$#" &&\
-  git log --pretty=briefer "$args"  |\
-  sed -E \
-    -e 's:HEAD -> :H->:' \
-    -e "s:user/$USER:\\$US:g" \
-    -e 's:origin:$OR:g' \
-    -e 's/tag: /t:/g'  |\
-  less
+    git log --pretty=briefer "$args" |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g' |\
+    less
+
   lll = !args="\"${@:--10}\"" && shift "$#" &&\
-  git log --pretty=brief --compact-summary "$args"  |\
-  sed -E \
-    -e 's:HEAD -> :H->:' \
-    -e "s:user/$USER:\\$US:g" \
-    -e 's:origin:$OR:g' \
-    -e 's/tag: /t:/g'  |\
-  less
+    git log --pretty=brief --compact-summary "$args" |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g' |\
+    less
 
 
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
@@ -114,8 +98,8 @@
   rc = rebase --continue
 
   s = status
-  st = !git status --short  |\
-  grep -E \
+  st = !git status --short |\
+    grep -E \
       -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.DS_Store|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
   stt = status -uno
 
@@ -132,25 +116,53 @@
   branch = always
   diff   = always
   grep   = always
+  remote = always
   ui     = always
 
-[color.blame]
+[color "blame"]
   highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
   repeatedLines = green  # seems to have no effect
 
-[color.branch]
-  current = green
+[color "branch"]
+  current = bold blue
   local = normal
-  remote = magenta
-  upstream = red
+  remote = dim magenta
+  upstream = magenta
   plain = yellow
 
-[color.status]
-  branch = green
+# # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorremoteltslotgt
+# # color.remote.<slot>, slot: hint, warning, success, error
+# [color.remote]
+#   hint =
+#   warning =
+#   success =
+#   error =
+
+# From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorstatusltslotgt
+# color.status.<slot>
+#   header - the header text of the status message
+#   branch
+#   added or updated  - files which are added but not committed
+#   changed - files which are changed but not added in the index
+#   untracked
+#   nobranch - the color the no branch warning is shown in, defaulting to red
+#   localBranch or remoteBranch - when branch and tracking information is displayed in the status short-format
+#   unmerged - files which have unmerged changes
+#
+[color "status"]
+  # header = white
+  branch = bold blue
+  # added = green
+  changed = yellow
+  # untracked = red
+  localBranch = bold blue
+  remoteBranch = magenta
+  unmerged = bold red
   
 [core]
   editor = subl
   excludesFile = ~/.gitignore
+  hooksPath = ~/dotfiles/dot_git_hooks
   pager = less  #default
   whitespace = -trailing-space,tab-in-indent,tabwidth=2
   # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol

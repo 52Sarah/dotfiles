@@ -1,7 +1,6 @@
 {
 	"settings":
 	{
-		// "color_scheme": "Packages/BlackBird-ColorScheme/BlackBird-Theme.tmTheme",
 		"color_scheme": "Packages/BlackBird-ColorScheme/BlackBird-Theme.tmTheme",
 
 		"follow_symlinks": true,
@@ -51,6 +50,7 @@
 			"file_include_patterns": [
 				".bash_profile*",
 				".git*",
+				".secret*",
 				".tick",
 				".vault-token",
 			],

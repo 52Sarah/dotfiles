@@ -44,17 +44,62 @@
   [[ -d "$HOME/bin" && ! "$PATH" =~ $HOME/bin ]] && export PATH="$HOME/bin:$PATH"
 
 
-  # Expand stdin '~' to value of $HOME, or compress value of $HOME to ~
-  tilde-expand() { sed -E -e "s:\\~:$HOME:g"; }
-  tilde-compress() { sed -E -e "s:\\$HOME:\\~:g"; }
+  # The following functions operate on stdin OR $*; [[ -t 0 ]] is true if stdin is a terminal
+  # from: https://stackoverflow.com/a/30520299
+  #
+  # Compress '~' to value of $HOME, or vice versa.
+  tilde-compress() {
+    [[ ! -t 0 ]] && sed -E -e "s:\\$HOME:\\~:g" && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: tilde-compress path [...], or ... | tilde-compress" && return 1
+    tilde-compress <<< "$*"
+  }
+  tilde-expand() {
+    [[ ! -t 0 ]] && sed -E -e "s:\\~:$HOME:g" && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: tilde-expand path [...], or ... | tilde-expand" && return 1
+    tilde-expand <<< "$*"
+  }
+  #
+  trim() {
+    [[ ! -t 0 ]] && sed -E -e 's/[[:space:]]*(.*)[[:space:]]*/\1/g' && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: trim str [...], or ... | trim" && return 1
+    trim <<< "$*"
+  }
+  rtrim() {
+    [[ ! -t 0 ]] && sed -E -e 's/(.*)[[:space:]]*/\1/g' && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: rtrim str [...], or ... | rtrim" && return 1
+    rtrim <<< "$*"
+  }
+  ltrim() {
+    [[ ! -t 0 ]] && sed -E -e 's/[[:space:]]*(.*)/\1/g' && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: ltrim str [...], or ... | ltrim" && return 1
+    ltrim <<< "$*"
+  }
+  #
+  upper() {
+    [[ ! -t 0 ]] && tr '[:lower:]' '[:upper:]' && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: upper word [...], or ... | upper" && return 1
+    upper <<< "$*"
+  }
+  lower() {
+    [[ ! -t 0 ]] && tr '[:upper:]' '[:lower:]' && return 0
+    [[ -z "$1" ]] && >&2 echo "usage: lower word [...], or ... | lower" && return 1
+    lower <<< "$*"
+  }
 
-  # Expand/compress user's home folder to/from the literal string '$HOME' (for writing commands to a script file, generally)
-  home-expand() { sed -E -e "s:\\\$HOME:$HOME:g"; }
-  home-compress() { sed -E -e "s:$HOME:\\$HOME:g"; }
 
-  trim() { sed -E -e 's/[[:space:]]*(.*)[[:space:]]*/\1/g'; }
-  rtrim() { sed -E -e 's/(.*)[[:space:]]*/\1/g'; }
-  ltrim() { sed -E -e 's/[[:space:]]*(.*)/\1/g'; }
+  # List path variable's elements, one per line
+  echo-path() {
+    local var=${1:-PATH}
+    split-lines ':' <<< "${!var}" | tilde-compress
+  }
+
+  # List all variables and values matching $1.
+  echo-glob() {
+    local patt="$1" && [[ -z "$patt" ]] && >&2 echo "usage: echo-glob patt" && return 1
+    for v in $(eval "echo $(printf "\${!%s}" "$patt")"); do
+      printf "%s: %s\n" "$v" "${!v}"
+    done
+  }
 
   # Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
   join-lines() {
@@ -72,12 +117,6 @@
       local delim="${1:-,}"
       sed -E -e "s/([^$delim]*)$delim([^$delim]*)/\\1"\\$'\n'"\\2/g"
   }
-  # List path variable's elements, one per line
-  echo-p() {
-    local var=${1:-PATH}
-    split-lines ':' <<< "${!var}" | tilde-compress
-  }
-
 
   # Usage: [ms places] [format]
   datetime-plus-ms() {

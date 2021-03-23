@@ -1,8 +1,7 @@
 {
 	"settings":
 	{
-		"color_scheme": "Packages/BlackBird-ColorScheme/BlackBird-Theme.tmTheme",
-
+		"color_scheme": "Packages/Dayle Rees Color Schemes/legacy/Contrast/Goldfish.tmTheme",
 		"follow_symlinks": true,
 
 	    // folder_exclude_patterns and file_exclude_patterns control which files
@@ -35,11 +34,14 @@
 	    ],
 		},
 		{
+			"name": "~/bin",
+			"path": "~/bin"
+		},
+		{
 			"name": "~",
 			"path": "~",
 			"folder_include_patterns": [
 				"bak",
-				"bin",
 				".docker",
 				".jenv",
 				".m2",
@@ -47,12 +49,14 @@
 				".pyenv",
 				".ssh"
 			],
-			"file_include_patterns": [
-				".bash_profile*",
-				".git*",
-				".secret*",
-				".tick",
-				".vault-token",
+			"file_exclude_patterns": [
+				".%*.png",
+				".bash_history",
+				".Box_*",
+				".CFUserTextEncoding",
+				".lesshst",
+				".viminfo",
+				".zsh*",
 			],
 		},
 	]

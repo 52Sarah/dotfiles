@@ -29,16 +29,20 @@
   [[ -e "$HOME/.bash_settings.$USER" ]] && . "$HOME/.bash_settings.$USER"
   
   #
-  ### 'ls' helpers
-  #
-  # -o show owner (-l includes group), -h human file sizes, -F suffix (/@)
-  #
-  alias ll='ls -ohF'
-  alias lltr='ls -ohFtr'
-  alias llsr='ls -ohFSr'
-  alias la='ls -AohF'
-  alias lA='ls -aohF'
-  alias latr='ls -AohFtr'
+  ### 'ls' helpers:
+  # -o  show owner
+  # -l  show owner and group)
+  # -h  human-readble file sizes
+  # -F  add suffix (/@)
+  # -tr sort by time modified, old to new
+  # -Sr sort by size, ascending
+  ll() {    ls -ohF "$@" | tilde-compress; }
+  lltr() {  ls -ohFtr "$@" | tilde-compress; }
+  llsr() {  ls -ohFSr "$@" | tilde-compress; }
+  la() {    ls -AohF "$@" | tilde-compress; }
+  lA() {    ls -aohF "$@" | tilde-compress; }
+  latr() {  ls -AohFtr "$@" | tilde-compress; }
+  lasr() {  ls -AohFSr "$@" | tilde-compress; }
   #
   # Think "ll and la but narrower": cut out permissions, link count and owner.
   #   $ ls -ohF
@@ -130,17 +134,15 @@
 
     alias g='git'
     
-    export __GIT_PROMPT_DIR="/usr/local/opt/bash-git-prompt/share"
+    export __GIT_PROMPT_DIR="$(brew --prefix)/opt/bash-git-prompt/share"
     if [[ -e "$__GIT_PROMPT_DIR/gitprompt.sh" ]]; then
       .tick_bpu "using git-prompt in $__GIT_PROMPT_DIR"
-      export GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all
-      export GIT_PROMPT_END_USER='\n\w \$ '
-      export GIT_PROMPT_START_USER='_LAST_COMMAND_INDICATOR_'
-      export GIT_PROMPT_THEME='Custom' # use custom theme specified in file GIT_PROMPT_THEME_FILE (default ~/.git-prompt-colors.sh)
       # export GIT_PROMPT_ONLY_IN_REPO=1
-      # export GIT_PROMPT_SHOW_UPSTREAM=1
-      # export GIT_PROMPT_THEME_FILE=~/.git-prompt-colors.sh
-      # export GIT_PROMPT_THEME=Solarized # use theme optimized for solarized color scheme
+      export GIT_PROMPT_SHOW_UPSTREAM=1
+      export GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all
+      # export GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=0
+
+      export GIT_PROMPT_THEME='Custom'
       . "$__GIT_PROMPT_DIR/gitprompt.sh"
     else
       .tick_bpu "not using git-prompt"
@@ -148,12 +150,6 @@
     .tick_bpu "PS1: [$PS1]"
     .tick_bpu "PROMPT_COMMAND=[$PROMPT_COMMAND]"
 
-    # if [[ -e "$HOME/.git-prompt.sh" ]]; then
-    #   export GIT_PS1_SHOWDIRTYSTATE=1 GIT_PS1_SHOWUNTRACKEDFILES=1 GIT_PS1_SHOWUPSTREAM=1 GIT_PS1_SHOWCOLORHINTS=1
-    #   export GIT_PS1_STATESEPARATOR='|' GIT_PS1_DESCRIBE_STYLE='branch' GIT_PS1_HIDE_IF_PWD_IGNORED=1
-    #   . "$HOME/.git-prompt.sh"
-    #   .tick_bpu "loaded git-prompt, PS1=$PS1"
-    # fi
     if [[ -e "$HOME/.git-completion" ]]; then
       .tick_bpu "loading git completion from $HOME"
       . "$HOME/.git-completion"
@@ -246,6 +242,16 @@
     .tick_bpu "finishing _prompt_command, PS1=[$PS1]"
   }
   #export PROMPT_COMMAND='_prompt_command'
+
+
+  # # Used by profile badge to show pwd (lowercase) via user.tildePath variable.
+  # # From: https://iterm2.com/documentation-scripting-fundamentals.html
+  #
+  # Disabled since it doesn't play so well w git-prompt.
+  #
+  # iterm2_print_user_vars() {
+  #   iterm2_set_user_var 'tildePath' "$(tilde-compress "$PWD" | lower)"
+  # }
 
 
   alias .reload-shell='exec $SHELL -l'

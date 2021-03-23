@@ -4,23 +4,22 @@
 
   # -C - detect moved or copied lines, even from other files in the same commit
   # -w - ignore whitespace
-  bl = blame -C -w --abbrev=3
+  bl = blame -C -w
 
-  b = branch
   br = branch
+  brcp = branch -C
+  brmv = branch -M
 
   # $ git brr
   # SHA....8 * branch_name...................................48   authrdt__rel.15   subject...
   #
-  # %(color:reset)
-  # %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:white)%(end)
-  # %(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)
+  # %(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)
   # ___%(align:48,left)%(refname:short)%(end)
   # ___%(align:15,left)%(authordate:relative)%(end)
   # ___%(contents:subject)
   brr = !git branch --ignore-case --list \
     --sort='-authordate' \
-    --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
+    --format='%(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
     'master' 'user*' |\
     awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
@@ -29,35 +28,32 @@
   #
   # local branches' refname start with ref/heads; remote, refs/remotes
   #
-  # %(color:reset)
-  # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
-  #   %(color:red)
-  # %(else)
-  #   %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)
-  # %(end)
-  # %(if)%(HEAD)%(then)%(color:bold green)% * %(else)   %(end)
-  # %(objectname:short)
+  # %(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)
   # %(align:48,left)%(refname:short)%(end)
   # __%(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)
   # __%(align:21,left)%(authorname)%(end)
   # __%(contents:subject)
   brrr = !git branch --ignore-case --list --all \
     --sort='-authordate' --sort='refname:rstrip=-3' \
-    --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
+    --format='%(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
     awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
-  co = checkout
-  com = checkout master
+  co = checkout --progress
+  com = checkout --progress master
 
-  cp = cherry-pick
+  cp = cherry-pick --edit --ff
   
-  ds = diff --stat --compact-summary
+  d = diff
+  ds = diff --stat
+  dsc = diff --stat --compact-summary
+  dds = diff --dirstat
+  ddsc = diff --dirstat --compact-summary
 
-  f = fetch
+  f = fetch --progress
 
   # Insert command line arguments at the end of the log command rather than at the end of the entire command
   # line, since they would be applied to less there.
-  l = !args="\"${@:--10}\"" && shift "$#" &&\
+  l = !args="\"${@:--30}\"" && shift "$#" &&\
     git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
@@ -67,7 +63,7 @@
     less
 
   ll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --pretty=briefer "$args" |\
+    git log --pretty=briefer --use-mailmap "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
@@ -76,7 +72,16 @@
     less
 
   lll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --pretty=brief --compact-summary "$args" |\
+    git log --no-use-mailmap --source "$args" |\
+    sed -E \
+      -e 's:HEAD -> :H->:' \
+      -e "s:user/$USER:\\$US:g" \
+      -e 's:origin:$OR:g' \
+      -e 's/tag: /t:/g' |\
+    less
+
+  llll = !args="\"$@\"" && shift "$#" &&\
+    git log --pretty=brief --compact-summary --no-use-mailmap --source "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
@@ -85,26 +90,36 @@
     less
 
 
+
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
   # for this function to pop.
   popb = !git-popb.sh
 
-  pff   = pull --ff-only
-  pullf = pull --ff-only
-  pullr = pull --rebase
+  pff   = pull --ff-only --progress
+  pullf = pull --ff-only --progress
+  pullr = pull --rebase --progress
 
-  puh = push --set-upstream origin HEAD
+  pushup = push --set-upstream origin HEAD
 
   rc = rebase --continue
 
-  s = status
-  st = !git status --short |\
+  s = !args="\"$@\"" && shift "$#" &&\
+    git status --short "$args" |\
     grep -E \
-      -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.DS_Store|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
-  stt = status -uno
+      -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
+  st = !args="\"$@\"" && shift "$#" &&\
+    git status --column=dense --no-show-stash "$args" |\
+    grep -E -v "^\\#?\\s*\\$"
+  stt = !args="\"$@\"" && shift "$#" &&\
+    git status --column=nodense --show-stash "$args" |\
+    grep -E -v "^\\#?\\s*\\$"
+  sttt = !args="\"$@\"" && shift "$#" &&\
+    git status --column=nodense --ignored --show-stash "$args" |\
+    grep -E -v "^\\#?\\s*\\$"
+
 
 [blame]
-  coloring = highlightRecent
+  coloring = highlightRecent  # options: repeatedLines, highlightRecent, NONE
   date = format:%a %D %H:%M  # Thu 10/11/18 18:31
 
 [branch]
@@ -112,128 +127,152 @@
   autoSetupRebase = always
   sort = refname
 
+[checkout]
+  defaultRemote = origin
+
+# ui provides the default for all other commands
 [color]
-  branch = always
-  diff   = always
-  grep   = always
-  remote = always
   ui     = always
+  #! advice = always
+  #! branch = always
+  #! diff   = always
+  #! grep   = always
+  #! interactive = always
+  #! pager = true
+  #! push = always
+  #! remote = always
+  #! showBranch = always
+  #! status = always
+  #! transport = always
 
-[color "blame"]
-  highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
-  repeatedLines = green  # seems to have no effect
+# From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorui
+# Values are always|NEVER|auto, COLUMN|row|plain, dense|NODENSE
+[column]
+  #! ui = never,column,nodense
+  branch = always,dense
+  status = always  # nodense seems to have no effect on status (set here or on .ui)
+  tag = always
 
-[color "branch"]
-  current = bold blue
-  local = normal
-  remote = dim magenta
-  upstream = magenta
-  plain = yellow
+[commit]
+  verbose = true
 
-# # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorremoteltslotgt
-# # color.remote.<slot>, slot: hint, warning, success, error
-# [color.remote]
-#   hint =
-#   warning =
-#   success =
-#   error =
-
-# From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorstatusltslotgt
-# color.status.<slot>
-#   header - the header text of the status message
-#   branch
-#   added or updated  - files which are added but not committed
-#   changed - files which are changed but not added in the index
-#   untracked
-#   nobranch - the color the no branch warning is shown in, defaulting to red
-#   localBranch or remoteBranch - when branch and tracking information is displayed in the status short-format
-#   unmerged - files which have unmerged changes
-#
-[color "status"]
-  # header = white
-  branch = bold blue
-  # added = green
-  changed = yellow
-  # untracked = red
-  localBranch = bold blue
-  remoteBranch = magenta
-  unmerged = bold red
-  
 [core]
+  abbrev = 6
+  #! commentChar = #
   editor = subl
   excludesFile = ~/.gitignore
-  hooksPath = ~/dotfiles/dot_git_hooks
-  pager = less  #default
+  hooksPath = ~/.git_hooks
+  pager = less
   whitespace = -trailing-space,tab-in-indent,tabwidth=2
   # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
 
 [credential]
   helper = osxkeychain
-  
+
+# See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffdirstat  
+#   .dirstat parameters: files|CHANGES|lines, cumulative|NONCUMULATIVE, 3 (cutoff %)
+#   .relative 'true' only performs diff in current directory and below
+#   .renames 'copies' detects renames and copies
+#   .algorithm 'minimal' is slower but generates the smallest correct diff
 [diff]
-  renames = copies
+  algorithm = minimal
+  colorMoved = true
+  context=2  # default: 3
+  dirstat = lines,cumulative,0
   relative = true
-  statGraphWidth = 20
+  renames = copies
+  # statGraphWidth = 20
   tool = bc3
 
 [fetch]
-  prune = true  # default
-  showForcedUpdates = true
-  writeCommitGraph = true  # default
+  output = compact  # branchName -> origin/* instead of origin/branchName
+  #! prune = true
+  #! showForcedUpdates = true
+  writeCommitGraph = true
+
+[grep]
+  fallbackToNoIndex = true
+  lineNumber = true
+  patternType = extended
 
 [log]
-  abbrevCommit = true
+  #! abbrevCommit = false
+  #! conflictStyle = merge
   date = format:%a %D %H:%M  # Thu 10/11/18 18:31
-  decorate = short
-  mailmap = false
+  #! decorate = short
+  follow = true
+  #! mailmap = true
 
 [mailmap]
-  file = ~/.mailmap
+  file = /Users/toddpierzina/.mailmap
 
 [merge]
+  #! autoStash = false
+  directoryRenames = true  # default: conflict
   ff = only
+  guitool = bc3
+  renames = copies
+  #! stat = true
   tool = bc3
+  #! verbosity = 2  # 2 is conflicts and file changes
 
 [mergetool "bc3"]
   trustExitCode = true
 
 # %h  - abbrev hash
 # %C  - color or reset
-# %cn - committer name
-# %cN - committer name, via .mailmap
-# %ce - committer email
-# %cE - committer email, via .mailmap
-# %cl - committer email local part
-# %cl - committer local part, via .mailmap
-# %cd - commit date in --date's format
-# %cr - commit date (relative)
+# %cn or %an - committer|author name; %cN via .mailmap
+# %ce or %ae - committer|author email; %cE via .mailmap
+# %cd - commit|author date in --date's format
+# %cr - commit|author date (relative)
 # %D  - ref name(s)
 # %s  - subject line
 [pretty]
   # commit(abbrev), author (mailmap), date, subject, [ref names]
-  briefest = %Cgreen%h%Creset  %<(10,trunc)%cN  %C(yellow)%cd  %<(15)%C(bold yellow)%cr%Creset %<(64,trunc)%s %>>(1)%Cblue%d%Creset
+  briefest = %h  %<(20,trunc)%aN  %ad  %<(15)%cr %<(64,trunc)%s %>>(1)%d
 
   # commit(abbrev), author, date (rel date), [ref names]; subject
-  briefer = %Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
+  briefer = %h  %<(25,trunc)%an  %ad  (%ar)  %>>(1)%d%n    %s
 
   # commit(abbrev), author, date (rel date), [ref names]; subject; summary
-  brief = %n%Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
+  brief = %n%h  %<(25,trunc)%an  %ad  (%ar)  %>>(1)%d%n    %s
 
 [pull]
   ff = only
   rebase = true
 
+[push]
+  #! default = simple  # upstream unless name is different
+  useForceIfIncludes = true  # minimize explicit forces
+
 [rebase]
+  #! autoSquash = false
+  #! autoStash = false
+  missingCommitsCheck = warn
   stat = true
+
+[remote]
+  #! pushDefault = origin
+
+[remote "master"]
+  pushDefault = PULL_REQUEST_YO
+
+[reset]
+  #! quiet = false
+
+[stash]
+  #! showStat = true
 
 # by default, full "status" command is complete; "st" alias is terse
 [status]
   aheadBehind = true
-  branch = true
+  branch = true  # only relevant for short=true
+  displayCommentPrefix = true
+  relativePaths = false  # TRUE: relative to PWD; false: to repo root
   renames = copies
-  short = false  # default
+  #! short = false
   showStash = true
-  showUntrackedFiles = normal  # default
+  #! showUntrackedFiles = normal  # options: no|NORMAL|all
 
 [user]
   name = Todd Pierzina
@@ -243,6 +282,6 @@
 #
 ### available colors, attributes
 #
-
+#
 # normal, black, red, green, yellow, blue, magenta, cyan, or white
 # bold, dim, ul (underline), blink, and reverse

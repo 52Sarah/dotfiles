@@ -6,37 +6,52 @@
   # -w - ignore whitespace
   bl = blame -C -w
 
-  br = branch
-  brcp = branch -C
-  brmv = branch -M
+
+  b = branch
+  br-cp = branch -C
+  br-mv = branch -M
+
+  br = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get-color color.diff.commit)" &&\
+    color_bc="$(git config --get-color color.branch.current)" &&\
+    color_br="$(git config --get-color color.branch.remote)" &&\
+    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:32,left)%(refname:short)%(end)%(color:reset)' &&\
+    git branch --list --ignore-case --sort='-authordate' --sort='refname:rstrip=-3' \
+      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset)' \
+    "$args"
 
   # $ git brr
-  # SHA....8 * branch_name...................................48   authrdt__rel.15   subject...
-  #
-  # %(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)
-  # ___%(align:48,left)%(refname:short)%(end)
-  # ___%(align:15,left)%(authordate:relative)%(end)
-  # ___%(contents:subject)
-  brr = !git branch --ignore-case --list \
-    --sort='-authordate' \
-    --format='%(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
-    'master' 'user*' |\
-    awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+  # SHA..6* branch_name...................32  au_dt_rel.14  [upstream] subject...
+  # Highlight date using stash's color, which is generally bright.
+  brr = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get-color color.diff.commit)" &&\
+    color_bc="$(git config --get-color color.branch.current)" &&\
+    color_br="$(git config --get-color color.branch.remote)" &&\
+    color_ds="$(git config --get-color color.decorate.stash)" &&\
+    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:32,left)%(refname:short)%(end)%(color:reset)' &&\
+    f_date="$color_ds"'%(align:14,left)%(authordate:relative)%(end)%(color:reset)' &&\
+    git branch --list --ignore-case --sort='-authordate' --sort='refname:rstrip=-3' \
+      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset) '"$f_date"' %(contents:subject)' \
+    "$args" |\
+    awk -v LEN=140 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
   # $ git brrr
-  # SHA....8 * branch_name...................................48  authrdt__iso.15  author_name........21  subject...
-  #
-  # local branches' refname start with ref/heads; remote, refs/remotes
-  #
-  # %(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)
-  # %(align:48,left)%(refname:short)%(end)
-  # __%(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)
-  # __%(align:21,left)%(authorname)%(end)
-  # __%(contents:subject)
-  brrr = !git branch --ignore-case --list --all \
-    --sort='-authordate' --sort='refname:rstrip=-3' \
-    --format='%(if)%(HEAD)%(then)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
-    awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+  # SHA..6 * branch_name...........................40  authrdt__med.15  author_name...16 [upstream] subject...
+  # Branches' refname prefixes: local: ref/heads; remote: refs/remotes
+  # Highlight date using stash's color, which is generally bright.
+  brrr = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get-color color.diff.commit)" &&\
+    color_bc="$(git config --get-color color.branch.current)" &&\
+    color_br="$(git config --get-color color.branch.remote)" &&\
+    color_ds="$(git config --get-color color.decorate.stash)" &&\
+    color_bu="$(git config --get-color color.branch.upstream)" &&\
+    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:32,left)%(refname:short)%(end)%(color:reset)' &&\
+    f_authorname='%(align:16,left)%(authorname)%(end)' &&\
+    git branch --list --ignore-case --all --sort='-authordate' --sort='refname:rstrip=-3' \
+      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset) '"$color_ds"'%(authordate:format:%a %m/%d %H:%M)%(color:reset)  '"$f_authorname"' %(if)%(upstream)%(then)'"$color_bu"'[%(upstream:short)] %(end)%(color:reset)%(contents:subject)' \
+    "$args" |\
+    awk -v LEN=180 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+
 
   co = checkout --progress
   com = checkout --progress master
@@ -51,10 +66,26 @@
 
   f = fetch --progress
 
-  # Insert command line arguments at the end of the log command rather than at the end of the entire command
-  # line, since they would be applied to less there.
-  l = !args="\"${@:--30}\"" && shift "$#" &&\
-    git log -10 --pretty=briefest --date='format:%a %m/%d %H:%M' --use-mailmap "$args" |\
+# LOG/PRETTY FORMAT FIELDS
+# %h  - abbrev hash
+# %C  - color or reset
+# %cn - committer name; %cN via .mailmap
+# %ce - committer email; %cE via .mailmap
+# %cl - committer email local part; %cL via .mailmap
+# %cd - commit date in --date's format
+# %cr - commit date (relative)
+# %D  - ref name(s)
+# %s  - subject line
+
+  # $ git l
+  # SHA..6 author_name...16 author_date_med.18 auth_dt_rel_14 subject (tags)
+  l = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
+    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
+    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
+    git log -10 --date=human --use-mailmap \
+      --format='%C('"$color_dc"')%h %C(reset) %<(16,trunc)%aN %<(18)%C('"$color_ds"')%ad %<(14)%C(bold)%cr%C(reset) %<(64,trunc)%s %>>(1)%C('"$color_dt"')%d%C(reset)' \
+      "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
@@ -62,8 +93,15 @@
       -e 's/tag: /t:/g' |\
     less
 
-  ll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --pretty=briefer --use-mailmap "$args" |\
+  # SHA..6  author_name.......20  author_date_med.18 auth_dt_rel_14 (tags)
+  #     subject
+  ll = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
+    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
+    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
+    git log -10 --date=human --use-mailmap \
+      --format='%C('"$color_dc"')%h%C(reset)  %<(20)%aN  %<(18)%C('"$color_ds"')%ad %C(bold)(%ar)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
+      "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
@@ -71,8 +109,16 @@
       -e 's/tag: /t:/g' |\
     less
 
-  lll = !args="\"${@:--10}\"" && shift "$#" &&\
-    git log --no-use-mailmap --source "$args" |\
+  # SHA..6  author_name............25  author_date_med.18 auth_dt_rel_14 (tags)
+  #     subject
+  #  compact summary
+  lll = !args="\"$@\"" && shift "$#" &&\
+    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
+    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
+    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
+    git log -10 --date='format:%a %D %H:%M' --compact-summary --no-use-mailmap \
+      --format='%C('"$color_dc"')%h%C(reset)  %<(25)%an  %C('"$color_ds"')%<(18)%ad %C(bold)(%cr)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
+      "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
@@ -81,14 +127,13 @@
     less
 
   llll = !args="\"$@\"" && shift "$#" &&\
-    git log --pretty=brief --compact-summary --no-use-mailmap --source "$args" |\
+    git log -10 --compact-summary --no-use-mailmap --source "$args" |\
     sed -E \
       -e 's:HEAD -> :H->:' \
       -e "s:user/$USER:\\$US:g" \
       -e 's:origin:$OR:g' \
       -e 's/tag: /t:/g' |\
     less
-
 
 
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
@@ -103,19 +148,30 @@
 
   rc = rebase --continue
 
-  s = !args="\"$@\"" && shift "$#" &&\
-    git status --short "$args" |\
-    grep -E \
-      -v '^[^ ]{2,} .*/?(.*(-localer|logback-test).(xml|ya?ml|properties)|\\.log/|\\.mvn/|\\.run/|mvnw.*)$'
+  #
+  # GIT STATUS VARIANTS, from terse to verbose
+  #
+  s = status --short
+  #
+  # Don't include hint text; show files in dense columns.
   st = !args="\"$@\"" && shift "$#" &&\
-    git status --column=dense --no-show-stash "$args" |\
-    grep -E -v "^\\#?\\s*\\$"
+    git -c advice.statusHints=false status --column=dense --no-show-stash "$args" |\
+    grep -E -v "^\\#?\\s*\\$" |\
+    sed -E -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/;"
+  #
+  # Show files in columns; include stash count.
   stt = !args="\"$@\"" && shift "$#" &&\
     git status --column=nodense --show-stash "$args" |\
-    grep -E -v "^\\#?\\s*\\$"
+    sed -E \
+      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
+      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
+  # 
+  # Show files in columns; include ignored files; include stash count.
   sttt = !args="\"$@\"" && shift "$#" &&\
     git status --column=nodense --ignored --show-stash "$args" |\
-    grep -E -v "^\\#?\\s*\\$"
+    sed -E \
+      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
+      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
 
 
 [blame]
@@ -125,31 +181,16 @@
 [branch]
   autoSetupMerge  = false
   autoSetupRebase = always
-  sort = refname
+  sort = -authordate
 
 [checkout]
   defaultRemote = origin
-
-# ui provides the default for all other commands
-[color]
-  ui     = always
-  #! advice = always
-  #! branch = always
-  #! diff   = always
-  #! grep   = always
-  #! interactive = always
-  #! pager = true
-  #! push = always
-  #! remote = always
-  #! showBranch = always
-  #! status = always
-  #! transport = always
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorui
 # Values are always|NEVER|auto, COLUMN|row|plain, dense|NODENSE
 [column]
   #! ui = never,column,nodense
-  branch = always,dense
+  branch = always   #! never
   status = always  # nodense seems to have no effect on status (set here or on .ui)
   tag = always
 
@@ -196,10 +237,10 @@
   patternType = extended
 
 [log]
-  #! abbrevCommit = false
+  abbrevCommit = true  #! false
   #! conflictStyle = merge
-  date = format:%a %D %H:%M  # Thu 10/11/18 18:31
-  #! decorate = short
+  date = human #!iso
+  #! decorate = short     # none|SHORT|full|auto
   follow = true
   #! mailmap = true
 
@@ -218,24 +259,6 @@
 
 [mergetool "bc3"]
   trustExitCode = true
-
-# %h  - abbrev hash
-# %C  - color or reset
-# %cn or %an - committer|author name; %cN via .mailmap
-# %ce or %ae - committer|author email; %cE via .mailmap
-# %cd - commit|author date in --date's format
-# %cr - commit|author date (relative)
-# %D  - ref name(s)
-# %s  - subject line
-[pretty]
-  # commit(abbrev), author (mailmap), date, subject, [ref names]
-  briefest = %h  %<(20,trunc)%aN  %ad  %<(15)%cr %<(64,trunc)%s %>>(1)%d
-
-  # commit(abbrev), author, date (rel date), [ref names]; subject
-  briefer = %h  %<(25,trunc)%an  %ad  (%ar)  %>>(1)%d%n    %s
-
-  # commit(abbrev), author, date (rel date), [ref names]; subject; summary
-  brief = %n%h  %<(25,trunc)%an  %ad  (%ar)  %>>(1)%d%n    %s
 
 [pull]
   ff = only
@@ -285,3 +308,6 @@
 #
 # normal, black, red, green, yellow, blue, magenta, cyan, or white
 # bold, dim, ul (underline), blink, and reverse
+
+[include]
+  path = .gitconfig__colors

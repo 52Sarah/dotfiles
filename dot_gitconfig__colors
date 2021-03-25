@@ -1,78 +1,63 @@
 #! .gitconfig
 
-[alias]
+# ui provides the default for all other commands: always|AUTO|never
+[color]
+  ui = always
+  #! advice = always
+  #! branch = always
+  #! diff   = always
+  #! grep   = always
+  #! interactive = always
+  #! pager = true
+  #! push = always
+  #! remote = always
+  #! showBranch = always
+  #! status = always
+  #! transport = always
 
-  # $ git brr
-  # SHA....8 * branch_name...................................48   authrdt__rel.15   subject...
-  #
-  # %(color:reset)
-  # %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:white)%(end)
-  # %(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)
-  # ___%(align:48,left)%(refname:short)%(end)
-  # ___%(align:15,left)%(authordate:relative)%(end)
-  # ___%(contents:subject)
-  brr = !git branch --ignore-case --list \
-    --sort='-authordate' \
-    --format='%(color:reset)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)   %(align:15,left)%(authordate:relative)%(end)   %(contents:subject)' \
-    'master' 'user*' |\
-    awk -v LEN=150 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+# color.advice and .hint seem to be ignored in Git 2.24.3
+[color "advice"]
+  hint = dim cyan
 
-  # $ git brrr
-  # SHA....8 * branch_name...................................48  authrdt__iso.15  author_name........21  subject...
-  #
-  # local branches' refname start with ref/heads; remote, refs/remotes
-  #
-  # %(color:reset)
-  # %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
-  #   %(color:red)
-  # %(else)
-  #   %(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)
-  # %(end)
-  # %(if)%(HEAD)%(then)%(color:bold green)% * %(else)   %(end)
-  # %(objectname:short)
-  # %(align:48,left)%(refname:short)%(end)
-  # __%(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)
-  # __%(align:21,left)%(authorname)%(end)
-  # __%(contents:subject)
-  brrr = !git branch --ignore-case --list --all \
-    --sort='-authordate' --sort='refname:rstrip=-3' \
-    --format='%(color:reset)%(if)%(HEAD)%(then)%(color:bold green)%(objectname:short) * %(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:red)%(else)%(if:equals=refs/heads/xmerged)%(refname:rstrip=-3)%(then)%(color:blue)%(else)%(color:normal)%(end)%(end)%(objectname:short)   %(end)%(align:48,left)%(refname:short)%(end)  %(align:15,left)%(authordate:format:%a %m/%d %H:%M)%(end)  %(align:21,left)%(authorname)%(end)  %(contents:subject)  %(symref)' |\
-    awk -v LEN=175 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
+[color "blame"]
+   highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
+   repeatedLines = green  # seems to have no effect
 
-
-# [color "advice"]
-#   hint =
-
-# [color "blame"]
-#    highlightRecent = blue,6.months.ago,normal,2.months.ago,yellow,2.weeks.ago,red
-#    repeatedLines = green  # seems to have no effect
-
-# [color "branch"]
-#   current = bold blue
-#   local = normal
-#   remote = dim magenta
-#   upstream = magenta
-#   plain = yellow
+[color "branch"]
+  current = magenta   #! green
+  #! local = normal
+  remote = cyan       #! red
+  upstream = blue     #! blue
+  #! plain = normal
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colordecorateltslotgt
-# Use customized color for git log --decorate output.
-
-# [color "decorate"]
-#   branch = 
-#   remoteBranch = 
-#   tag = 
-#   stash =
-#   HEAD = 
+# LOG/PRETTY FORMAT FIELDS
+# %h  - abbrev hash
+# %C  - color or reset
+# %cn - committer name; %cN via .mailmap
+# %ce - committer email; %cE via .mailmap
+# %cl - committer email local part; %cL via .mailmap
+# %cd - commit date in --date's format
+# %cr - commit date (relative)
+# %D  - ref name(s)
+# %s  - subject line
+[color "decorate"]
+  #! branch = bold green
+  remoteBranch = bold cyan  #! bold red
+  tag = bold cyan           #! bold cyan
+  stash = white
+  #! HEAD = green
+  # grafted
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colordiff
-# [color "diff"]
+[color "diff"]
 #   context =  # plain is synonym
 #   meta = 
 #   frag = 
 #   func = 
 #   old = 
 #   new = 
-#   commit = 
+   commit = yellow    #! yellow
 #   whitespace =
 #   oldMoved =
 #   newMoved =
@@ -91,61 +76,42 @@
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorinteractiveltslotgt
 # Use customized color for git add --interactive and git clean --interactive output.
-# [color "interactive"]
+[color "interactive"]
 #   prompt = 
 #   header = 
 #   help = 
 #   error = 
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorremoteltslotgt
-# [color "remote"]
+[color "remote"]
 #   hint =
 #   warning =
 #   success =
 #   error =
 
-# [color "push"]
+[color "push"]
 #   error = 
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colorstatusltslotgt
-# [color "status"]
-  # # header = white
-  # branch = bold blue
-  # # added = green
-  # changed = yellow
-  # # untracked = red
-  # localBranch = bold blue
-  # remoteBranch = magenta
-  # unmerged = bold red
+# Match theese defaults and the default git-prompt colors as closely as possible.
+[color "status"]
+  #! header = normal
+  branch = magenta
+  #! added = green
+  changed = yellow
+  untracked = red
+  localBranch = magenta
+  remoteBranch = cyan
+  #! unmerged = bold red
 
-# [color "transport"]
+[color "transport"]
 #   rejected =
 
 
 # See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffcolorMoved
-# [diff]
+[color "diff"]
 #   colorMoved =    # mode from color.diff above
 #   colorMovedWS =  # mode from color.diff above
-
-
-# %h  - abbrev hash
-# %C  - color or reset
-# %cn - committer name; %cN via .mailmap
-# %ce - committer email; %cE via .mailmap
-# %cl - committer email local part; %cL via .mailmap
-# %cd - commit date in --date's format
-# %cr - commit date (relative)
-# %D  - ref name(s)
-# %s  - subject line
-[pretty]
-  # commit(abbrev), author (mailmap), date, subject, [ref names]
-  briefest = %Cgreen%h%Creset  %<(10,trunc)%cN  %C(yellow)%cd  %<(15)%C(bold yellow)%cr%Creset %<(64,trunc)%s %>>(1)%Cblue%d%Creset
-
-  # commit(abbrev), author, date (rel date), [ref names]; subject
-  briefer = %Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
-
-  # commit(abbrev), author, date (rel date), [ref names]; subject; summary
-  brief = %n%Cgreen%h%Creset  %<(25)%cn  %C(yellow)%cd  %C(bold yellow)(%cr)%Creset  %>>(1)%Cblue%d%Creset%n    %s
 
 
 #

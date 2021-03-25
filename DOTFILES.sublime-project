@@ -38,6 +38,10 @@
 			"path": "~/bin"
 		},
 		{
+			"name": ".../opt/bash-git-prompt/share",
+			"path": "/usr/local/opt/bash-git-prompt/share"
+		},
+		{
 			"name": "~",
 			"path": "~",
 			"folder_include_patterns": [

@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+# DEPRECATED 2021 in favor of Homebrew's bash-git-prompt.
+
 # bash/zsh git prompt support
 #
 # Copyright (C) 2006,2007 Shawn O. Pearce <spearce@spearce.org>

@@ -32,6 +32,7 @@ override_git_prompt_colors() {
   # GIT_PROMPT_CLEAN="${BoldGreen}✔"      # a colored flag indicating a "clean" repo
   GIT_PROMPT_UNTRACKED=" ${Red}…"         # the number of untracked files/dirs
   GIT_PROMPT_STASHED=" ${White}⚑"          # the number of stashed files/dir
+  
   GIT_PROMPT_CLEAN=" ${BoldGreen}✔"       # a colored flag indicating a "clean" repo
 
   ## For the command indicator, the placeholder _LAST_COMMAND_STATE_ 

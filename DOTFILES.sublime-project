@@ -44,14 +44,18 @@
 		{
 			"name": "~",
 			"path": "~",
-			"folder_include_patterns": [
-				"bak",
-				".docker",
-				".jenv",
-				".m2",
-				"prefs",
-				".pyenv",
-				".ssh"
+			"folder_exclude_patterns": [
+				".android",
+				".bash_sessions",
+				".cups",
+				".iterm2",
+				".Trash",
+				"Applications",
+				"bin", "ch-bash-profile", "dotfiles",
+				"Desktop", "Documents", "Drive",
+				"Library",
+				"Movies", "Music",
+				"Pictures", "Public"
 			],
 			"file_exclude_patterns": [
 				".%*.png",

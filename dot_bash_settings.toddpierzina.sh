@@ -130,10 +130,14 @@ _bash_settings_env() {
   export HISTCONTROL=ignoreboth
   export HISTSIZE=100000
   export HISTFILESIZE=$HISTSIZE
-  export HISTTIMEFORMAT=' %F %T  '
+  # export HISTTIMEFORMAT='%F %T   '
+  export HISTTIMEFORMAT='%m/%d %H:%M  '
 
   # Exclude from tab completion
   export FIGNORE='DS_Store:Icon?'
+
+  export SUBLIME_LIB="$HOME/Library/Application Support/Sublime Text 3"
+  alias cd-sublime-lib='cd "$SUBLIME_LIB"'
 
   .tick_bsu "... FINISH env ..."
   .tickeval_bsu 'printf "... %d variables\n" "$(env | grep -E '^[A-Za-z_.-].*' | wc -l)"'

@@ -26,6 +26,7 @@
   .tickeval_bpu 'printf "== START == \$-=[%s] PID,PPID,COMMAND=[%s] \$_=[%s]\n" "$-" "$(ps -o pid,ppid,command -p $PPID | tail -n -1)" "$_"'
 
 
+  # Offloaded 
   [[ -e "$HOME/.bash_settings.$USER" ]] && . "$HOME/.bash_settings.$USER"
   
   #
@@ -93,7 +94,15 @@
   alias wrap='tput smam'
 
   # history-grep
-  hg() { if [[ -z "$1" ]]; then history; else history | grep -E "$*"; fi }
+  hg() {
+    local HISTTIMEFORMAT="$HISTTIMEFORMAT"
+    [[ "$1" =~ ^-d|--date$ ]] && shift || HISTTIMEFORMAT=
+    if [[ -z "$1" ]]; then
+      history
+    else
+      history | grep -E $*
+    fi
+  }
 
   # Oops, return to where I was one time, if possible.
   uncd() {
@@ -116,7 +125,7 @@
 
 
   #
-  ### VAULT
+  ### CH-Specific
   #
   vault-token-refresh() {
     vault login -method=ldap -no-print username=todd.pierzina password=$SECRET_OKTA_CRED && echo Vault token refreshed.
@@ -137,10 +146,10 @@
     export __GIT_PROMPT_DIR="$(brew --prefix)/opt/bash-git-prompt/share"
     if [[ -e "$__GIT_PROMPT_DIR/gitprompt.sh" ]]; then
       .tick_bpu "using git-prompt in $__GIT_PROMPT_DIR"
-      # export GIT_PROMPT_ONLY_IN_REPO=1
+      export GIT_PROMPT_ONLY_IN_REPO=
       export GIT_PROMPT_SHOW_UPSTREAM=1
       export GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all
-      # export GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=0
+      export GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=1
 
       export GIT_PROMPT_THEME='Custom'
       . "$__GIT_PROMPT_DIR/gitprompt.sh"

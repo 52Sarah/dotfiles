@@ -1,23 +1,23 @@
-{
+	{
 	"settings":
 	{
-		"color_scheme": "Packages/Dayle Rees Color Schemes/legacy/Contrast/Goldfish.tmTheme",
+		"color_scheme": "Packages/User/color-schemes/Goldfish.tmTheme",
 		"follow_symlinks": true,
 
-	    // folder_exclude_patterns and file_exclude_patterns control which files
-	    // are listed in folders on the side bar. These can also be set on a per-
-	    // project basis.
-	    "folder_exclude_patterns": [
-	    	"*.BAK.*", 
-	    	".git", ".svn", "CVS",
-	    ],
-	    "file_exclude_patterns": [
-	    	"*.pyc", "*.pyo", 
-	    	"*.exe", "*.dll", "*.obj",
-	    	"*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.class",
-	    	"*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", "*.psd", "*.db", 
-	    	"*.sublime-workspace",
-	    ],
+    // folder_exclude_patterns and file_exclude_patterns control which files
+    // are listed in folders on the side bar. These can also be set on a per-
+    // project basis.
+    "folder_exclude_patterns": [
+    	"*.BAK.*", 
+    	".git", ".svn", "CVS",
+    ],
+    "file_exclude_patterns": [
+    	"*.pyc", "*.pyo", 
+    	"*.exe", "*.dll", "*.obj",
+    	"*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.class",
+    	"*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", "*.psd", "*.db", 
+    	"*.sublime-workspace",
+    ],
 	    
 	},
 	"folders":
@@ -38,7 +38,7 @@
 			"path": "~/bin"
 		},
 		{
-			"name": ".../opt/bash-git-prompt/share",
+			"name": "opt/bash-git-prompt/share",
 			"path": "/usr/local/opt/bash-git-prompt/share"
 		},
 		{

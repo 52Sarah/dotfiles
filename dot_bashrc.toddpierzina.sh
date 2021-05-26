@@ -43,6 +43,27 @@
   # Put my homemade scripts and other miscellany here at the start of the classpath.
   [[ -d "$HOME/bin" && ! "$PATH" =~ $HOME/bin ]] && export PATH="$HOME/bin:$PATH"
 
+  # Conditional echoes, used for debugging all over.
+  vecho() { ((SH_VERBOSE)) && echo "$@"; return 0; }
+  qecho() { ((! SH_QUIET)) && echo "$@"; return 0; }
+  eecho() { >&2 echo "$@"; return 0; }  # to stderr
+
+  # List path variable's elements, one per line
+  echo-path() {
+    local var=${1:-PATH}
+    split-lines ':' <<< "${!var}" | tilde-compress
+  }
+  alias pecho=echo-path
+
+  # List all variables and values matching $1.
+  echo-glob() {
+    local patt="$1" && [[ -z "$patt" ]] && >&2 echo "usage: echo-glob patt" && return 1
+    for v in $(eval "echo $(printf "\${!%s}" "$patt")"); do
+      printf "%s: %s\n" "$v" "${!v}"
+    done
+  }
+  alias gecho=echo-glob
+
 
   # The following functions operate on stdin OR $*; [[ -t 0 ]] is true if stdin is a terminal
   # from: https://stackoverflow.com/a/30520299
@@ -86,20 +107,6 @@
     lower <<< "$*"
   }
 
-
-  # List path variable's elements, one per line
-  echo-path() {
-    local var=${1:-PATH}
-    split-lines ':' <<< "${!var}" | tilde-compress
-  }
-
-  # List all variables and values matching $1.
-  echo-glob() {
-    local patt="$1" && [[ -z "$patt" ]] && >&2 echo "usage: echo-glob patt" && return 1
-    for v in $(eval "echo $(printf "\${!%s}" "$patt")"); do
-      printf "%s: %s\n" "$v" "${!v}"
-    done
-  }
 
   # Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
   join-lines() {

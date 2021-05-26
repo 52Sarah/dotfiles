@@ -37,6 +37,7 @@
   # -F  add suffix (/@)
   # -tr sort by time modified, old to new
   # -Sr sort by size, ascending
+  #
   ll() {    ls -ohF "$@" | tilde-compress; }
   lltr() {  ls -ohFtr "$@" | tilde-compress; }
   llsr() {  ls -ohFSr "$@" | tilde-compress; }
@@ -113,16 +114,62 @@
 
   # Make specified, or all in PWD, shell scripts executable.
   chx() {
-    local opt_verbose=$(( SH_VERBOSE ))
+    local opt_verbose=$((SH_VERBOSE))
     [[ "$1" =~ ^(-v|--verbose)$ ]] && shift && opt_verbose=1
     
     local files=("$@")
     [[ ! "$1" ]] && files=(*.sh) && opt_verbose=1
 
-    (( opt_verbose )) && opt_verbose="-vv" || opt_verbose=
+    ((opt_verbose)) && opt_verbose="-vv" || opt_verbose=
     chmod $opt_verbose +x "${files[@]}"
   }
 
+touchd() {
+    [[ -z "$1" ]] && eecho "usage: touchd dir [...]" && return 1
+    local SH_VERBOSE="$((SH_VERBOSE))"
+    local count=0 arg
+    for arg in "$@"; do
+        [[ "$arg" =~ ^(-v|--verbose)$ ]] && SH_VERBOSE=1 && continue
+        
+        local dir="$arg"
+        local dir_tilde="${dir/$HOME/~}"
+        [[ ! -e "$dir" ]] && eecho "touchd: $dir_tilde: no such directory" && return 1
+        [[ ! -d "$dir" ]] && vecho "touchd: $dir_tilde: not a directory" && continue
+
+        local newest="$(ls -A1t "$dir/" | head -n 1)"
+        [[ -z "$newest" ]] && vecho "touchd: empty directory: $dir_tilde" && continue
+
+        local dir_time="$(stat -f %Sm "$dir")"; [[ -z "$dir_time" ]] && return 1
+        local newest_time="$(stat -f %Sm "$dir/$newest")"; [[ -z "$newest_time" ]] && return 1
+        [[ "$dir_time" == "$newest_time" ]] && vecho "touchd: $dir_tilde: mtime already matches $newest: $newest_time" && continue
+        echo "touchd: updating mtime of '$dir_tilde' ($dir_time) to match '$newest': $newest_time"
+
+        # touch -h will update link's target instead of link
+        touch -r "$dir/$newest" "$dir"
+        [[ -L "$dir" ]] && touch -h -r "$dir/$newest" "$dir"
+        
+        ((count++))
+    done
+    ((!count)) && return 1
+    vecho "touchd: updated $count directories"
+}
+# shellcheck disable=SC2206,SC2086  # quote to avoid split
+touchd_R() {
+    local dirs=("$@")
+    [[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
+    for dir in "${dirs[@]}"; do
+        # local subdirs="$(find "$dir" -depth ! -type f)"
+        # vecho "touchd_R: for $dir, found subdirs: $subdirs"
+        # for subdir in $subdirs; do
+        find "$dir" -depth ! -type f -print |\
+        while read -r subdir; do
+            # vecho "touchd_R: calling touchd for subdir='$subdir'"
+            touchd "$subdir"
+        done
+        # vecho "touchd_R: calling touchd for dir='$dir'"
+        touchd "$dir"
+    done
+}
 
   #
   ### CH-Specific
@@ -142,6 +189,22 @@
     .tickeval_bpu 'echo "using $(git --version)"'
 
     alias g='git'
+    if type -t git-flow &>/dev/null; then
+      # Usage: gf-feature-finish [featureName] [mvn_opts] [gitflow_opts]
+      gf-feature-finish() {
+        local gitbr="$(git branch --show-current 2> /dev/null)"
+        [[ -z "$gitbr" ]] && eecho "gf-feature-finish: not in a git repository" && return 1
+        local featureName="${1:-${gitbr#*feature/}}"; [[ -n "$1" ]] && shift
+        mvn --batch-mode $1 gitflow:feature-finish -Dverbose=true -DkeepBranch=true -DfeatureName=$featureName $2
+      }
+      # Usage: gf-feature-start [featureName] [mvn_opts] [gitflow_opts]
+      gf-feature-start() {
+        local gitbr="$(git branch --show-current 2> /dev/null)"
+        [[ -z "$gitbr" ]] && eecho "gf-feature-finish: not in a git repository" && return 1
+        local featureName="${1:-${gitbr#*feature/}}"; [[ -n "$1" ]] && shift
+        mvn --batch-mode $1 gitflow:feature-start -Dverbose=true -DfeatureName=$featureName $2
+      }
+    fi
     
     export __GIT_PROMPT_DIR="$(brew --prefix)/opt/bash-git-prompt/share"
     if [[ -e "$__GIT_PROMPT_DIR/gitprompt.sh" ]]; then
@@ -164,8 +227,13 @@
       . "$HOME/.git-completion"
     fi
     complete -p | grep -E -q 'git$' && .tick_bpu "loaded git cli completion" || .tick_bpu "not using git completion"
+
+    if [[ -e "$HOME/.git-flow-completion" ]]; then
+      .tick_bpu "loading git-flow completion from $HOME"
+      . "$HOME/.git-flow-completion"
+    fi
   }
-  _setup_git
+  _setup_git && unset -f _setup_git
 
 
   #
@@ -194,7 +262,7 @@
     fi
     .tick_bpu "using JAVA_HOME: [$JAVA_HOME]"
   }
-  _setup_java
+  _setup_java && unset -f _setup_java
 
 
   #
@@ -225,8 +293,8 @@
     eval "$(python -m pip completion --bash)"
     complete -p | grep -E -q 'pip$' && .tick_bpu "loaded pip cli completion"
   }
-  _setup_pyenv
-  _setup_python
+  _setup_pyenv && unset -f _setup_pyenv
+  _setup_python && unset -f _setup_python
 
   #
   ### PS1 COMMAND LINE PROMPT
@@ -246,7 +314,7 @@
     local _pprefix && ((prev_status)) && _pprefix="!\$" || _pprefix="\$"
     export PS1="\\w $_pprefix "
     # export PS1='--\n$(__git_ps1 "[%s]") \w $_pprefix '
-    # export GITBR="$(git branch --show-current 2> /dev/null)"
+    # export GIT_BRANCH="$(git branch --show-current 2> /dev/null)"
     # __git_ps1 "$_sep\n" " \w $_pprefix\$ " "[%s]"'
     .tick_bpu "finishing _prompt_command, PS1=[$PS1]"
   }

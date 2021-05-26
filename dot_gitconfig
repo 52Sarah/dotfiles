@@ -8,8 +8,9 @@
 
 
   b = branch
-  br-cp = branch -C
-  br-mv = branch -M
+  brc = branch -C
+  brm = branch -M
+  brd = branch -D
 
   br = !args="\"$@\"" && shift "$#" &&\
     color_dc="$(git config --get-color color.diff.commit)" &&\
@@ -55,8 +56,9 @@
 
   co = checkout --progress
   com = checkout --progress master
+  cod = checkout --progress develop
 
-  cp = cherry-pick --edit --ff
+  cp = cherry-pick
   
   d = diff
   ds = diff --stat
@@ -87,9 +89,9 @@
       --format='%C('"$color_dc"')%h %C(reset) %<(16,trunc)%aN %<(18)%C('"$color_ds"')%ad %<(14)%C(bold)%cr%C(reset) %<(64,trunc)%s %>>(1)%C('"$color_dt"')%d%C(reset)' \
       "$args" |\
     sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
-      -e 's:origin:$OR:g' \
+      -e "s:user/$USER:\\$ME:g" \
+      -e 's/ -> /->/g' \
+      -e 's/origin/$OR/g' \
       -e 's/tag: /t:/g' |\
     less
 
@@ -103,8 +105,8 @@
       --format='%C('"$color_dc"')%h%C(reset)  %<(20)%aN  %<(18)%C('"$color_ds"')%ad %C(bold)(%ar)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
       "$args" |\
     sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
+      -e "s:user/$USER:\\$ME:g" \
+      -e 's/ -> /->/g' \
       -e 's:origin:$OR:g' \
       -e 's/tag: /t:/g' |\
     less
@@ -120,8 +122,8 @@
       --format='%C('"$color_dc"')%h%C(reset)  %<(25)%an  %C('"$color_ds"')%<(18)%ad %C(bold)(%cr)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
       "$args" |\
     sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
+      -e "s:user/$USER:\\$ME:g" \
+      -e 's/ -> /->/g' \
       -e 's:origin:$OR:g' \
       -e 's/tag: /t:/g' |\
     less
@@ -129,8 +131,8 @@
   llll = !args="\"$@\"" && shift "$#" &&\
     git log -10 --compact-summary --no-use-mailmap --source "$args" |\
     sed -E \
-      -e 's:HEAD -> :H->:' \
-      -e "s:user/$USER:\\$US:g" \
+      -e "s:user/$USER:\\$ME:g" \
+      -e 's/ -> /->/g' \
       -e 's:origin:$OR:g' \
       -e 's/tag: /t:/g' |\
     less

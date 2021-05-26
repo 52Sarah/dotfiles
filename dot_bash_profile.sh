@@ -61,10 +61,10 @@ reset_prompt() {
   [[ -z "$PS1" ]] && return 0
   # export PROMPT_COMMAND='(($?)) && _pprefix="!\$" || _pprefix="\$"; history -a'
   # export PS1='--\n$(__git_ps1 "[%s]") \w $_pprefix '
-  export GITBR="$(git branch --show-current 2> /dev/null)"
+  export GIT_BRANCH="$(git branch --show-current 2> /dev/null)"
   export PROMPT_COMMAND='(($?)) && _pprefix="!" _sep="!..." || _pprefix= _sep="____"; \
   history -a; \
-  export GITBR="$(git branch --show-current 2> /dev/null)"; \
+  export GIT_BRANCH="$(git branch --show-current 2> /dev/null)"; \
   __git_ps1 "$_sep\n" " \w $_pprefix\$ " "[%s]"'
 }
 reset_prompt

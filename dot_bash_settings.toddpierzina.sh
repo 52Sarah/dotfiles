@@ -119,7 +119,10 @@ _bash_settings_env() {
   .tickeval_bsu 'printf "... %d variables\n" "$(env | grep -E '^[A-Za-z_.-].*' | wc -l)"'
 
   export EDITOR=vim
-  export CLICOLOR=1 CLICOLOR_FORCE=1
+  export CLICOLOR=1
+
+  # Uncomment to color output even when being piped
+  # export CLICOLOR_FORCE=1
 
   # See: https://ss64.com/bash/less.html
   export LESS='--quit-at-eof --quit-if-one-screen --hilite-search --LONG-PROMPT --RAW --squeeze --HILITE-UNREAD --no-init --shift=.25'

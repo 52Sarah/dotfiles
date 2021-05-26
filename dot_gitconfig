@@ -58,8 +58,8 @@
   com = checkout master
   cod = checkout develop
 
-  cm = commit --message
-  cma = commit --all --message
+  cm = !args="$@" && shift && git commit --message "\"$args\"" && diff --stat HEAD^
+  cma = !args="$@" && shift && git commit --all --message "\"$args\"" && diff --stat HEAD^
 
   cp = cherry-pick
   

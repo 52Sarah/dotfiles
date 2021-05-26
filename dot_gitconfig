@@ -58,8 +58,8 @@
   com = checkout master
   cod = checkout develop
 
-  cm = !args="$@" && shift "$#" && git commit --message "\"$args\"" && git diff --compact-summary HEAD^
-  cma = !args="$@" && shift "$#" && git commit --all --message "\"$args\"" && echo "Okay" && git diff --summary HEAD^
+  cm = !args="$@" && shift "$#" && git commit --message "\"$args\"" && git diff --compact-summary ^HEAD | grep -E -v 'files? changed, [0-9]+ insertion.+ [0-9]+ deletion'
+  cma = !args="$@" && shift "$#" && git commit --all --message "\"$args\"" && echo "Okay" && git diff --compact-summary HEAD^
 
   cp = cherry-pick
   

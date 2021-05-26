@@ -54,9 +54,12 @@
     awk -v LEN=180 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
 
 
-  co = checkout --progress
-  com = checkout --progress master
-  cod = checkout --progress develop
+  co = checkout
+  com = checkout master
+  cod = checkout develop
+
+  cm = commit --message
+  cma = commit --all --message
 
   cp = cherry-pick
   

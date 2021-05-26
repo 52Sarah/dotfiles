@@ -1,0 +1,31 @@
+# Follow or don't follow symlinks, other than whatever starting files or directories were specified on the command line.
+--follow
+
+# Direct ack's output through program.
+--pager=less
+
+# (-p, -P) Groups together match lines that are within N lines of each other.
+--proximate=10
+
+# Suppress error messages about nonexistent or unreadable files.  This is taken from fgrep.
+-s
+
+# Sorts the found files lexicographically.
+# Use this if you want your file listings to be deterministic between runs of ack.
+--sort-files
+
+# (-S) Ignore case in the search strings if PATTERN contains no uppercase characters.
+--smart-case
+
+
+# (-T, --type=config)
+--type-set
+  config:ext:json,xml,yaml,yml
+
+--type-set
+  data:ext:csv,sql
+
+--type-set
+  ignore:ext:sublime-workspace
+
+--type=noignore

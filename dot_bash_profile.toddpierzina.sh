@@ -189,6 +189,8 @@ touchd_R() {
     .tickeval_bpu 'echo "using $(git --version)"'
 
     alias g='git'
+    alias gco='git co' 
+
     if type -t git-flow &>/dev/null; then
       # Usage: gf-feature-finish [featureName] [mvn_opts] [gitflow_opts]
       gf-feature-finish() {

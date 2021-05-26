@@ -59,7 +59,7 @@
   cod = checkout develop
 
   cm = !args="$@" && shift "$#" && git commit --message "\"$args\"" && git diff --stat HEAD^
-  cma = !args="$@" && shift "$#" && git commit --all --message "\"$args\"" && echo "Okay" && git diff --stat HEAD^
+  cma = !args="$@" && shift "$#" && git commit --all --message "\"$args\"" && echo "Okay" && git diff --compact-summary HEAD^
 
   cp = cherry-pick
   

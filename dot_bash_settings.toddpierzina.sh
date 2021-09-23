@@ -3,20 +3,21 @@
 # All "shell settings" and options are placed here, to ba called by .bash_profile
 # (or possible .bashrc).
 
+# Simple login file debugging, enabled if caller checks that ~/.tick.LOGINSCRIPT exists 
+# and sets prefix accordingly.
+. ~/.bashrc_tick
+
 unset TICK_BASH_SETTINGS_USER
 if type -t .tick >&/dev/null && [[ -e "$HOME/.tick.bash_settings.$USER" ]]; then
   export TICK_BASH_SETTINGS_USER='~/.bash_settings.$USER'
   .tick_bsu() { .tick -s "$TICK_BASH_SETTINGS_USER" "$@"; }
   .tickeval_bsu() { .tickeval -s "$TICK_BASH_SETTINGS_USER" "$@"; }
 else
-  # .tick_bsu() { >&2 echo "STDERR> @$"; }
-  # .tickeval_bsu() { local p="$1" && shift; >&2 printf "$p" "$(eval "$@")"; }
   .tick_bsu() { :; }
   .tickeval_bsu() { :; }
 fi
 
-
-_bash_settings_set() {
+.bash_settings_set() {
 
   .tick_bsu "... START set ..."
   .tickeval_bsu 'printf "... set: %d options\n" "$(split-lines ':' <<<"$SHELLOPTS" | wc -l)"'
@@ -57,10 +58,11 @@ _bash_settings_set() {
   .tick_bsu "... - = $-"
 
 }
-_bash_settings_set "@"
+.bash_settings_set "@"
+unset -f .bash_settings_set
 
 
-_bash_settings_shopt() {
+.bash_settings_shopt() {
   .tick_bsu "... START shopt ..."
   .tickeval_bsu 'printf "... set: %d options\n" "$(shopt -s | wc -l)"'
   .tickeval_bsu 'printf "... set: %s\n" "$(shopt -s | cut -f1 | join-lines ':')"'
@@ -111,18 +113,20 @@ _bash_settings_shopt() {
     .tickeval_bsu 'printf "... set: %d options\n" "$(shopt -s | wc -l)"'
     .tickeval_bsu 'printf "... set: %s\n" "$(shopt -s | cut -f1 | join-lines ':')"'
 }
-_bash_settings_shopt "$@"
+.bash_settings_shopt "$@"
+unset -f .bash_settings_shopt
 
 
-_bash_settings_env() {
+.bash_settings_env() {
   .tick_bsu "... START env ..."
   .tickeval_bsu 'printf "... %d variables\n" "$(env | grep -E '^[A-Za-z_.-].*' | wc -l)"'
 
   export EDITOR=vim
   export CLICOLOR=1
 
-  # Uncomment to color output even when being piped
-  # export CLICOLOR_FORCE=1
+  # Uncomment to color output even when being piped.
+  # Turning this on has an adverse interaction with a few tools.
+  export CLICOLOR_FORCE=1
 
   # See: https://ss64.com/bash/less.html
   export LESS='--quit-at-eof --quit-if-one-screen --hilite-search --LONG-PROMPT --RAW --squeeze --HILITE-UNREAD --no-init --shift=.25'
@@ -139,9 +143,14 @@ _bash_settings_env() {
   # Exclude from tab completion
   export FIGNORE='DS_Store:Icon?'
 
+
   export SUBLIME_LIB="$HOME/Library/Application Support/Sublime Text 3"
   alias cd-sublime-lib='cd "$SUBLIME_LIB"'
 
+
+  export CCHH_HOME="$HOME/cchh"
+
+  
   .tick_bsu "... FINISH env ..."
   .tickeval_bsu 'printf "... %d variables\n" "$(env | grep -E '^[A-Za-z_.-].*' | wc -l)"'
 }
@@ -149,4 +158,5 @@ _bash_settings_env() {
 alias .reload-bash-settings-user='. "$HOME/.bash_settings.$USER"'
 alias .rlbsu='.reload-bash-settings-user'
 
-_bash_settings_env "$@"
+.bash_settings_env "$@"
+unset -f .bash_settings_env

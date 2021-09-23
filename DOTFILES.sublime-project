@@ -27,6 +27,10 @@
 			"path": "~/dotfiles"
 		},
 		{
+			"name": "~/bin",
+			"path": "~/bin"
+		},
+		{
 			"name": "~/ch-bash-profile",
 			"path": "~/ch-bash-profile",
 	    "file_exclude_patterns": [
@@ -34,11 +38,7 @@
 	    ],
 		},
 		{
-			"name": "~/bin",
-			"path": "~/bin"
-		},
-		{
-			"name": "opt/bash-git-prompt/share",
+			"name": "bash-git-prompt/share",
 			"path": "/usr/local/opt/bash-git-prompt/share"
 		},
 		{
@@ -46,25 +46,33 @@
 			"path": "~",
 			"folder_exclude_patterns": [
 				".android",
+        ".ansible",
 				".bash_sessions",
+				".config/iterm2",
 				".cups",
-				".iterm2",
+        ".gem",
+        ".jenv/versions/*/*",
+        ".putty",
+        ".pyenv/shims",
 				".Trash",
 				"Applications",
 				"bin", "ch-bash-profile", "dotfiles",
 				"Desktop", "Documents", "Drive",
 				"Library",
 				"Movies", "Music",
-				"Pictures", "Public"
+				"Pictures", "Public",
+        "virtualenvs/*/lib/*",
 			],
 			"file_exclude_patterns": [
 				".%*.png",
 				".bash_history",
 				".Box_*",
 				".CFUserTextEncoding",
+        ".jenv/versions/*/*",
 				".lesshst",
 				".viminfo",
 				".zsh*",
+        "virtualenvs/*/lib/*",
 			],
 		},
 	]

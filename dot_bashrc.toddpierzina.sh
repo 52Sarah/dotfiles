@@ -4,49 +4,50 @@
 # .bash_profile || .bash_login || .profile; once it finds one it stops looking.
 # Non-interactive shells read the $BASH_ENV file, if any (this file).
 
-.bashrc.USER() {
+# Simple login file debugging, enabled if caller checks that ~/.tick.LOGINSCRIPT exists 
+# and sets prefix accordingly.
+type -t .tick >&/dev/null || . ~/.bashrc_tick
 
-  # Simple login file debugging, enabled if caller checks that ~/.tick.LOGINSCRIPT exists 
-  # and sets prefix accordingly.
-  #
-  # Usage: .tick_bpu -s script_name [message [...]]
-  .tick() { 
-    local USAGE='usage: .tick[eval] -s script_name [msg|expr [...]]'
-    [[ ! "$1" =~ ^-s|--script ]] && >&2 echo "$USAGE" && return 1
-    local script_name="$2" && shift 2 && [[ -z "$script_name" ]] && echo "$USAGE" && return 1
-    local dt="$(date +'%D %T')"
-    printf "%s %-22s %s\n" "$dt" "$script_name" "$*" >> "$HOME/.tick.log"
-  }
-  #
-  # Like .tick_bpu but woth delayed evaluation of potentially expensive message
-  # Usage: .tickeval_bpu -s script_name [expr [...]]
-  .tickeval() {
-    local sw="$1" nm="$2"
-    shift 2
-    .tick "$sw" "$nm" "$(eval "$*")"
-  }
-
-
+# Usage: .tick_bru -s script_name [message [...]]
+if type -t .tick >&/dev/null && [[ -e "$HOME/.tick.bashrc.$USER" ]]; then
+  TICK_BASHRC_USER='~/.bashrc.$USER'
+  .tick_bru() { .tick -s "$TICK_BASHRC_USER" "$@"; }
+  .tickeval_bru() { .tickeval -s "$TICK_BASHRC_USER" "$@"; }
+else
   unset TICK_BASHRC_USER
-  if type -t .tick >&/dev/null && [[ -e "$HOME/.tick.bashrc.$USER" ]]; then
-    export TICK_BASHRC_USER='~/.bashrc.$USER'
-    .tick_bru() { .tick -s "$TICK_BASHRC_USER" "$@"; }
-    .tickeval_bru() { .tickeval -s "$TICK_BASHRC_USER" "$@"; }
-  else
-    .tick_bru() { :; }
-    .tickeval_bru() { :; }
+  .tick_bru() { :; }
+  .tickeval_bru() { :; }
+fi
+
+.bashrc_USER() {
+
+  # reduce the number of "start" messages
+  if [[ "$PID_PPID_BRU" != "$$,$PPID" ]]; then
+    export PID_PPID_BRU="$$,$PPID"
+    .tickeval_bru 'printf -- "START PID,PPID=%s \$SHLVL=%s \$_=[%s] \$-=[%s]\n" "$PID_PPID_BRU" "$SHLVL" "$_" "$-"'
   fi
 
-  .tickeval_bru 'printf -- "-- START -- \$-=[%s] PID,PPID,COMMAND=[%s] \$_=[%s]\n" "$-" "$(ps -o pid,ppid,command -p $PPID | tail -n -1)" "$_"'
+  export TODAY_YYYYMMDD="$(date +'%Y%m%d')"
+  export TODAY_MMDD="$(date +'%m%d')"
 
-
-  # Put my homemade scripts and other miscellany here at the start of the classpath.
-  [[ -d "$HOME/bin" && ! "$PATH" =~ $HOME/bin ]] && export PATH="$HOME/bin:$PATH"
-
-  # Conditional echoes, used for debugging all over.
+  # conditional echoes, used for debugging all over
   vecho() { ((SH_VERBOSE)) && echo "$@"; return 0; }
   qecho() { ((! SH_QUIET)) && echo "$@"; return 0; }
   eecho() { >&2 echo "$@"; return 0; }  # to stderr
+
+  # echo command before executing it via eval
+  eeval() {
+    [[ -z "$1" ]] && return 1
+    echo ">\$ $*"
+    eval $*
+  }
+
+  # Add given path element to the beginning of the variable, unless already present.
+  prepend-path() {
+    local var=PATH
+    [[ -n "$2" ]] && var="$1" && shift
+    [[ ! "${!var}" =~ $1[:$] ]] && export $var="$1:${!var}"
+  }
 
   # List path variable's elements, one per line
   echo-path() {
@@ -107,7 +108,6 @@
     lower <<< "$*"
   }
 
-
   # Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
   join-lines() {
     local delim="${1:-, }" && shift
@@ -138,8 +138,18 @@
     date +"$format.${ms:0:$places}"
   }
 
+  # Put Ruby 3 in front of system's 2.6
+  # Put my homemade scripts and other miscellany here at the start of the classpath.
+  .tick_bru 'adding ruby/bin, ~/bin and ~ to PATH'
+  prepend-path PATH "/usr/local/opt/gnu-tar/libexec/gnubin"
+  prepend-path PATH "/usr/local/opt/ruby/bin"
+  prepend-path PATH "$HOME/bin"
+  prepend-path PATH "$HOME"
+
 
   alias .reload-bashrc-user='. $HOME/.bashrc.$USER'
   alias .rlbru='.reload-bashrc-user'
+
+  # .tickeval_bru 'printf -- "FINISH PID,PPID=[%s]\n" "$PID_PPID_BRU"'
 }
-.bashrc.USER "$@"
+.bashrc_USER "$@" && unset -f .bashrc_USER

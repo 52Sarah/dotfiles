@@ -1,6 +1,7 @@
 [alias]
 
   a = add --verbose
+  alias = !git config --get-regexp "^alias\\."  | awk "{print $1}"
 
   # -C - detect moved or copied lines, even from other files in the same commit
   # -w - ignore whitespace
@@ -69,7 +70,8 @@
   dds = diff --dirstat
   ddsc = diff --dirstat --compact-summary
 
-  f = fetch --progress
+  f = fetch --progress --verbose
+  ft = f --tags
 
 # LOG/PRETTY FORMAT FIELDS
 # %h  - abbrev hash
@@ -203,7 +205,7 @@
   verbose = true
 
 [core]
-  abbrev = 6
+  abbrev = 7
   #! commentChar = #
   editor = subl
   excludesFile = ~/.gitignore
@@ -316,3 +318,8 @@
 
 [include]
   path = .gitconfig__colors
+[filter "lfs"]
+	required = true
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process

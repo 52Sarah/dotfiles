@@ -303,12 +303,14 @@ fi
       local dirs="$*"
       [[ -z "$dirs" ]] && dirs="$(find . -depth 1 -type d)"
 
+      local f1=1
       for d in $dirs; do
+        ((f1)) && f1= || printf '\n'
         [[ ! -e "$d" ]] && eecho "g-pullr: folder does not exist; aborting" && return 1
         [[ ! -e "$d/.git" ]] && eecho "g-pullr: folder is not a git repo; bypassing $d" && continue
         cd "$d"
-        printf '-- %s\t%s\n' "$d" "$(git branch --show-current)"
-        git pull --ff-only --progress
+        printf '== %s %s\n' "$d" "$(git branch --show-current)"
+        git pull --ff-only
         cd ..
       done
     }

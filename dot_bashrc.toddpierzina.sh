@@ -19,6 +19,9 @@ else
   .tickeval_bru() { :; }
 fi
 
+# Welcome to Todd's ugly system of semi-global shell variables. These hopefully
+# facilitate increased verbosity when troubleshooting without changing the scriopt.
+# The hits include SH_QUIET, SH_VERBOSE, SH_WHATIF (if set then weval only echoes).
 .bashrc_USER() {
 
   # reduce the number of "start" messages
@@ -35,11 +38,27 @@ fi
   qecho() { ((! SH_QUIET)) && echo "$@"; return 0; }
   eecho() { >&2 echo "$@"; return 0; }  # to stderr
 
+  # conditional printfs, used for debugging all over
+  vprintf() { ((SH_VERBOSE)) && printf "$@"; return 0; }
+  qprintf() { ((! SH_QUIET)) && printf "$@"; return 0; }
+  eprintf() { >&2 printf "$@"; return 0; }  # to stderr
+
   # echo command before executing it via eval
   eeval() {
-    [[ -z "$1" ]] && return 1
+    [[ -z "$1" ]] && eecho 'usage: eeval expr' && return 1
     echo ">\$ $*"
     eval $*
+  }
+  qeval() { qecho ">\$ $@"; eval $*; }
+  # echo expr but don't evaluate it if SH_WHATIF is 1
+  weval() {
+    [[ -z "$1" ]] && eecho 'usage: [SH_WHATIF=1] weval expr' && return 1
+    if ((SH_WHATIF)); then
+      printf "[what-if:on] >\$ $*\n"
+    else
+      printf ">\$ $*\n"
+      eval $*
+    fi
   }
 
   # Add given path element to the beginning of the variable, unless already present.

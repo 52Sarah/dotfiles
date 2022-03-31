@@ -1,0 +1,2 @@
+NAMESPACE             NAME            READY                                 STATUS          RESTARTS                                  STARTED             IP
+.metadata.namespace   .metadata.name  .status.containerStatuses[0].ready   .status.phase   .status.containerStatuses[0].restartCount  .status.startTime   .status.podIP

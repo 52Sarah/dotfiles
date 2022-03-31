@@ -5,11 +5,11 @@
 # *.[oa]
 # *~
 
+*-pit.sql
+
 .log/*
 
 **/*-localer*.yml
-
-local/dco.sh
 local/*.override.*
-local/oas/mock-metadata-localer-oas.yaml
 
+*.sublime-*

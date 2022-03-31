@@ -275,31 +275,31 @@ is_video_file() { [[ "$1" =~ ^.+\.(mov|MOV|avi|AVI|m4v|M4V|mp4|MP4)$ ]]; }
 
 
 # Perform the prefixed command only on the newest file(s) in the given folder (or PWD).
-llnew() {
+ll-new() {
     local lines="10"
     [[ "$1" =~ "^-n" ]] && local lines="$2" && shift 2
     ls -ohtr "$@" | tail -n "$lines"
 }
-catnew() {
+cat-new() {
     local d="${1:-$PWD}"
     local f="$d/$(ls -1tr "$d" | tail -n 1)"
     iecho "cat $f ..."
     cat "$f"
 }
-cdnew() {
+cd-new() {
     local d="${1:-$PWD}"
     local f="$d/$(ls -1trF "$d" | grep -E '/$' | tail -n 1)"
     iecho "cd $f ..."
     cd "$f" || return 1
 }
-headnew() {
+head-new() {
     local d="${1:-$PWD}"; shift
     local lines="${1:-10}"; shift
     local f="$d/$(ls -1tr "$d" | tail -n 1)"
     iecho "head $f ..."
     head -n "$lines" "$f"
 }
-opennew() {
+open-new() {
     local d="${1:-$PWD}"
     local f="$d/$(ls -1tr "$d" | tail -n 1)"
     iecho "open $f ..."
@@ -308,7 +308,7 @@ opennew() {
 }
 
 # Change directory to the given link's target, either the file's parent or the directory itself.
-cdln() {
+cd-ln() {
     local link="$1"
     local target="$(readlink "$link")"
     if [[ -d "$target" ]]; then
@@ -320,7 +320,7 @@ cdln() {
 }
 
 # If any listed file is a symlink, operate on its target
-cpln() {
+cp-ln() {
     local opts=()
     while [[ -n "$1" ]]; do
         local opt="$1"
@@ -333,7 +333,7 @@ cpln() {
 }
 
 # If any listed file is a symlink, operate on its target
-mvln() {
+mv-ln() {
     local cmd
     while [[ -n "$1" ]]; do
         local opt="$1"
@@ -345,7 +345,7 @@ mvln() {
 }
 
 # Show directory of the given link's target, either the file's parent or the directory itself.
-lsln() {
+ls-ln() {
     [[ -z "$1" ]] && eecho "usage: lsln symlink [...]" && return 1
     local sw=()
     while [[ "$1" =~ ^- ]]; do
@@ -367,39 +367,57 @@ lsln() {
         iecho_and_eval "$c"
     done
 }
-llln() { lsln -ohtr "$@"; }
+ll-ln() { ls-ln -ohtr "$@"; }
 
 # Touch each symlink to match its target's modification date.
 # Usage: touchln [--quiet | --verbose] link1 [...]
-touchln() {
-    local count=0
-    for link in "$@"; do
-        [[ "$link" =~ ^-?-q(uiet)?$ ]] && SH_QUIET=1 && unset SH_VERBOSE && continue
-        [[ "$link" =~ ^-?-v(erbose)?$ ]] && SH_VERBOSE=1 && unset SH_QUIET && continue
-        [[ ! -e "$link" ]] && eecho "touchln: ${link}: no such file" && return 1
-        [[ ! -L "$link" ]] && vecho "touchln: ${link}: not a symlink" && continue
-        local target="$(readlink "$link")"
-        [[ "$(file_modified_seconds "$link")" = "$(file_modified_seconds "$target")" ]] && vecho "touchln: $link: mtime already matches" && continue
-        touch -h "$link" -r "$target"
-        ((count++))
-        [[ -z "$SH_QUIET" ]] && ls -ohF -d "$link"
-    done
-    ((!count)) && return 1
-    vecho "touchln: updated $count links"
-}
-touchln_R() {
-    # shellcheck disable=SC2206  # quote to avoid split
-    local dirs=($@)
-    (( ! ${#dirs[@]} )) && dirs+=("$PWD")
-    for dir in "${dirs[@]}"; do
-        for link in $(find "$dir" -type l | sort); do
-            touchln "$link"
-        done
-    done
+touch-ln() {
+    if [[ "$1" ~= -r|-R ]]; then
+      shift
+      local dirs=($@)
+      (( ! ${#dirs[@]} )) && dirs+=("$PWD")
+      for dir in "${dirs[@]}"; do
+          for link in $(find "$dir" -type l | sort); do
+              touchln "$link"
+          done
+      done
+    else
+      local count=0
+      for link in "$@"; do
+          [[ "$link" =~ ^-?-q(uiet)?$ ]] && SH_QUIET=1 && unset SH_VERBOSE && continue
+          [[ "$link" =~ ^-?-v(erbose)?$ ]] && SH_VERBOSE=1 && unset SH_QUIET && continue
+          [[ ! -e "$link" ]] && eecho "touchln: ${link}: no such file" && return 1
+          [[ ! -L "$link" ]] && vecho "touchln: ${link}: not a symlink" && continue
+          local target="$(readlink "$link")"
+          [[ "$(file_modified_seconds "$link")" = "$(file_modified_seconds "$target")" ]] && vecho "touchln: $link: mtime already matches" && continue
+          touch -h "$link" -r "$target"
+          ((count++))
+          [[ -z "$SH_QUIET" ]] && ls -ohF -d "$link"
+      done
+      ((!count)) && return 1
+      vecho "touchln: updated $count links"
+    fi
 }
 
-touchdir() {
-    [[ -z "$1" ]] && eecho "usage: touchdir dir [...]" && return 1
+touch-dir() {
+  [[ -z "$1" ]] && eecho "usage: touchdir [-R] dir [...]" && return 1
+  if [[ "$1" ~= -r|-R ]]; then
+    shift
+    local dirs=("$@")
+    [[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
+    for dir in "${dirs[@]}"; do
+        # local subdirs="$(find "$dir" -depth ! -type f)"
+        # vecho "touchdir_R: for $dir, found subdirs: $subdirs"
+        # for subdir in $subdirs; do
+        find "$dir" -depth ! -type f -print |\
+        while read -r subdir; do
+            # vecho "touchdir_R: calling touchdir for subdir='$subdir'"
+            touchdir "$subdir"
+        done
+        # vecho "touchdir_R: calling touchdir for dir='$dir'"
+        touchdir "$dir"
+    done
+  else
     local count=0 SH_QUIET="$SH_QUIET" SH_VERBOSE="$SH_VERBOSE"
     for dir in "$@"; do
         vecho "touchdir: dir='$dir'"
@@ -421,44 +439,28 @@ touchdir() {
     done
     ((!count)) && return 1
     vecho "INFO: touchdir: updated $count directories"
-}
-# shellcheck disable=SC2206,SC2086  # quote to avoid split
-touchdir_R() {
-    local dirs=("$@")
-    [[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
-    for dir in "${dirs[@]}"; do
-        # local subdirs="$(find "$dir" -depth ! -type f)"
-        # vecho "touchdir_R: for $dir, found subdirs: $subdirs"
-        # for subdir in $subdirs; do
-        find "$dir" -depth ! -type f -print |\
-        while read -r subdir; do
-            # vecho "touchdir_R: calling touchdir for subdir='$subdir'"
-            touchdir "$subdir"
-        done
-        # vecho "touchdir_R: calling touchdir for dir='$dir'"
-        touchdir "$dir"
-    done
+  fi
 }
 
 
 # find . -name $1, then echo the first result in sorted order
-find_1() {
-    local name="$1" && shift
-    local find_opts="$*"
-    [[ -z "$name" ]] && eecho "ERROR: Usage: find_1 name NAME" && return 1
+find-1() {
+  local name="$1" && shift
+  local find_opts="$*"
+  [[ -z "$name" ]] && eecho "ERROR: Usage: find-1 name NAME" && return 1
 
-    local c="find . -name '$name' ${find_opts} -print -quit | sort -s | head -n 1"
-#decho_vars name find_opts c
+  local c="find . -name '$name' ${find_opts} -print -quit | sort -s | head -n 1"
+  #decho_vars name find_opts c
 
-local path="$(eval "$c")"
-[[ -n "$path" && -e "$path" ]] && echo "$path" && return 0
+  local path="$(eval "$c")"
+  [[ -n "$path" && -e "$path" ]] && echo "$path" && return 0
 
-[[ -n "$path" ]] && eecho "find_1: $path: Invalid path, somehow"
-return 1
+  [[ -n "$path" ]] && eecho "find-1: $path: Invalid path, somehow"
+  return 1
 }
 
-cdf() {
-    local path="$(find_1 "$1" -type d)"
+cd-f() {
+    local path="$(find-1 "$1" -type d)"
     [[ -z "$path" ]] && eecho "cdf: $1: No such file or directory" && return 1
 
     vecho_and_eval "cd '$path'"
@@ -468,14 +470,14 @@ headf() {
     local lines=10
     [[ "$1" = "-n" ]] && lines=$2 && shift 2
 
-    local path="$(find_1 "$1" -type f)"
+    local path="$(find-1 "$1" -type f)"
     [[ -z "$path" ]] && eecho "headf: $1: No such file or directory" && return 1
 
     vecho_and_eval "head -n $lines '$path'"
 }
 
-catf() {
-    local path="$(find_1 "$1" -type f)"
+cat-f() {
+    local path="$(find-1 "$1" -type f)"
     [[ -z "$path" ]] && eecho "catf: $1: No such file" && return 1
 
     vecho_and_eval " cat '$path'"
@@ -485,7 +487,7 @@ catf() {
 # Delete 0-byte files. If $1 == -r recurse; else only check files directly in the target folders.
 # If no folders are specifed, default to PWD.
 # Usage: rm0 [-r] [dir...]
-rm0() {
+rm-0() {
     local maxdepth="-maxdepth 1"
     [[ "$1" =~ -[rR] ]] && maxdepth= && shift
 
@@ -499,17 +501,17 @@ rm0() {
 
 # Display selected info from a jar's manifest.
 # If --all is $1, show the entire manifest.
-jar_info() {
+jar-info() {
     if ! typeof_command "unzip"; then
-        eecho "jar_info: unzip is not installed"
+        eecho "jar-info: unzip is not installed"
         return 1
     fi
 
     [[ "$1" =~ --?a(ll)? ]] && local opt_all=1 && shift
 
     local jar_file="$1"
-    [[ -z "$jar_file" ]] && eecho "jar_info: missing jar_file operand" && return 1
-    [[ ! -e "$jar_file" ]] && eecho "jar_info: $jar_file: not found" && return 1
+    [[ -z "$jar_file" ]] && eecho "jar-info: missing jar_file operand" && return 1
+    [[ ! -e "$jar_file" ]] && eecho "jar-info: $jar_file: not found" && return 1
 
     if [[ -z "$opt_all" ]]; then
         unzip -c "$jar_file" "META-INF/MANIFEST.MF" | grep -E -i -e "build-jdk" -e "Implementation-(Title|Version)" -e "Bundle-(SymbolicName|Doc-URL)"
@@ -521,14 +523,14 @@ jar_info() {
 # Check each archive recursively from PWD for the given filename expression.
 # $1 - filename expression
 # $2 - archive type, default 'zip'
-zip_find() {
+zip-find() {
     if ! typeof_command "unzip"; then
-        eecho "zip_find: unzip is not installed"
+        eecho "zip-find: unzip is not installed"
         return 1
     fi
 
     local filename_expr="$1"; shift
-    [[ -z "$filename_expr" ]] && eecho "zip_find: missing filename_expr operand; usage: zip_find filename_expr [archive_type]" && return 1
+    [[ -z "$filename_expr" ]] && eecho "zip-find: missing filename_expr operand; usage: zip-find filename_expr [archive_type]" && return 1
 
     local archive_type="${1:-zip}"; shift
     [[ "${archive_type:0:1}" = "." ]] && archive_type="${archive_type:1}"
@@ -541,8 +543,8 @@ zip_find() {
     | \
     sort
 }
-jar_find() {
-    zip_find "$1" "jar"
+jar-find() {
+    zip-find "$1" "jar"
 }
 
 # Rename all files in a given directory, by substituting NEW_TEXT for OLD_TEXT;
@@ -578,7 +580,7 @@ xmv() {
 
 # Recursively report cksum values and sizes in tab-delimited form:
 #   path TAB size TAB cksum TAB mdate [TAB image_cdate TAB image_size]
-cksum_R() {
+cksum-R() {
     local dirs=("$@")
     [[ -z "$1" ]] && dirs=("$PWD")
     decho_vars dirs
@@ -614,7 +616,7 @@ cksum_R() {
 
 # Recursively list size in kb, modification date, and name, sorted by date ascending.
 # Usage: $0 [root [pattern]]
-lltr_R() {
+lltr-R() {
     local root="${1:-$PWD}"; shift
     local patt="$1"; shift
 
@@ -650,7 +652,7 @@ lltr_R() {
 #   -v, --verbose   enable verbose output (inherits and locally overrides SH_VERBOSE)
 #   -i, --include   glob of filenames to include (passed to 'find -name')
 #   -e, --exclude   glob of filenames to exclude (passed to '! find -name')
-countf() {
+count-f() {
     local SH_QUIET="$SH_QUIET"
     local SH_VERBOSE="$SH_VERBOSE"
 
@@ -658,7 +660,7 @@ countf() {
     local opt_includes opt_excludes
     while [[ -n "$1" ]]; do
         local opt="$1"
-        vecho "countf: opt: $opt"
+        vecho "count-f: opt: $opt"
         [[ "$opt" =~ ^-?-q(uiet)?$ ]] && SH_QUIET=1 && unset SH_VERBOSE && shift && continue
         [[ "$opt" =~ ^-?-v(erbose)?$ ]] && SH_VERBOSE=1 && unset SH_QUIET && shift && continue
         [[ "$opt" =~ ^-?-i(nclude)?$ ]] && opt_includes="$opt_includes -name '$2'" && shift 2 && continue
@@ -669,11 +671,11 @@ countf() {
     local directories=( "$@" )
     # shellcheck disable=SC2207  # quote command output into array
     [[ ${#directories} == 0 ]] && IFS="${CR}" directories=( $(ls -1Ad {.??,}*) )  # all files, including hidden files, except '..'
-    vecho "countf: directories: ${#directories}"
+    vecho "count-f: directories: ${#directories}"
 
     for dir in "${directories[@]}"; do
-        [[ ! -d "$dir" ]] && vecho "countf: ${dir}: not a directory" && continue
-        [[ -L "$dir" ]] && vecho "countf: ${dir}: symlink to directory not followed" && continue
+        [[ ! -d "$dir" ]] && vecho "count-f: ${dir}: not a directory" && continue
+        [[ -L "$dir" ]] && vecho "count-f: ${dir}: symlink to directory not followed" && continue
 
         for find_type in f d l; do
             local c="find '$dir' -mindepth 1 -type $find_type $opt_includes $opt_excludes"
@@ -690,17 +692,17 @@ countf() {
 }
 
 # Nice wrapper around du, showing nice size numbers but also sorting.
-# usage: sizef [dir ...]
-sizef() {
+# usage: size-f [dir ...]
+size-f() {
     local dirs
     [[ "$1" ]] && dirs=("$@") || dirs=(*)
     
-    local tmp="$TMPDIR/sizef.csv"
+    local tmp="$TMPDIR/size-f.csv"
     rm -f "$tmp"
     
     local IFS=$'\t'
     for dir in $(find . -maxdepth 1 -type d -exec printf '%s\t' '{}' \;); do
-        [[ ! -e "$dir" ]] && eecho "sizef: directory not found: $dir" && return 1
+        [[ ! -e "$dir" ]] && eecho "size-f: directory not found: $dir" && return 1
         local bytes=$(du -s "$dir" | awk '{print $1}')
         local nice_bytes="$(nice_byte_size $bytes)"
         printf '%12s\t%-8s\t%s\n' "$bytes" "$nice_bytes" "$dir" >> "$tmp"
@@ -715,49 +717,49 @@ sizef() {
 
 type realpath >& /dev/null || \
 realpath() {
-    while [[ "${1:0:1}" = "-" ]]; do
-        [[ "$1" = "-v" ]] && local VERBOSE=1 && shift && continue
-        [[ "$1" = "-t" ]] && local TILDE=1 && shift && continue
-    done
-    local target="${1:-$PWD}" && shift
-    [[ -n "$VERBOSE" ]] && echo "target = $target"
+  while [[ "${1:0:1}" = "-" ]]; do
+      [[ "$1" = "-v" ]] && local VERBOSE=1 && shift && continue
+      [[ "$1" = "-t" ]] && local TILDE=1 && shift && continue
+  done
+  local target="${1:-$PWD}" && shift
+  [[ -n "$VERBOSE" ]] && echo "target = $target"
 
-    [[ -L "$target" ]] && eecho "$(readlink "$target")" && return 0
+  [[ -L "$target" ]] && eecho "$(readlink "$target")" && return 0
 
-    local path="$(cd "$(dirname "$target")" || return 1; pwd)"
-    [[ -n "$VERBOSE" ]] && echo "path   = $path"
-    local lhs="$path/$(basename "$target")"
-    [[ -n "$VERBOSE" ]] && echo "lhs    = $lhs"
-    lhs="$(sed -E "s:/+:/:g" <<<"$lhs")"
-    [[ -n "$VERBOSE" ]] && echo "lhs    = $lhs"
-    local rhs=""
-    while true; do
-        [[ -n "$VERBOSE" ]] && echo "  ........"
-        [[ -n "$VERBOSE" ]] && echo "  lhs    = $lhs"
-        [[ -n "$VERBOSE" ]] && echo "  rhs    = $rhs"
+  local path="$(cd "$(dirname "$target")" || return 1; pwd)"
+  [[ -n "$VERBOSE" ]] && echo "path   = $path"
+  local lhs="$path/$(basename "$target")"
+  [[ -n "$VERBOSE" ]] && echo "lhs    = $lhs"
+  lhs="$(sed -E "s:/+:/:g" <<<"$lhs")"
+  [[ -n "$VERBOSE" ]] && echo "lhs    = $lhs"
+  local rhs=""
+  while true; do
+    [[ -n "$VERBOSE" ]] && echo "  ........"
+    [[ -n "$VERBOSE" ]] && echo "  lhs    = $lhs"
+    [[ -n "$VERBOSE" ]] && echo "  rhs    = $rhs"
 
-[[ -d "$lhs" ]] && lhs="$(cd "$lhs" || return 1; pwd)"  #normalize ., ..
-if [[ -L "$lhs" ]]; then
-    local ret="$(readlink "${lhs}")"
-    [[ -n "$rhs" ]] && ret+="/${rhs}"
-    [[ -n "$TILDE" ]] && ret="${ret/$HOME/\~}"
-    echo "$ret"
-    return 0
-fi
+    [[ -d "$lhs" ]] && lhs="$(cd "$lhs" || return 1; pwd)"  #normalize ., ..
+    if [[ -L "$lhs" ]]; then
+      local ret="$(readlink "${lhs}")"
+      [[ -n "$rhs" ]] && ret+="/${rhs}"
+      [[ -n "$TILDE" ]] && ret="${ret/$HOME/\~}"
+      echo "$ret"
+      return 0
+    fi
 
-local leaf="${lhs##*/}"  # ##*/ = after last /, or input if no /
-[[ -n "$VERBOSE" ]] && echo "  leaf   = $leaf"
-if [[ "$lhs" = "/" ]] || [[ "$lhs" = "$leaf" ]]; then
-    local ret="${lhs}/${rhs}" && [[ -z "$rhs" ]] && ret="${lhs}"
-    [[ -n "$TILDE" ]] && ret="${ret/$HOME/\~}"
-    echo "$ret"
-    return 0
-fi
+    local leaf="${lhs##*/}"  # ##*/ = after last /, or input if no /
+    [[ -n "$VERBOSE" ]] && echo "  leaf   = $leaf"
+    if [[ "$lhs" = "/" ]] || [[ "$lhs" = "$leaf" ]]; then
+      local ret="${lhs}/${rhs}" && [[ -z "$rhs" ]] && ret="${lhs}"
+      [[ -n "$TILDE" ]] && ret="${ret/$HOME/\~}"
+      echo "$ret"
+      return 0
+    fi
 
-lhs="${lhs%/*}"  # %/* = before last /
-[[ "$leaf" = "." ]] && continue
-[[ -n "$rhs" ]] && rhs="${leaf}/${rhs}" || rhs="${leaf}"
-done
+    lhs="${lhs%/*}"  # %/* = before last /
+    [[ "$leaf" = "." ]] && continue
+    [[ -n "$rhs" ]] && rhs="${leaf}/${rhs}" || rhs="${leaf}"
+  done
 }
 
 # Usage: xgrep [-d dir --no-log|-nl] pattern [--include|-i EXT1 [--include|-i EXT2] ...] [--exclude EXT1 [--exclude EXT2] ...]
@@ -879,17 +881,17 @@ EOF
 
 
 # Move file $1 to folder/file $2, then create symlink to it in its original place.
-mv_and_ln() {(
+mv-and-ln() {(
     set -o errexit
-    local USAGE="usage: mv_and_ln [--force] orig_file target_file"
+    local USAGE="usage: mv-and-ln [--force] orig_file target_file"
 
     local opt_force='-n'
     [[ "$1" =~ ^-?-f(orce)?$ ]] && opt_force='-f' && shift
 
     local orig_file="$1"; shift
     [[ -z "$orig_file" ]] && eecho "$USAGE" && return 1
-    [[ ! -e "$orig_file" ]] && eecho "mv_and_ln: no such file or directory: $orig_file" && return 1
-    [[ -L "$orig_file" ]] && eecho "mv_and_ln: orig_file cannot be a link: $orig_file" && return 1
+    [[ ! -e "$orig_file" ]] && eecho "mv-and-ln: no such file or directory: $orig_file" && return 1
+    [[ -L "$orig_file" ]] && eecho "mv-and-ln: orig_file cannot be a link: $orig_file" && return 1
 
     # If target is a directory, append the name of orig file to it since the ln command will expect the full path
     # (rather than implicitly creating a child file inside it).
@@ -898,7 +900,7 @@ mv_and_ln() {(
     if [[ -d "$target_file" ]]; then
         target_file="$target_file/$(basename "$orig_file")"
     fi
-    [[ "$opt_force" = '-n' && -e "$target_file" ]] && eecho "mv_and_ln: : $target_filetarget_file already exists" && return 1
+    [[ "$opt_force" = '-n' && -e "$target_file" ]] && eecho "mv-and-ln: : $target_filetarget_file already exists" && return 1
 
     decho "mv $opt_force -v \"$orig_file\" \"$target_file\""
     decho "ln -s -v \"$target_file\" \"$orig_file\""
@@ -910,9 +912,9 @@ mv_and_ln() {(
 
 # Usage 1: swap a link and its target file
 # Usage 2: move a target file to a new location, then create a link in its old location to the new
-swapln() {(
+swap-ln() {(
     set -o errexit
-    local USAGE="usage: swapln [--backup --quiet] link"$'\n'"       swapln --create [--force --backup --quiet] source target"
+    local USAGE="usage: swap-ln [--backup --quiet] link"$'\n'"       swap-ln --create [--force --backup --quiet] source target"
 
     local opt_create= opt_backup= opt_force= SH_QUIET=$SH_QUIET mv_f_switch= v_switch="-v"
     while [[ "$1" =~ ^--?.+$ ]]; do
@@ -933,17 +935,17 @@ swapln() {(
         # for SWAP, make sure only the link was specified, and it is an existing, valid symlink
         local link="$1" || true
         [[ "$target" ]] && eecho "$USAGE" && return 1
-        [[ ! -L "$link" ]] && eecho "swapln: $link: not a symlink" && return 1
-        [[ ! -e "$link" ]] && eecho "swapln: $link: not a valid symlink" && return 1
+        [[ ! -L "$link" ]] && eecho "swap-ln: $link: not a symlink" && return 1
+        [[ ! -e "$link" ]] && eecho "swap-ln: $link: not a valid symlink" && return 1
     else
         # for CREATE AND SWAP, make sure target was specified, source is an existing regular file or
         # directory, and target does not exist or it exists but --force was specified
         local source="$1" && shift || true
         local target="$1" && shift || true
         [[ ! "$target" ]] && eecho "$USAGE" && return 1
-        [[ -L "$source" ]] && eecho "swapln: $source: source file is a link" && return 1
-        [[ ! -e "$source" ]] && eecho "swapln: $source: no such file or directory" && return 1
-        [[ -e "$target" ]] && ((!opt_force)) && eecho "swapln: $target: target file exists (--force overwrites)" && return 1
+        [[ -L "$source" ]] && eecho "swap-ln: $source: source file is a link" && return 1
+        [[ ! -e "$source" ]] && eecho "swap-ln: $source: no such file or directory" && return 1
+        [[ -e "$target" ]] && ((!opt_force)) && eecho "swap-ln: $target: target file exists (--force overwrites)" && return 1
     fi
     
     if ((!opt_create)); then
@@ -969,8 +971,8 @@ swapln() {(
 )}
 
 # For each link in @$, echo OKAY or ERROR. If --quiet is specified, only show ERRORs.
-checkln() {
-    local USAGE="checkln [--recursive] [--quiet] [link ...]${CR}       default link is each link/dir in PWD"
+check-ln() {
+    local USAGE="check-ln [--recursive] [--quiet] [link ...]${CR}       default link is each link/dir in PWD"
     local maxdepth='-maxdepth 1' SH_QUIET=$SH_QUIET
     while [[ "$1" =~ ^--?.+$ ]]; do
         case "$1" in
@@ -998,7 +1000,7 @@ checkln() {
                 fi
             done
         elif [[ ! -e "$file" ]]; then
-            eecho "checkln: $file: file or directory does not exist" && return 1
+            eecho "check-ln: $file: file or directory does not exist" && return 1
         fi
     done
 }

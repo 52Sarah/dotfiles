@@ -167,6 +167,34 @@ fi
     chmod $opt_verbose +x "${files[@]}"
   }
 
+  # Tidy way to pgrep but (1) include header, (2) exclude the egrep itself.
+  # ps options:
+  #   -A  display all processes (same as -e)
+  #   -m  sort by mem usage (instead of pid)
+  #   -r  sort by cpu usage (instead of pid)
+  #   -o  specify output fields:
+  #         user -    username (18c wide so we cut it down to 12)
+  #         pid
+  #         ppid
+  #         start
+  #         time
+  #         %cpu
+  #         %mem
+  #         command - very long, so we limit line length to window size
+  ps-grep() {
+    line_width=$COLUMNS; ((line_width < 100)) && line_width=100
+    ps_cmd="ps -e -o user,pid,ppid,start,time,%cpu,%mem,command"
+    if [[ -n "$1" ]]; then
+      ps_cmd="$ps_cmd | egrep -e 'USER\s+PID\s+PPID'"
+      while [[ -n "$1" ]]; do
+        ps_cmd="$ps_cmd -e '$1'" && shift
+      done
+    fi
+    ps_cmd="$ps_cmd | cut -c 1-12,19-$line_width | egrep -v -e '$$ .+ egrep -e USER'"
+    eeval $ps_cmd
+  }
+  alias psg='ps-grep'
+
   # Print today's date in any format, defaulting to YYYYMMDD.
   today-formatted() {
     local opt_format="${1:-%Y%m%d}" && shift
@@ -218,15 +246,77 @@ fi
 
   # record lengths along with count of each length
   record-lengths() {
-    local files="$*"
-    [[ -n "$files" ]] && shift 1 || files=*
-
+    [[ -z "$1" ]] && >&2 echo "usage: record-lengths file [...]" && return 1
+    local files=$*
     for f in $files; do
-      printf '%s:\n' "$f"
-      printf '\t%s\n' "$(awk '{print length($0)}' "$f" | sort -n | uniq -c)"
+      printf "%s\n  %s\n" "$f" "$(awk '{print length($0)}' "$f" | sort -n | uniq -c)"
     done
   }
   alias recl='record-lengths'
+
+  fwf-less() {
+    local is_pipe=; [[ ! -t 0 ]] && is_pipe=1
+    vecho "is_pipe=$is_pipe"
+    
+    local delim='|'
+    if [[ "$1" =~ -d|--delim ]]; then
+      delim="$2"
+      shift 2
+    fi
+    
+    local fwf=; ((! is_pipe)) && fwf="$1" && shift
+    # [[ -z "$fwf" ]] && eecho "usage: fwf-less [-d delim] file [col-expr [...]" && return 1
+    ((! is_pipe)) && [[ ! -f "$fwf" ]] && eecho "fwf-less: $fwf: No such file" && return 1
+    local c='print ' first=1
+    while true; do
+      local cr=0
+      [[ "$1" = "CR" ]] && cr=1 && shift 1
+      [[ -z "$1" || -z "$2" ]] && break
+      local pos=$1 len=$2; shift 2
+      if ((first)); then
+        c="print substr(\$0, $pos, $len)"
+        first=0
+      elif ((cr)); then
+        c="$c \"\n\" substr(\$0, $pos, $len)"
+      else
+        c="$c \"$delim\" substr(\$0, $pos, $len)"
+      fi
+    done
+    ((is_pipe)) && awk "{$c}" || awk "{$c}" "$fwf"
+  }
+  alias fwf='fwf-less'
+  fwf-hcsc-med-accum() {
+    local delim="\t"
+    if [[ "$1" =~ -d|--delim ]]; then
+      delim="$2"
+      shift 2
+    fi
+    vecho "fwf-less -d "$delim" $*"
+    fwf-less -d "$delim" $* \
+      1 9  10 4  14 9  23 8  31 1  32 15  47 10  57 1  58 15  73 2  75 2 \
+      CR  77 8  85 8  93 1  94 1  95 64  159 2  161 3 164 3  167  16  183 12  195 12 \
+      CR  207 8  215 8  223 1  224 1  225 64  289 2  291 3  294 3  297 16  313 12  325 12 \
+      CR  337 8  345 8  353 1  354 1  355 64  419 2  421 3  424 3  427 16  443 12  455 12 \
+      CR  467 8  475 8  483 1  484 1  485 64  549 2  551 3  554 3  557 16  573 12  585 12 \
+      CR  597 8  605 8  613 1  614 1  615 64  679 2  681 3  684 3  687 16  703 12  715 12 \
+      CR  727 8  735 8  743 1  744 1  745 64  809 2  811 3  814 3  817 16  833 12  845 12 \
+      CR  857 8  865 8  873 1  874 1  875 64  939 2  941 3  944 3  947 16  963 12  975 12 \
+      CR  987 8  995 8  1003 1  1004 1  1005 64  1069 2  1071 3  1074 3  1077 16  1093 12  1105 12 \
+      CR  1117 8  1125 8  1133 1  1134 1  1135 64  1199 2  1201 3  1204 3  1207 16  1223 12  1235 12 \
+      CR  1247 8  1255 8  1263 1  1264 1  1265 64  1329 2  1331 3  1334 3  1337 16  1353 12  1365 12 \
+      CR  1377 8  1385 8  1393 1  1394 1  1395 64  1459 2  1461 3  1464 3  1467 16  1483 12  1495 12 \
+      CR  1507 8  1515 8  1523 1  1524 1  1525 64  1589 2  1591 3  1594 3  1597 16  1613 12  1625 12 \
+      CR  1637 8  1645 8  1653 1  1654 1  1655 64  1719 2  1721 3  1724 3  1727 16  1743 12  1755 12 \
+      CR  1767 8  1775 8  1783 1  1784 1  1785 64  1849 2  1851 3  1854 3  1857 16  1873 12  1885 12 \
+      CR  1897 8  1905 8  1913 1  1914 1  1915 64  1979 2  1981 3  1984 3  1987 16  2003 12  2015 12 \
+      CR  2027 8  2035 8  2043 1  2044 1  2045 64  2109 2  2111 3  2114 3  2117 16  2133 12  2145 12 \
+      CR  2157 8  2165 8  2173 1  2174 1  2175 64  2239 2  2241 3  2244 3  2247 16  2263 12  2275 12 \
+      CR  2287 8  2295 8  2303 1  2304 1  2305 64  2369 2  2371 3  2374 3  2377 16  2393 12  2405 12 \
+      CR  2417 8  2425 8  2433 1  2434 1  2435 64  2499 2  2501 3  2504 3  2507 16  2523 12  2535 12 \
+      CR  2547 8  2555 8  2563 1  2564 1  2565 64  2629 2  2631 3  2634 3  2637 16  2653 12  2665 12 \
+      CR  2677 8  2685 8  2693 1  2694 1  2695 64  2759 2  2761 3  2764 3  2767 16  2783 12  2795 12
+  }
+
 
   #
   ### PS1 COMMAND LINE PROMPT
@@ -546,16 +636,31 @@ fi
   vault-token-refresh() {
     vault login -method=ldap -no-print username=todd.pierzina password=$SECRET_OKTA_CRED && echo Vault token refreshed.
   }
-  #
-  #
-  k-gp--aq-status() {
-    local k_ns="${1:-prod}"; shift 1
-    eeval kubectl -n "$k_ns" get pods -L alt-name -L app -L version -l 'app=aq-status'
-    eeval kubectl -n "$k_ns" get pods -L alt-name -L app -L version -l 'app=aq-status-rest'
+  
+
+  # get $1 resources (pods/deployments/etc.) for $2 ns, $3 app, [$4 kubectl options/switches]
+  k-getres--ns-app() {
+    [[ -z "$6" ]] && eecho 'usage: k-getres--ns-app -r res -n ns -a app [kubectl_opts ...]' && return 0
+    local k_res k_ns k_app
+    
+    while [[ -n "$1" ]]; do
+      [[ "$1" = "-r" ]] && k_res="$2" && shift 2
+      [[ "$1" = "-n" ]] && k_ns="$2" && shift 2
+      [[ "$1" = "-a" ]] && k_app="$2" && shift 2
+    done
+    eeval kubectl -n $k_ns get $k_res -l "app=$k_app" -L 'alt-name,app,version' $*
   }
-  #
-  k-logs--app-ns() {
-    [[ -z "$1" ]] && eecho "k-logs--app: missing app; usage: k-logs--app app ns" && return 0
+  
+  # get aq-status-reset pods for $1 ns, [$2 kubectl options/switches]
+  k-getpods--aq-status-rest() {
+    [[ -z "$1" ]] && eecho 'usage: k-getpods--aq-status-rest ns [kubectl_opts ...]' && return 0
+    local k_ns="$1"; shift 1
+    eeval k-getres--ns-app -r 'pods' -n $k_ns -a 'aq-status-rest' $*
+  }
+  
+
+  k-logs--ns-app() {
+    [[ -z "$1" ]] && eecho "usage: k-logs--app app ns" && return 0
     local k_app="$1"; shift 1
     local k_ns="${1:-prod}"; shift 1
     eeval "kubectl -n $k_ns logs -l app=$k_app --tail -1" \
@@ -567,18 +672,18 @@ fi
   }
   k-logs--canal-sftp-out-rx-optum-accum() {
     local k_ns="${1:-prod}"; shift 1
-    eeval k-logs--app-ns "canal-sftp-out-rx-optum-accum" "$k_ns"
+    eeval k-logs--ns-app "canal-sftp-out-rx-optum-accum" "$k_ns"
   }
   k-logs--aq-status() {
     local k_ns="${1:-prod}"; shift 1
-    eeval k-logs--app-ns "aq-status" "$k_ns"
-    eeval k-logs--app-ns "aq-status-rest" "$k_ns"
+    eeval k-logs--ns-app "aq-status" "$k_ns"
+    eeval k-logs--ns-app "aq-status-rest" "$k_ns"
   }
   k-logs--is-deploy() {
     local k_ns="${1:-claims-pit}"; shift 1
     eeval kubectl -n "$k_ns" exec "intersystems-${k_ns}-0" -- tail -n 20 /data/deploy_logs/intersystems.log
   }
-  #
+  
   k-pf--aq-status-rest() {
     local k_ns="${1:-prod}"; shift 1
     local k_service='aq-status-rest'
@@ -595,37 +700,98 @@ fi
     local k_ns="${1:-prod}"; shift 1
     eeval kubectl -n $k_ns port-forward service/rabbitmq 15672:15672
   }
-  #
-  #
-  ssh-is-prod() {
-    eeval ssh_uswest2 intersystems.prod.cchh.local
+  
+  ssh-airflow-test1() {
+    eeval ssh_uswest2 172.31.19.25
   }
-  #
-  ssh-mq-prod() {
+  
+  ssh-is-prod() { eeval ssh_uswest2 intersystems.prod.cchh.local; }
+  ssh-is-preprod() { eeval ssh_uswest2 intersystems.preprod.cchh.local; }
+  ssh-is-pit() { eeval kubectl -n claims-pit exec -it -c intersystems intersystems-claims-pit-0 bash; }
+  
+  scp-from() {
+    [[ -z "$2" ]] && eecho "usage: scp-from remote_host remote_file_spec [local_path] [scp_switches ...]" && return 1
+    local remote_host="$1" && shift
+    local remote_file="$1" && shift
+    local local_path="${1:-.}" && shift
+    local scp_switches="$*"
+    eeval scp_uswest2 -p -r $scp_switches "$remote_host:$remote_file" "$local_path"
+  }
+  scp-from--is-preprod() {
+    [[ -z "$1" ]] && eecho "usage: scp-from--is-preprod remote_file_spec [local_path] [scp_switches ...]" && return 1
+    eeval scp-from intersystems.preprod.cchh.local $*
+  }
+  scp-from--ibmmq-prod() {
+    [[ -z "$1" ]] && eecho "usage: scp-from--ibmmq-prod remote_file_spec [local_path] [scp_switches ...]" && return 1
+    eeval scp-from root@192.168.1.1 $*
+  }
+
+  scp-to() {
+    [[ -z "$2" ]] && eecho "usage: scp-to remote_host [local_file_spec ...] [remote_path] [scp_switches ...]" && return 1
+    local remote_host="$1" && shift
+    local local_file="$1" && shift
+    local remote_path="${1:-.}" && shift
+    local scp_switches="$*"
+    eeval scp_uswest2 -p -r $scp_switches "$local_file" "$remote_host:$remote_path"
+  }
+  scp-to--is-preprod() {
+    [[ -z "$1" ]] && eecho "usage: scp-to--is-preprod local_file_spec [remote_path] [scp_switches ...]" && return 1
+    eeval scp-to intersystems.preprod.cchh.local $*
+  }
+
+  scp-to-airflow-test1() {
+    [[ -z "$2" ]] && eecho "usage: scp-to-airflow-test1 local_dir_or_name remote_file_spec" && return 1
+    local local_path="$1" && shift
+    [[ ! -e "$local_path" ]] && eecho "scp-to-airflow-test1: '$local_path': No such file or directory" && return 1
+    local remote_file="$1" && shift
+    # [[ ! "$remote_file" =~ ^/ ]] && remote_file="/opt/airflow/$remote_file"
+    eeval scp_uswest2 -p -r "$local_path" "172.31.19.25:$remote_file"
+  }
+  scp-sql-file-to-airflow-test1() {
+    [[ -z "$1" ]] && eecho "usage: scp-airflow-sql-file sql_file_name" && return 1
+    local local_path="$1" && shift
+    # scp-to-airflow-test1 "$local_path" "airflow@/opt/airflow/dags/cchh_dags/fileflow/claims_reports/sql_files/$(basename '$local_path')"
+    scp-to-airflow-test1 "$local_path" "$(basename "$local_path")"
+  }
+
+  ssh-ibmmq() {
     cat <<-EOF
 
 IBM MQ Runbook: https://github.com/collectivehealth/runbooks/tree/master/ibm-mq#connecting
 
 $ sudo su - mqm
 
-$ runmqsc PCCHH01
-(don't wait for a prompt, you won't get one...)
+$ runmqsc PCCHH01  # no prompt will appear
 
-dis ql(*) all   # Display queue details: DISPLAY QLOCAL(*|queue_nane) [ALL]
-dis chs(*) all  # Verify channels are running: DISPLAY CHSTATUS(*|channel_name) [ALL]
-dis qstatus(*)  # Display queue status: DISPLAY QSTATUS(*|queue_nane) [ALL]
-dis qstatus(*) where (curdepth gt 100)
+dis ql(*) all   # or qlocal
+dis chs(*) where (STATUS eq RUNNING)
+dis chs(*) where (STATUS ne RUNNING)
+dis chs(*) where (STATUS eq RUNNING) CHLTYPE BYTSRCVD BYTSSENT CHSTADA CHSTATI LSTMSGDA LSTMSGTI RQMNAME
+dis chs(INTERSYSTEMS.*) where (STATUS eq RUNNING) CHLTYPE BYTSRCVD BYTSSENT CHSTADA CHSTATI LSTMSGDA LSTMSGTI RQMNAME
+dis chs(CANAL.*) where (STATUS eq RUNNING) CHLTYPE BYTSRCVD BYTSSENT CHSTADA CHSTATI LSTMSGDA LSTMSGTI RQMNAME
 
-# sender channels 
+dis qstatus(*) where (CURDEPTH gt 100)
+dis qstatus(*) where (CURDEPTH gt 0)
+
 dis chs(CCHH.ESI.CDH)
 dis qstatus(CCHH.ESI.CDH.TQ)
 stop channel(CCHH.ESI.CDH)
 start channel(CCHH.ESI.CDH)
-stop channel(PCCHH01.TO.CVS.ZQM1)
 
-# receiver channels
-stop channel(ESI.CDH.CCHH)
+dis chs(PCCHH01.TO.CVS.ZQM1)
+dis qstatus(CCHH.CVS.TQ)
+stop channel(PCCHH01.TO.CVS.ZQM1)
+start channel(PCCHH01.TO.CVS.ZQM1)
+
+dis chs(CVS.ZQM1.TO.PCCHH01)
 stop channel(CVS.ZQM1.TO.PCCHH01)
+dis chs(CVS.ZQM1.TO.PCCHH01)
+start channel(CVS.ZQM1.TO.PCCHH01)
+
+dis chs(ESI.CDH.CCHH)
+stop channel(ESI.CDH.CCHH)
+dis chs(ESI.CDH.CCHH)
+start channel(ESI.CDH.CCHH)
 
 # bounce mq
 $ endmqm PCCHH01

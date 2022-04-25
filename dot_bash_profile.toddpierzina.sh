@@ -62,11 +62,15 @@ fi
   # -Sr sort by size, ascending
   #
   ll()   { ls -oghF "$@" | tilde-compress; }
+  llt() { ll -t "$@"; }
   lltr() { ll -tr "$@"; }
+  lls() { ll -S "$@"; }
   llsr() { ll -Sr "$@"; }
   #
   la()   { ll -A "$@"; }
+  lat() { la -t "$@"; }
   latr() { la -tr "$@"; }
+  las() { la -S "$@"; }
   lasr() { la -Sr "$@"; }
   #
   lld()  { ll -d "$@"; }
@@ -106,6 +110,28 @@ fi
 
   ### 'less' helperrs
   alias l='less'
+
+  ### 'mv' helpers
+  alias mvv='mv -v'
+
+  ### 'rm' helpers
+  alias rmv='rm -v'
+  #
+  # Delete the target of a symlink, then the symlink.
+  rmln() {
+    local cmd="rm"
+    while [[ "$1" =~ ^- ]]; do
+      cmd="$cmd $1" && shift
+    done
+  
+    local link="$1" && shift
+    [[ -z "$link" ]] && eecho "usage: rmln [rm opts] symlink" && return 1
+    [[ ! -L "$link" ]] && eecho "rmln: $link: no such symlink" && return 1
+  
+    local dest="$(readlink "$link")"
+    [[ ! -e "$dest" ]] && eecho "rmln: $link -> $dest: no such file or directory" && return 1
+    qeval "$cmd '$dest'" || return 1
+  }
 
   ### 'tail' helpers
   alias t='tail'

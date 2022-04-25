@@ -205,11 +205,14 @@ pyenv-brew-relink() {
 
 # -o show owner (-l includes group), -h human file sizes, -F suffix (/@)
 alias ll='ls -ohF'
+alias llt='ls -ohFt'
 alias lltr='ls -ohFtr'
+alias lls='ls -ohFS'
 alias llsr='ls -ohFSr'
 alias la='ls -AohF'
 alias lA='ls -aohF'
 alias latr='ls -AohFtr'
+alias lat='ls -AohFt'
 
 # Think "ll and la but narrower": cut out permissions, link count and owner
 lln() {

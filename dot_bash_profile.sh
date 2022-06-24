@@ -114,7 +114,7 @@ if [[ -e "$HOME/.git-prompt.sh" ]]; then
   . "$HOME/.git-prompt.sh"
   __echo "[.bash_profile] loaded git-prompt, PS1=$PS1"
 fi
-safe_source_script "$HOME/.git-completion.sh"
+safe-source_script "$HOME/.git-completion.sh"
 complete -p | grep -E -q 'git$' && __echo "[.bash_profile] loaded git cli completion"
 
 #
@@ -128,7 +128,7 @@ else
   else
     __echo "[.bash_profile] initializing jenv"
     eval "$(jenv init -)"
-    export PATH="$HOME/.jenv/bin:$PATH"
+    path-prepend "$HOME/.jenv/bin"
     __echo "[.bash_profile] initialized jenv, PATH=$PATH"
   fi
   __echo "[.bash_profile] setting JAVA_HOME from jenv"
@@ -139,7 +139,7 @@ __echo "[.bash_profile] using JAVA_HOME=$JAVA_HOME"
 #
 ### MAVEN
 #
-safe_source_script "/usr/local/etc/bash_completion.d/maven"
+safe-source_script "/usr/local/etc/bash_completion.d/maven"
 complete -p | grep -E -q 'mvn$' && __echo "[.bash_profile] loaded mvn cli completion"
 
 #
@@ -149,7 +149,7 @@ export POSTGRES_HOME="/usr/local/opt/postgresql@10"
 if [[ ! -e "$POSTGRES_HOME/bin/psql" ]]; then
   unset POSTGRES_HOME
 elif [[ ! "$PATH" =~ bin/psql ]]; then
-  export PATH="$POSTGRES_HOME/bin:$PATH"
+  path-prepend "$POSTGRES_HOME/bin"
   __echo "[.bash_profile] added Postgres to PATH, PATH=$PATH"
 fi
 __echo "[.bash_profile] using POSTGRES_HOME=$POSTGRES_HOME"
@@ -170,7 +170,7 @@ __echo "[.bash_profile] using Python version: $(python --version)"
 __echo "[.bash_profile] using pip version: $(pip --version)"
 
   # init the "toxx" helper functions which operate on multiple tox.ini files at a time.
-  safe_source_script "$HOME/bin/toxx.sh"
+  safe-source_script "$HOME/bin/toxx.sh"
 
   __echo "[.bash_profile] initializing pip completion"
   eval "$(python -m pip completion --bash)"
@@ -186,7 +186,7 @@ else
   else
     __echo "[.bash_profile] initializing pyenv"
     export PYENV_HOME="$HOME/.pyenv"
-    export PATH="$PYENV_HOME/bin:$PATH"
+    path-prepend "$PYENV_HOME/bin"
     eval "$(pyenv init -)"
     __echo "[.bash_profile] initialized pyenv, version: $(pyenv --version 2>/dev/null)"
   fi

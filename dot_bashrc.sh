@@ -517,10 +517,10 @@ tilde_home_compress_expand() {
 }
 
 # If $1 exists, source it; if not, exit quietly (with an optional verbose note)
-safe_source_script() {
-  [[ -z "$1" ]] && eecho "usage: safe_source_script script_file" && return 1
+safe-source_script() {
+  [[ -z "$1" ]] && eecho "usage: safe-source_script script_file" && return 1
   local script_file="$1" && shift
-  [[ ! -e "$script_file" ]] && vecho "safe_source_script: script file '$script_file' not found, skipping" && return 0
+  [[ ! -e "$script_file" ]] && vecho "safe-source_script: '$script_file': not found; skipping" && return 0
   . "$script_file"
 }
 

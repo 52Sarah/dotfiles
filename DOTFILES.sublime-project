@@ -1,7 +1,6 @@
-	{
+{
 	"settings":
 	{
-		"color_scheme": "Packages/User/color-schemes/Goldfish.tmTheme",
 		"follow_symlinks": true,
 
     // folder_exclude_patterns and file_exclude_patterns control which files
@@ -31,49 +30,15 @@
 			"path": "~/bin"
 		},
 		{
+			"name": "bash-git-prompt/share",
+			"path": "/usr/local/opt/bash-git-prompt/share"
+		},
+		{
 			"name": "~/ch-bash-profile",
 			"path": "~/ch-bash-profile",
 	    "file_exclude_patterns": [
 	    	".zprofile*", ".zshrc*",
 	    ],
-		},
-		{
-			"name": "bash-git-prompt/share",
-			"path": "/usr/local/opt/bash-git-prompt/share"
-		},
-		{
-			"name": "~",
-			"path": "~",
-			"folder_exclude_patterns": [
-				".android",
-        ".ansible",
-				".bash_sessions",
-				".config/iterm2",
-				".cups",
-        ".gem",
-        ".jenv/versions/*/*",
-        ".putty",
-        ".pyenv/shims",
-				".Trash",
-				"Applications",
-				"bin", "ch-bash-profile", "dotfiles",
-				"Desktop", "Documents", "Drive",
-				"Library",
-				"Movies", "Music",
-				"Pictures", "Public",
-        "virtualenvs/*/lib/*",
-			],
-			"file_exclude_patterns": [
-				".%*.png",
-				".bash_history",
-				".Box_*",
-				".CFUserTextEncoding",
-        ".jenv/versions/*/*",
-				".lesshst",
-				".viminfo",
-				".zsh*",
-        "virtualenvs/*/lib/*",
-			],
 		},
 	]
 }

@@ -252,7 +252,7 @@
   #! mailmap = true
 
 [mailmap]
-  file = /Users/toddpierzina/.mailmap
+  file = /Users/dad/.mailmap
 
 [merge]
   #! autoStash = false

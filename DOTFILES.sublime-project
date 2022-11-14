@@ -29,17 +29,10 @@
 			"name": "~/bin",
 			"path": "~/bin"
 		},
-		{
-			"name": "bash-git-prompt/share",
-			"path": "/usr/local/opt/bash-git-prompt/share"
-		},
-		{
-			"name": "~/ch-bash-profile",
-			"path": "~/ch-bash-profile",
-	    "file_exclude_patterns": [
-	    	".zprofile*", ".zshrc*",
-	    ],
-		},
+		// {
+		// 	"name": "bash-git-prompt/share",
+		// 	"path": "/usr/local/opt/bash-git-prompt/share"
+		// },
 	]
 }
 

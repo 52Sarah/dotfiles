@@ -1,0 +1,64 @@
+#
+### MAVEN
+#
+# "Maven List", describe the plugins, phases and goals for a given project or projects.
+# Created based on https://stackoverflow.com/a/35610377/529256
+#
+[[ -e "${MAVEN_HOME:-$HOME/.m2}/settings.xml" ]] &&\
+mvnl() {
+  local SH_QUIET=$SH_QUIET SH_VERBOSE=$SH_VERBOSE
+  local goal='list-phase' build_plan='clean,deploy' dirs= mvn_opts=
+
+  while [[ -n "$1" ]]; do
+    local opt="$1" && shift
+    case "$opt" in
+      -h|--help)
+        echo "Lists the goals of mvn project(s) by phase in a table"
+        echo
+        echo "Usage:"
+        echo "    mvnl [-v|--verbose | -q|--quiet]  -g|--goal goal  -b|--build_plan build_plan [mvn_opt ...] [dir ...]"
+        echo
+        echo "           --goal  The goal for the buildplan-maven-plugin (default: $goal)"
+        echo "                   (possible values: list, list-plugin, list-phase)"
+        echo
+        echo "     --build_plan  The value of the buildplan.tasks parameter (default: $build_plan)"
+        echo "                   (examples: 'clean,install', 'deploy', 'install', etc...) "
+        echo
+        echo "     [*directory]  The directories (with pom.xml files) to run the command in"
+        return 0;;
+      -v|--verbose)
+          SH_VERBOSE=1;;
+      -q|--quiet)
+          SH_QUIET=1;;
+      -b|--build_plan)
+          build_plan="$1" && shift
+          [[ -z "$build_plan" ]] && eecho "mvnl: -b|--build-plan requires a parameter, comma-separated tasks; e.g., 'clean,install', 'deploy', 'install'" && return 1
+          ;;
+      -g|--goal)
+          goal="$1" && shift
+          [[ -z "$goal" ]] && eecho "mvnl: -g|--goal requires a parameter, one of: [list, list-plugin, list-phase]" && return 1
+          ;;
+      -*)
+          [[ -z "$mvn_opts" ]] && mvn_opts="$opt" || mvn_opts="$mvn_opts $opt";;
+      *)
+          local dir="$opt"
+          [[ ! -d "$dir" ]] && eecho "mvnl: $dir: No such directory" && return 1
+          [[ ! -e "$dir/pom.xml" ]] && eecho "mvnl: $dir: No pom.xml found" && return 1
+          dir="$(tilde_compress "$dir")"
+          [[ -z "$dirs" ]] && dirs="'$dir'" || dirs="$dirs '$dir'"
+          ;;
+    esac
+  done
+
+  [[ -z "$dirs" ]] && dirs="$PWD"
+  vecho "goal='$goal', build_plan='$build_plan', dirs=[$dirs], mvn_opts=[$mvn_opts]"
+
+  for dir in $dirs; do
+    local mvn_cmd='mvn' && [[ -e "$dir/mvnw" ]] && mvn_cmd='./mvnw'
+    iecho "cd $dir"
+    pushd $dir > /dev/null
+    iecho "$mvn_cmd fr.jcgay.maven.plugins:buildplan-maven-plugin:$goal -Dbuildplan.tasks=$build_plan $mvn_opts"
+    $mvn_cmd fr.jcgay.maven.plugins:buildplan-maven-plugin:$goal -Dbuildplan.tasks=$build_plan $mvn_opts
+    popd > /dev/null
+  done
+}

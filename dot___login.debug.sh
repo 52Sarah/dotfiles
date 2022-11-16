@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # For debugging login files; this file should be included at the top of each.
-# The__echo function should be called only if debugging is enabled;
+# The __echo function should be called only if debugging is enabled;
 # it will echo its arguments and write to __login.log if one of the following is true:
 #   - the SH_DEBUG env var is already set
 #   - script is called with --debug as its $1
-#   - existence of ~/__login.debug file
+#   - existence of ~/.login.debug.enabled file
 #   - existence of ~/$script.debug file, where $script is ".profile", etc.
 
 __echo() {

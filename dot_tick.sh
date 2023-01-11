@@ -87,6 +87,6 @@ test-tick() {
   
 }
 
-alias .reload-tick='. ~/.tick.sh'  .rlt='.reload-tick'
+alias .reload-tick='. ~/.tick'  .rlt='.reload-tick'
 
 

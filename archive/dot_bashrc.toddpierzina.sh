@@ -8,7 +8,7 @@
 # For any shells invoked as 'sh', Bash reads the $ENV file (usually ~/.profile).
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-type -t .tick >&/dev/null || . ~/.tick.sh
+type -t .tick >&/dev/null || . ~/.tick
 .tick-bashrc() { .tick -s .bashrc $@; }
 # export TICK_STDERR= TICK_STDOUT= TICK_INDENT=
 
@@ -100,10 +100,10 @@ type -t .tick >&/dev/null || . ~/.tick.sh
   # -tr sort by time modified, old to new
   # -Sr sort by size, ascending
   #
-  l1()    { ls -1F "$@" | tilde_compress; }
+  l1()    { ls -1F "$@" | tilde-compress; }
   l1r()   { l1 -r "$@"; }
   #
-  ll()    { ls -oghF "$@" | tilde_compress; }
+  ll()    { ls -oghF "$@" | tilde-compress; }
   llt()   { ll -t "$@"; }
   lltr()  { ll -tr "$@"; }
   lls()   { ll -S "$@"; }
@@ -184,7 +184,7 @@ type -t .tick >&/dev/null || . ~/.tick.sh
   path-list() {
     ((! $#)) && echo-stderr 'usage: path-list PATHVAR [...]' && return 1
     local var=${1:-PATH}
-    split-lines ':' <<< "${!var}" | tilde_compress
+    split-lines ':' <<< "${!var}" | tilde-compress
   }
   alias pecho=path-list path-echo=path-list
 
@@ -193,10 +193,10 @@ type -t .tick >&/dev/null || . ~/.tick.sh
   # from: https://stackoverflow.com/a/30520299
   #
   # Compress '~' to value of $HOME, or vice versa.
-  tilde_compress() {
+  tilde-compress() {
     [[ ! -t 0 ]] && sed -E -e "s:\\$HOME:\\~:g" && return 0
-    [[ -z "$1" ]] && >&2 echo "usage: tilde_compress path [...], or ... | tilde_compress" && return 1
-    tilde_compress <<< "$@"
+    [[ -z "$1" ]] && >&2 echo "usage: tilde-compress path [...], or ... | tilde-compress" && return 1
+    tilde-compress <<< "$@"
   }
   tilde-expand() {
     [[ ! -t 0 ]] && sed -E -e "s:\\~:$HOME:g" && return 0

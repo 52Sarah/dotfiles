@@ -4,7 +4,7 @@
 # (or possible .bashrc).
 
 # Simple login file debugging.
-type -t .tick >& /dev/null || . ~/.tick.sh
+type -t .tick >& /dev/null || . ~/.tick
 if .do_tick ".bash_settings.$USER"; then
   .tick_bsu() { .tick ".bash_settings.$USER" $@; }
   .tickeval_bsu() { .tickeval ".bash_settings.$USER" $@; }

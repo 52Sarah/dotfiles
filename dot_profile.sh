@@ -8,7 +8,7 @@
 # For any shells invoked as 'sh', Bash reads the $ENV file (usually ~/.profile).
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-type -t .tick >&/dev/null || . ~/.tick.sh
+type -t .tick >&/dev/null || . ~/.tick
 .tick_profile() { .tick ".profile" "$@"; }
 # export TICK_STDERR= TICK_STDOUT= TICK_INDENT=
 

@@ -122,7 +122,7 @@ rfind(){ eval-quiet find -L -E . -regex $@; }
 l1()    { ls -1F $@; }
 l1r()   { l1 -r $@; }
 #
-ll()    { ls -oghF $@ | tilde-compress; }
+ll()    { ls -oghF $@; }
 llt()   { ll -t $@; }
 lltr()  { ll -tr $@; }
 lls()   { ll -S $@; }
@@ -203,25 +203,13 @@ path-prepend() {
 path-list() {
   ((! $#)) && echo-error 'usage: path-list PATHVAR [...]' && return 1
   local var=${1:-PATH}
-  split-lines ':' <<< "${!var}" | tilde-compress
+  split-lines ':' <<< "${!var}"
 }
 alias pecho=path-list path-echo=path-list
 
 
 # The following functions operate on stdin OR $@; [[ -t 0 ]] is true if stdin is a terminal
 # from: https://stackoverflow.com/a/30520299
-#
-# Compress '~' to value of $HOME, or vice versa.
-tilde-compress() {
-  [[ ! -t 0 ]] && sed -E -e "s:\\$HOME:\\~:g" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: tilde-compress path [...], or ... | tilde-compress" && return 1
-  tilde-compress <<< $@
-}
-tilde-expand() {
-  [[ ! -t 0 ]] && sed -E -e "s:\\~:$HOME:g" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: tilde-expand path [...], or ... | tilde-expand" && return 1
-  tilde-expand <<< $@
-}
 #
 trim() {
   [[ ! -t 0 ]] && sed -E -e 's/[[:space:]]*(.*)[[:space:]]*/\1/g' && return 0
@@ -288,15 +276,19 @@ datetime-epoch-ms() {
   )"
 }
 
+# Source given file(s). If a file does not exist, echo-quiet a warning and ignore.
+# Usage: safe-source [--quiet] file [...]
 safe-source() {
-  local opt_quiet=; [[ "$1" =~ ^(-q|--quiet) ]] && opt_quiet=1 && shift
-  local script_path="$1"; shift
-  [[ -z "$script_path" ]] && echo-error "usage: safe-source script" && return 1
-  if [[ ! -e "$script_path" ]]; then
-    ((! opt_quiet)) && echo-error "safe-source: $script_path: No such file"
-    return 1
-  fi
-  . "$script_path"
+  local SH_QUIET=$SH_QUIET; [[ "$1" =~ ^(-q|--quiet)$ ]] && SH_QUIET=1 && shift
+  [[ -z "$1" ]] && echo-error "usage: safe-source [--quiet] file [...]" && return 1
+  while [[ -n "$1" ]]; do
+    local script_path="$1"; shift
+    if [[ ! -e "$script_path" ]]; then
+      ((! SH_QUIET)) && echo-error "safe-source: $script_path: No such file"
+    else
+      eval-quiet . "$script_path"
+    fi
+  done
 }
 
 .tidy_system_path() {
@@ -454,14 +446,6 @@ tilde-home-compress-expand() {
     delim=' '
   done
   printf '\n'
-}
-
-# If $1 exists, source it; if not, exit quietly (with an optional verbose note)
-safe-source-script() {
-  [[ -z "$1" ]] && eecho "usage: safe-source-script script_file" && return 1
-  local script_file="$1" && shift
-  [[ ! -e "$script_file" ]] && vecho "safe-source-script: '$script_file': not found; skipping" && return 0
-  . "$script_file"
 }
 #
 ###

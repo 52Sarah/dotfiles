@@ -11,7 +11,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 
 
 #? # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-#? type -t .tick >&/dev/null || . ~/.tick.sh
+#? type -t .tick >&/dev/null || . ~/.tick
 #? .tick-bash-profile() { .tick -s ".bash_profile" "$@"; }
 #? .tick_bp() { .tick-bash-profile "$@"; }
 #? export TICK_STDERR= TICK_STDOUT= TICK_INDENT= TICK_LAST_MS=

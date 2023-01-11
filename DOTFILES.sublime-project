@@ -22,17 +22,8 @@
 	"folders":
 	[
 		{
-			"name": "~/dotfiles",
-			"path": "~/dotfiles"
+			"path": "."
 		},
-		{
-			"name": "~/bin",
-			"path": "~/bin"
-		},
-		// {
-		// 	"name": "bash-git-prompt/share",
-		// 	"path": "/usr/local/opt/bash-git-prompt/share"
-		// },
 	]
 }
 

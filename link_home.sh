@@ -14,13 +14,5 @@ link_home() {(
         hname="${hname%.sh*}"      # minus '.sh'
         ln -sf $SH_VERBOSE "$d" "$hname"
     done
-
-    # iCloud
-    for n in bin dotfiles; do
-        local link="$HOME/$n"
-        [[ -e "$link" && ! -L "$link" ]] && echo "link_homes: existing directory is not a link: $n" && return 1
-        vecho_and_eval "rm -f "$link""
-        vecho_and_eval "ln -s $SH_VERBOSE "$HOME/iCloud/$n" "$link""
-    done
 )}
 link_home "$@"

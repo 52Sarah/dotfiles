@@ -11,7 +11,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 
 
 #? # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-#? type -t .tick >&/dev/null || . ~/.tick.sh
+#? type -t .tick >&/dev/null || . ~/.tick
 #? .tick-bash-profile() { .tick -s ".bash_profile" "$@"; }
 #? .tick-bp() { .tick-bash-profile "$@"; }
 #? export TICK_STDERR= TICK_STDOUT= TICK_INDENT= TICK_LAST_MS=
@@ -246,7 +246,7 @@ fwf(){ fwf-nice $@; }
 #?  #
 #?  ### BASH COMPLETION
 #?  # Load completions other than the ones handled explicitly above.
-#?  safe_source_script /usr/local/etc/bash_completion.d/brew && .tick-bp 'loaded brew completion' || .tick-bp '!! failed to load brew completion'
+#?  safe-source -q /usr/local/etc/bash_completion.d/brew && .tick-bp 'loaded brew completion' || .tick-bp '!! failed to load brew completion'
 
 
 # # Used by profile badge to show pwd (lowercase) via user.tildePath variable.
@@ -347,6 +347,8 @@ fwf(){ fwf-nice $@; }
 .bash_profile_shopts
 
 
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
 
 #
 ###  GIT
@@ -358,7 +360,7 @@ fwf(){ fwf-nice $@; }
   .tick-bp "... using $(git --version)"
 
   .tick-bp "... checking for ~/.git-completion"
-  safe_source_script -q ~/.git-completion
+  safe-source -q ~/.git-completion
   complete -p | grep -E -q 'git$' && .tick-bp "... loaded git cli completion" || .tick-bp "... not using git completion"
 
   .tick-bp '... checking for git-flow'
@@ -366,7 +368,7 @@ fwf(){ fwf-nice $@; }
     # https://github.com/aleksandr-m/gitflow-maven-plugin
 
     .tick-bp "... checking for ~/.git-flow-completion"
-    safe_source_script -q ~/.git-flow-completion
+    safe-source -q ~/.git-flow-completion
     complete -p | grep -E -q 'git-flow$' && .tick-bp "... loaded git-flow cli completion" || .tick-bp "... not using git-flow completion"
 
     # Usage: gf-feature-start featureName [mvn_opts] [gitflow_opts]
@@ -447,9 +449,9 @@ fwf(){ fwf-nice $@; }
       local commit_sec="$(git show --pretty=format:%at --abbrev-commit "$rev" | head -n 1)"
       local commit_ts="$(date -r $commit_sec '+%Y%m%d%H%M.%S')"
       # IFS=`printf '\t\n\t'`
-      ((!SH_QUIET)) && printf 'before: ' && ls -oghF "$f" | tilde-compress
+      ((!SH_QUIET)) && printf 'before: ' && ls -oghF "$f"
       eval-quiet touch -h -t "$commit_ts" "$f"
-      ((!SH_QUIET)) && printf 'after:  ' && ls -oghF "$f" | tilde-compress
+      ((!SH_QUIET)) && printf 'after:  ' && ls -oghF "$f"
     done      
   }
 

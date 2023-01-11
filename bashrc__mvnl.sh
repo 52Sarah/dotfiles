@@ -44,7 +44,7 @@ mvnl() {
           local dir="$opt"
           [[ ! -d "$dir" ]] && eecho "mvnl: $dir: No such directory" && return 1
           [[ ! -e "$dir/pom.xml" ]] && eecho "mvnl: $dir: No pom.xml found" && return 1
-          dir="$(tilde_compress "$dir")"
+          dir="$(tilde-compress "$dir")"
           [[ -z "$dirs" ]] && dirs="'$dir'" || dirs="$dirs '$dir'"
           ;;
     esac

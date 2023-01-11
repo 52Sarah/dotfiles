@@ -365,8 +365,8 @@ ls-ln() {
             target="$(dirname "$target")"
         fi
         iecho
-        [[ "$target_file" ]] && iecho "$(tilde_compress "$target_file") => .. => $(tilde_compress "$target")"
-        local c="ls ${sw[*]} $(tilde_compress "$target")"
+        [[ "$target_file" ]] && iecho "$(tilde-compress "$target_file") => .. => $(tilde-compress "$target")"
+        local c="ls ${sw[*]} $(tilde-compress "$target")"
         iecho_and_eval "$c"
     done
 }
@@ -607,7 +607,7 @@ cksum-R() {
             decho_vars mdate image_cdate image_size
 
             cksum "$f" |\
-            awk -v FILE="$(tilde_compress "$f")" \
+            awk -v FILE="$(tilde-compress "$f")" \
                 -v MDATE="$mdate" \
                 -v IMAGE_CDATE="$image_cdate" \
                 -v IMAGE_SIZE="$image_size" \
@@ -1446,13 +1446,13 @@ alias .rlbp='.reload-bash-profile'
 # Source over-engineered shell variables and aliases.
 # Load over-engineered shell functions and aliases.
 if ls $HOME/.bash_profile__* >& /dev/null; then
-  __echo "[.bash_profile] sourcing files: $(tilde_compress $HOME/.bash_profile__*)"
+  __echo "[.bash_profile] sourcing files: $(tilde-compress $HOME/.bash_profile__*)"
   for dotpath in $HOME/.bash_profile__*; do
-  __echo "[.bash_profile] sourcing $(tilde_compress $dotpath)"
+  __echo "[.bash_profile] sourcing $(tilde-compress $dotpath)"
   . "$dotpath"
   done
 else
-  __echo "[.bash_profile] no $(tilde_compress $HOME)/.bash_profile__* files to parse"
+  __echo "[.bash_profile] no $(tilde-compress $HOME)/.bash_profile__* files to parse"
 fi
 
 

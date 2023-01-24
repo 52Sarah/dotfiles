@@ -4,26 +4,31 @@
 # Then it also echoes to stdout/stderr if TICK_STDOUT/TICK_STDERR is set.
 # Optional .tick options:
 #   --scriptname  used with '.tick' to determine whether this script's ticks should fire
-#                 (if omitted then ignore this check)
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
 #   --vars        log each variable given along with its value
 
-# Return true (0) if ~/.tick.enabled or .tick${sname}.enabled exists; e.g., .tick.bashrc.enabled
+# Return true (0) if any:
+# - $TICK_ENABLED
+# - ~/.tick.enabled
+# - ~/.tick${script_name}.enabled exists; e.g., .tick.bashrc.enabled
 .do-tick() {
+  [[ -e ~/.tick.disabled ]] && return 1
+  [[ -e ~/.tick${1}.disabled ]] && return 1
+  ((TICK_ENABLED)) && return 0
   [[ -e ~/.tick.enabled ]] && return 0
-  [[ -z "$1" ]] && return 1
-  [[ -e ~/.tick$1 ]]
+  [[ -e ~/.tick${1}.enabled ]] && return 0
+  return 1
 }
 
 .tick() {
-  local sname= opt_eval= opt_vars=
+  local script_name= opt_eval= opt_vars=
   while [[ "$1" =~ ^- ]]; do case "$1" in
-    -s|--script) sname="$2"; shift 2;;
+    -s|--script) script_name="$2"; shift 2;;
     -e|--eval) opt_eval=1; shift;;
     -v|--vars) opt_vars=1; shift;;
     *) >&2 echo ".tick: $1: invalid option" && return 1;;
   esac; done
-  .do-tick "$sname" || return 1
+  .do-tick "$script_name" || return 1
 
   local msg=
   if ((opt_eval)); then
@@ -34,59 +39,48 @@
     msg="$@"
   fi
 
-  # If delta is longer than 5 seconds, presume we've re-executed .tick via .bashrc, most likely
-  local epoch_ms=$(datetime-epoch-ms) delta=0
-  ((TICK_LAST_MS)) && delta=$((epoch_ms - TICK_LAST_MS))
-  ((delta > 5000)) && epoch_ms=
-  export TICK_LAST_MS=$epoch_ms
+  # If delta is 10+ seconds, presume we've re-executed .tick in a new train of thought
+  local datetime_ms="$(datetime-plus-ms 3 '%D %T')" epoch_ms="$(datetime-epoch-ms)" delta=0
+  if ((TICK__LAST_MS)); then
+    delta=$((epoch_ms - TICK__LAST_MS))
+    ((delta >= 10000)) && delta=0
+  fi
+  if ((! delta)); then
+    TICK__INDENT=0
+    printf "\n" >> ~/.tick.log
+  fi
+  export TICK__LAST_MS=$epoch_ms
 
   # unindent for [finish]
-  ((${#TICK_INDENT} >= 2)) && [[ "$msg" =~ ^\[(FINISH|finish).+ ]] && export TICK_INDENT="${TICK_INDENT:0:((${#TICK_INDENT}-2))}"
+  ((TICK__INDENT >= 2)) && [[ "$msg" =~ ^\[(finish|end|FINISH-FILE|END-FILE)\] ]] && ((TICK__INDENT -= 2))
 
-  printf '+%4d %s %12s %s%b\n' $delta "$(datetime-plus-ms 3 '%D %T')" "$sname" "$TICK_INDENT" "$msg" >> ~/.tick.log
-  # printf '%s %s %s%b\n' "$(date +'%D %T')" "$sname" "$TICK_INDENT" "$msg" >> ~/.tick.log
-  if ((TICK_STDOUT)) || ((TICK_STDERR)); then
-    # local tick_line=$(printf '.tick  %s %s %s%b\n' "$(datetime-plus-ms 3 '%T')" "$sname" "$TICK_INDENT" "$msg")
-    local tick_line="$(printf '+%4d %s %12s %s%b' $delta "$(datetime-plus-ms 3 '%D %T')" "$sname" "$TICK_INDENT" "$msg")"
-    ((TICK_STDOUT)) &&  echo "$tick_line"
-    ((TICK_STDERR)) && >&2 echo "$tick_line"
-  fi
+  local tick_line="$(printf "%s +%4d %-13s %${TICK__INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
+  echo "$tick_line" >> ~/.tick.log
+  ((TICK_STDOUT)) &&  echo "$tick_line"
+  ((TICK_STDERR)) && >&2 echo "$tick_line"
 
   # indent for [start]
-  [[ "$msg" =~ ^\[(START|start).+ ]] && export TICK_INDENT="$TICK_INDENT  "
+  [[ "$msg" =~ ^\[(start|START-FILE)\] ]] && ((TICK__INDENT += 2))
+
   return 0
 }
 
-  # usage: [ms places] [format]
+
+# usage: [ms places] [format]
 datetime-plus-ms() {
   local places="${1:-3}" && shift
   local format="${1:-%D %T}" && shift
-  local ms="$(perl - <<-'EOF'
-    use Time::HiRes qw(time);
-    my $t = time;
-    printf "%06d", ($t - int($t)) * 1000000;
-  EOF
-  )00000"
+  local ms="$(perl -e 'use Time::HiRes qw(time); my $t = time; printf "%06d", ($t - int($t)) * 1000000;')00000"
   date +"$format.${ms:0:$places}"
 }
 
 datetime-epoch-ms() {
-  echo "$(perl - <<-'EOF'
-    use Time::HiRes qw(time);
-    printf "%d", time * 1000;
-  EOF
-  )"
+  perl -e 'use Time::HiRes qw(time); printf "%d", time * 1000;'
 }
 
-.ticklog-tail()  { tail $@ ~/.tick.log; }
-.ticklog-less()  { less $@ ~/.tick.log; }
-.ticklog-rm()    { rm -v $@ ~/.tick.log; }
-alias .tt='.ticklog-tail'  .tl='.ticklog-less'  .tr='.ticklog-rm'
 
-test-tick() {
-  
-}
+.ticklog-tail()  { qeval tail $@ ~/.tick.log; }
+.ticklog-less()  { qeval less $@ ~/.tick.log; }
+.ticklog-rm()    { qeval rm -v $@ ~/.tick.log; }
 
-alias .reload-tick='. ~/.tick'  .rlt='.reload-tick'
-
-
+alias .reload-tick='qeval . ~/.tick.sh'

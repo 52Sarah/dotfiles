@@ -8,21 +8,15 @@
 # For any shells invoked as 'sh', Bash reads the $ENV file (usually ~/.profile).
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-type -t .tick >&/dev/null || . ~/.tick
-.tick_profile() { .tick ".profile" "$@"; }
-# export TICK_STDERR= TICK_STDOUT= TICK_INDENT=
+# TICK_x variables control its behavior; all default to false/0/off.
+# export TICK_ENABLED= TICK_STDERR= TICK_STDOUT=
+type -t .tick >&/dev/null || . ~/.tick.sh
 
-.tick_profile "[START-FILE ] ~/.profile (\$\$=$$, \$_=$_)"
-
-.profile_wrapper() {
-  .tick_profile "[start ] .profile_wrapper (\$\$=$$, \$PPID=$PPID, \$SHLVL=$SHLVL, \$-=$-, \$_=$_)"
-  
-  alias .reload-profile='. ~/.profile'
-  alias .rlp=.reload-profile
-
-  .tick_profile "[finish] .profile_wrapper (\$\$=$$, \$_=$_)"
-}
-.profile_wrapper
+.tick-profile() { .tick -s '.profile' "$@"; }
 
 
-.tick_profile "[FINISH-FILE] ~/.profile (\$\$=$$, \$_=$_)"
+.tick-profile "[START-FILE] (\$\$=[$$], \$_=[$_], \$PATH=[$PATH])"
+
+alias .reload-profile='qeval . ~/.profile'
+
+.tick-profile "[END-FILE  ] (\$\$=[$$], \$_=[$_], \$PATH=[$PATH])"

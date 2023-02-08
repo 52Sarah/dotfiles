@@ -7,16 +7,16 @@
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
 #   --vars        log each variable given along with its value
 
-# Return true (0) if any:
-# - $TICK_ENABLED
-# - ~/.tick.enabled
-# - ~/.tick${script_name}.enabled exists; e.g., .tick.bashrc.enabled
+# Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
 .do-tick() {
-  [[ -e ~/.tick.disabled ]] && return 1
-  [[ -e ~/.tick${1}.disabled ]] && return 1
-  ((TICK_ENABLED)) && return 0
-  [[ -e ~/.tick.enabled ]] && return 0
-  [[ -e ~/.tick${1}.enabled ]] && return 0
+  local scriptf="$1"
+  local scriptv="${1//./dot_}"
+  if [[ -n "$scriptv" ]]; then
+    [[ -n "$(echo $TICK_${scriptv}_DISABLED)" || -e ~/.tick${scriptf}.disabled ]] && return 1
+    [[ -n "$(echo $TICK_${scriptv}_ENABLED)" || -e ~/.tick${scriptvf}.enabled ]] && return 0
+  fi
+  [[ -n "$TICK_DISABLED" || -e ~/.tick.disabled ]] && return 1
+  [[ -n "$TICK_ENABLED" || -e ~/.tick.enabled ]] && return 0
   return 1
 }
 

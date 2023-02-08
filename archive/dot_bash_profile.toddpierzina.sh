@@ -572,9 +572,7 @@ fwf(){ fwf-nice $@; }
 
 
 alias .reload-shell='qeval exec $SHELL -l'
-alias .rs='.reload-shell'
 alias .reload-bash-profile='qeval . ~/.bash_profile'
-alias .rbp='.reload-bash-profile'
 
 # Make sure prompt show success first time thru
 ((1)) && eval "$PROMPT_COMMAND"

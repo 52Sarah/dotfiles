@@ -11,7 +11,8 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
 # TICK_x variables control its behavior; all default to false/0/off.
-# export TICK_ENABLED= TICK_STDERR= TICK_STDOUT=
+# export TICK_DISABLED= TICK_ENABLED=
+# export TICK_STDERR= TICK_STDOUT=
 export TICK__INDENT=
 . ~/.tick.sh
 .tick-bash-profile() { .tick -s '.bash_profile' "$@"; }
@@ -68,10 +69,11 @@ cd-ln() {
   [[ ! -e "$link" ]] && eecho "cd-ln: $link: no such symlink" && return 1
   [[ ! -L "$link" ]] && eecho "cd-ln: $link: not a symlink" && return 1
   local target="$(readlink "$link")"
+  veval cd "$link"
   if [[ -d "$target" ]]; then
-      qeval cd "$target"
+      veval cd "$target"
   else
-      qeval cd "$(dirname "$target")"
+      veval cd "$(dirname "$target")"
   fi
 }
 
@@ -91,48 +93,23 @@ chx() {
 }
 
 #
-### 'echo' helpers
-#
-# List all variables matching $1 (globbing *, etc.) and their values.
-echo-glob() {
-  [[ -z "$1" ]] && echo-error "usage: echo-glob patt [...]" && return 1
-  for patt in "$@"; do
-    [[ ! "$patt" =~ [*?]$ ]] && patt="${patt}*"
-    local IFS=' '; for var in $(eval echo $(printf "\${!%s}" "$patt")); do
-      printf "%s=%s\n" "$var" "${!var}"
-    done
-  done
-}
-gecho() { echo-glob "$@"; }
-#
-# Replace newlines, carriage-returns and tabs with \n, \r and \t.
-echo-unescape() {
-  if [[ ! -t 0 ]]; then
-    sed -E -n 'l;' \
-    | join-lines '\\n' \
-    | sed -E 's/\$(\\n)/\1/g; s/\$$//g;'
-    return 0;
-  fi
-  [[ -z "$1" ]] && eecho 'usage: echo-unescape text [...] or echo-unescape <<< text' && return 1
-  echo-unescape <<< $@
-}
-
-#
-### 'eval' helpers
-#
-# Always ECHO the given expression; but do not EVAL if SH_WHATIF is set.
-: ${EVAL_WHATIF_PREFIX:=#$}
-eval-whatif()   { ((SH_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" "$@" || eval-echo "$@"; }
-weval() { eval-whatif "$@"; }
-
-#
 ### 'find' helpers
 #
 # -L = follow symlinks
 # -E = use extended (modern) regexes
-alias nfind='qeval find -L . -name'
-alias pfind='qeval find -L . -path'
+# alias nfind='qeval find -L -E . -name'
+alias pfind='qeval find -L -E . -path'
 alias rfind='qeval find -L -E . -regex'
+nfind() {
+  local usage="usage: nfind [path ...] glob_pattern [find_expr ...]"
+  [[ -z "$1" ]] && eecho "$usage" && return 1
+  local paths=
+  while [[ -e "$1" ]]; do
+    paths="$paths $1"; shift
+  done
+  [[ -z "$paths" ]] && paths="."
+  qeval find -L -E $paths -name $@
+}
 
 #
 ### 'history' helpers
@@ -194,7 +171,7 @@ alias lltr='qeval ll -tr'
 alias lls='qeval ll -S'
 alias llsr='qeval ll -Sr'
 #
-alias la='ll -A'
+alias la='ls -AlhF'
 alias lat='qeval la -t'
 alias latr='qeval la -tr'
 alias las='qeval la -S'
@@ -333,61 +310,38 @@ touchd-R() {
   done
 }
 
-#
-### array/lines helpers
-#
-join-array() {
-    local delim="$1" && shift
-    local i_first=1
-    [[ -n "$SH_DEBUG" ]] && echo_vars delim i_first $@
-    for i in "$@"; do
-        [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
-        [[ -n "$i_first" ]] && printf "%s" "$i" && unset i_first || printf "%s%s" "$delim" "$i"
-    done
-    printf '\n'
-}
-#
-uniq-array() {
-    local i_first=1
-    [[ -n "$SH_DEBUG" ]] && eecho_vars delim i_first $@
-    local buff=
-    for i in "$@"; do
-        [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
-        if (( i_first )); then
-            buff="$i"
-            unset i_first
-        else
-            buff="$(printf '%s\n%s' "$buff" "$i")"
-        fi
-    done
-    echo "$buff" | sort -s | uniq
-}
-#
-# Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
-join-lines() {
-    delim="${1:-, }"
-    sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do [[ -n "$not1st" ]] && printf "%s" "$delim" || not1st=1; printf "%s" "$ln"; done; printf '\n'
-}
-# Split line(s) from stdin into separate lines, using $1 [,] as delimiter
-split-lines() {
-    local delim="${1:-,}"
-    sed -E -e "s/([^$delim]*)$delim([^$delim]*)/\\1"\\$'\n'"\\2/g"
-}
 
 #
-### path helpers
+# glob/symlink helpers
 #
-# List path variable's elements, 1 per line.
-path-list() {
-  local var=${1:-PATH}
-  split-lines ':' <<< "${!var}"
+glob-path-count() {
+    [[ -z "$1" ]] && eecho "usage: glob-path-count patt [...]" && return 1
+    ls -1d $@ 2> /dev/null | wc -l
 }
-alias path-echo='qeval path-list'
-alias pecho='qeval path-list'
+# Convenience version of [[ -e "file*" [&& ...] ]] since test won't take wildcards/globs.
+glob-path-exists() {
+    [[ -z "$1" ]] && eecho "usage: glob-path-exists patt" && return 1
+    ls -1d $1 >& /dev/null
+}
+# First matching path for given pattern
+glob-path-first() {
+    [[ -z "$1" ]] && eecho "usage: glob-path-first patt" && return 1
 
+    local save_clicolor_force=${CLICOLOR_FORCE}
+    unset CLICOLOR_FORCE
 
+    if local paths="$(ls -1d $1 2> /dev/null)"; then
+      head -n 1 <<< "$paths"
+      export CLICOLOR_FORCE=$save_clicolor_force
+      return 0
+    else
+      export CLICOLOR_FORCE=$save_clicolor_force
+      return 1
+    fi
+}
+#
 is-valid-symlink() {
-    [[ ! "$1" ]] && eecho "is_broken_link: missing argument" && return 1
+    [[ -z "$1" ]] && eecho "usage: is-valid-symlink file" && return 1
     [[ -L "$1" && -e "$1" ]] 
 }
 
@@ -457,8 +411,8 @@ fwf-nice() {
 #
 # Disabled since it doesn't play so well w git-prompt.
 #
-# iterm2_print_vars() {
-#   iterm2_set_var 'tildePath' "$(tilde-compress "$PWD" | lower)"
+# iterm_print_vars() {
+#   iterm_set_var 'tildePath' "$(tilde-compress "$PWD" | lower)"
 # }
 
 .bash_profile_sets() {
@@ -556,23 +510,57 @@ fwf-nice() {
 .setup-homebrew() {
   .tick-bash-profile '[start] .setup-homebrew'
   if ! type -t brew &>/dev/null; then
-    .tick-bash-profile "Homebrew not installed"
+    .tick-bash-profile "... homebrew not installed"
     return 0
   fi
+
+  ((SH_VERBOSE)) && printf "\$\$ .setup-homebrew: before 'brew shellenv':\n" && eeval path-list
   eval "$(brew shellenv 2>/dev/null)"
+  ((SH_VERBOSE)) && printf "\$\$ .setup-homebrew: after 'brew shellenv':\n" && eeval path-list
   if [[ -z "$HOMEBREW_PREFIX" ]]; then
-    .tick-bash-profile "Homebrew 'shellenv' did not set up env vars correctly"
+    .tick-bash-profile "... homebrew 'shellenv' did not set \$HOMEBREW_PREFIX"
     return 1
   fi
+  # Let path-prepend de-dupe the /usr/local/... paths.
+  path-prepend PATH /usr/local/sbin
+  path-prepend PATH /usr/local/bin
+  .tick-bash-profile "... \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
 
-  path-prepend PATH "/usr/local/sbin"
-
-  safe-source -q /usr/local/etc/bash_completion.d/brew && .tick-bash-profile 'loaded brew completion' || .tick-bash-profile '!! failed to load brew completion'
   alias bs='qeval brew services'
+  safe-source -q /usr/local/etc/bash_completion.d/brew && .tick-bash-profile '... loaded brew completion' || .tick-bash-profile '!!! failed to load brew completion'
 
-  .tick-bash-profile '[end] .setup-homebrew'
+  local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
+  if [[ -e "$gnu_getopt_home" ]]; then
+    path-prepend PATH "$gnu_getopt_home/bin"
+    .tick-bash-profile "... prepended gnu-getopt/bin to PATH"
+  fi
+
+  .tick-bash-profile "[end] .setup-homebrew, PATH=$PATH"
 }
 .setup-homebrew
+
+
+#
+###  ITERM window/tab titles
+#
+.setup-iterm() {
+  .tick-bash-profile '[start] .setup-iterm'
+  [[ "$TERM_PROGRAM" != "iTerm.app" ]] && .tick-bash-profile "... iTerm2 not installed" && return 1
+
+  # From https://superuser.com/a/344397/17666
+  # $1 = type; 0 - both, 1 - tab, 2 - window
+  set-terminal-text () {
+    [[ -z "$2" || ! "$1" =~ -b|-t|-w ]] && eecho "usage: set-terminal-text --both|--tab|--window text" && return 1
+    local mode=0
+    [[ "$1" =~ -t ]] && mode=1
+    [[ "$1" =~ -w ]] && mode=2
+    shift
+    echo -ne "\033]$mode;$@\007"
+  }
+
+  .tick-bash-profile "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
+}
+.setup-iterm
 
 
 #
@@ -719,11 +707,10 @@ fwf-nice() {
   else
     .tick-bash-profile '... initializing sdkman'
     . "$SDKMAN_DIR/bin/sdkman-init.sh"
-    path-prepend "$HOME/.sdkman/bin"
+    path-prepend "$SDKMAN_DIR/bin"
     .tick-bash-profile "... initialized sdkman"
   fi
-  # .tick-bash-profile -e 'echo "... using $(sdkman --version)"'
-  # .tick-bash-profile -e 'echo "... using java $(sdkman version)"'
+  # .tick-bash-profile -e 'echo "... using $(sdkman version)"'
   # .tick-bash-profile -e 'echo "... $ which javac: $(2>&1 which javac)"'
   # .tick-bash-profile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
   
@@ -735,7 +722,16 @@ fwf-nice() {
     .tick-bash-profile "sdkman non-directory JAVA_HOME/bin: $JAVA_HOME/bin"
   fi
 
-  .tick-bash-profile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME]"
+  sdk-set-java-home() {
+    [[ -z "$1" ]] && eecho "usage: sdk-set-java-home version_glob" && return 1
+    local version_glob="$1*"; shift
+    local java_cand_dir="$(glob-path-first $SDKMAN_DIR/candidates/java/$version_glob)"
+    echo "java_cand_dir=$java_cand_dir"
+    # qeval export JAVA_HOME="$(cd-ln "$java_cand_dir/bin"; cd "$(pwd -P)/.."; pwd)"
+    qeval export JAVA_HOME="$(cd "$java_cand_dir/bin"; cd "$(pwd -P)/.."; pwd)"
+  }
+
+  .tick-bash-profile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
 .setup-java-sdkman
 
@@ -746,7 +742,7 @@ fwf-nice() {
 if ! type -t sdk &>/dev/null; then
   .setup-java-jenv() {
     .tick-bash-profile '[start] .setup-java-jenv'
-    ! type -t jenv &>/dev/null && .tick-bash-profile "[end] jenv not installed" && return 0
+    ! type -t jenv &>/dev/null && .tick-bash-profile "[end] .setup-java-jenv, jenv not installed" && return 0
 
     if [[ "$(type -t jenv &>/dev/null)" == "function" ]]; then
       .tick-bash-profile 'jenv already initialized'
@@ -772,7 +768,7 @@ if ! type -t sdk &>/dev/null; then
       export JAVA_HOME="$javahome"
     fi
 
-    .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME]"
+    .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
   }
   .setup-java-jenv
 fi
@@ -781,17 +777,182 @@ fi
 #
 ### POSTGRESQL
 #
-path-prepend '/usr/local/opt/postgresql/bin'
-export HOMEBREW_POSTGRESQL_SERVICE="$(readlink /usr/local/opt/postgresql)"
-alias pg-restart='qeval brew services restart $HOMEBREW_POSTGRESQL_SERVICE'
-alias pg-start='qeval brew services start $HOMEBREW_POSTGRESQL_SERVICE'
-alias pg-stop='qeval brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
+.setup-pg() {
+  .tick-bash-profile '[start] .setup-pg'
+  export HOMEBREW_POSTGRESQL_SERVICE="$(readlink /usr/local/opt/postgresql)"
+  [[ ! -e "$HOMEBREW_POSTGRESQL_SERVICE" ]] && .tick-bash-profile '[end] .setup-pg, no /usr/local/opt/postgresql, pg not installed' && return 1
+  path-append '/usr/local/opt/postgresql/bin'
+  alias pg-restart='qeval brew services restart $HOMEBREW_POSTGRESQL_SERVICE'
+  alias pg-start='qeval brew services start $HOMEBREW_POSTGRESQL_SERVICE'
+  alias pg-stop='qeval brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
+  .tick-bash-profile '[end] .setup-pg, PATH=$PATH"'
+}
+.setup-pg
+
+
+#
+### VIRTUAL BOX general helpers
+#
+.setup-vbox() {
+  ! type -t VBoxManage &>/dev/null && .tick-bash-profile '[end] .setup-vbox, VirtualBox not installed' && return 1
+
+  export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
+
+  alias vb='qeval VBoxManage'
+  alias vb-ls='qeval VBoxManage list'
+  #
+  vb-status() {
+    printf '\n'
+    qeval "vb-ls --long --sorted vms | egrep '^(Name|State|UUID):\s{2,}'" \
+      | sed -E -e 's/^(State:.+\))/\1\n/'
+    
+    qeval "vb-ls runningvms"
+    printf '\n'
+    
+    qeval "vb-ls hostonlynets" \
+      | egrep '.+'
+    printf '\n'
+  }
+
+  # Lookup full vm name given a pattern; if not found, return pattern with error status.
+  vb-vm-name() {
+    [[ -z "$1" ]] && eecho "usage: vb-vm-name patt" && return 1
+    local patt="$1" && shift
+    local save_clicolor_force=${CLICOLOR_FORCE}
+    unset CLICOLOR_FORCE
+    if ls -1A "$VBOX_VMS_HOME/" | egrep -i "$patt"; then
+      export CLICOLOR_FORCE=$save_clicolor_force
+      return 0
+    else
+       echo "$patt"
+       export CLICOLOR_FORCE=$save_clicolor_force
+       return 1
+    fi
+  }
+
+  vb-start() {
+    [[ -z "$1" ]] && eecho "usage: vb-start vm_name [startvm options]" && return 1
+    local vm_name="$1" && shift
+    qeval VBoxManage startvm \"$vm_name\" $@
+  }
+  vb-controlvm() {
+    [[ -z "$2" ]] && eecho "usage: vb-controlvm vm_name_patt cmd [controlvm cmd options]" && return 1
+    local vm_name_patt="$1" && shift
+    local cmd="$1" && shift
+    qeval VBoxManage controlvm \"$(vb-vm-name $vm_name_patt)\" $cmd $@
+  }
+  vb-reboot() {
+    [[ -z "$1" ]] && eecho "usage: vb-reboot vm_name" && return 1
+    local vm_name_patt="$1" && shift
+    vb-controlvm "$(vb-vm-name $vm_name_patt)" reboot $@
+  }
+  vb-shutdown() {
+    [[ -z "$1" ]] && eecho "usage: vb-shutdown vm_name_patt [--force]" && return 1
+    local vm_name_patt="$1" && shift
+    vb-controlvm "$(vb-vm-name $vm_name_patt)" shutdown $@
+  }
+  vb-poweroff() {
+    [[ -z "$1" ]] && eecho "usage: vb-poweroff vm_name_patt [--type=gui|headless|..., other startvm options]" && return 1
+    local vm_name_patt="$1" && shift
+    vb-controlvm "$(vb-vm-name $vm_name_patt)" poweroff $@
+  }
+
+  vb-tail() {
+    [[ -z "$1" ]] && eecho "usage: vb-tail vm_name_patt [-f or other tail options]" && return 1
+    local vm_name_patt="$1" && shift
+    qeval tail $@ '"$VBOX_VMS_HOME/$(vb-vm-name $vm_name_patt)/Logs/VBox.log"'
+  }
+}
+.setup-vbox
+
+
+#
+### MAPR (client)
+#
+.setup-mapr() {
+  .tick-bash-profile '[start] .setup-mapr'
+  [[ ! -e "/opt/mapr" ]] && .tick-bash-profile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
+
+  export MAPR_HOME="/opt/mapr"
+  path-append PATH "$MAPR_HOME/bin"
+
+  .tick-bash-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
+}
+.setup-mapr
+
+
+#
+### HADOOP (client & server, not embedded in MapR)
+#
+.setup-hadoop() {
+  .tick-bash-profile '[start] .setup-hadoop'
+  [[ ! -e "/opt/hadoop" ]] && .tick-bash-profile '[end] .setup-hadoop, no such directory: /opt/mapr' && return 1
+
+  export HADOOP_HOME="/opt/hadoop"
+  path-prepend PATH "$HADOOP_HOME/sbin"
+  path-prepend PATH "$HADOOP_HOME/bin"
+
+  export HADOOP_LIBEXEC_DIR="$HADOOP_HOME/libexec"
+  export HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop"
+  export HADOOP_LOG_DIR="/var/log/hadoop"
+
+  .tick-bash-profile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
+}
+.setup-hadoop
 
 
 #
 ### GRADLE/GRADLEW
 #
 alias gw='qeval ./gradlew'
+#
+# -a, --no-rebuild                   Do not rebuild project dependencies.
+# --build-cache                      Enables the Gradle build cache. Gradle will try to reuse outputs from previous builds.
+# --configure-on-demand              Configure necessary projects only. Gradle will attempt to reduce configuration time for large multi-project builds. [incubating]
+# --continue                         Continue task execution after a task failure.
+# -D, --system-prop                  Set system property of the JVM (e.g. -Dmyprop=myvalue).
+# -d, --debug                        Log in debug mode (includes normal stacktrace).
+# --daemon                           Uses the Gradle daemon to run the build. Starts the daemon if not running.
+# -I, --init-script                  Specify an initialization script.
+# -i, --info                         Set log level to info.
+# -m, --dry-run                      Run the builds with all task actions disabled.
+# --no-build-cache                   Disables the Gradle build cache.
+# --no-configure-on-demand           Disables the use of configuration on demand. [incubating]
+# --no-daemon                        Do not use the Gradle daemon to run the build. Useful occasionally if you have configured Gradle to always run with the daemon by default.
+# --no-parallel                      Disables parallel execution to build projects.
+# --no-scan                          Disables the creation of a build scan. For more information about build scans, please visit https://gradle.com/build-scans.
+# --no-watch-fs                      Disables watching the file system.
+# --offline                          Execute the build without accessing network resources.
+# -P, --project-prop                 Set project property for the build script (e.g. -Pmyprop=myvalue).
+# -p, --project-dir                  Specifies the start directory for Gradle. Defaults to current directory.
+# -q, --quiet                        Log errors only.
+# --refresh-dependencies             Refresh the state of dependencies.
+# --rerun-tasks                      Ignore previously cached task results.
+# -s, --stacktrace                   Print out the stacktrace for all exceptions.
+# --status                           Shows status of running and recently stopped Gradle daemon(s).
+# --stop                             Stops the Gradle daemon if it is running.
+# -w, --warn                         Set log level to warn.
+# --warning-mode                     Specifies which mode of warnings to generate. Values are 'all', 'fail', 'summary'(default) or 'none'
+# --watch-fs                         Enables watching the file system for changes, allowing data about the file system to be re-used for the next build.
+# --write-locks                      Persists dependency resolution for locked configurations, ignoring existing locking information if it exists
+# -x, --exclude-task                 Specify a task to be excluded from execution.
+gw-task() {
+  local USAGE='Usage: gw-task [wrapper_opt... --] task [opt...]'
+  local wrapper_opts= task_opts=
+  while [[ -n "$1" ]]; do
+    case "$1" in
+      --) shift 1; task_opts="$@"; break;;
+       *) wrapper_opts="$wrapper_opts $1"; shift 1
+    esac
+  done
+  qeval gw $wrapper_opts $task_opts
+}
+# gw-task() {
+#   local USAGE='Usage: gw-task [-w wrapper_option... --] task [args...]'
+#   local wrapper_opts=
+#   [[ "$1" == "-w" ]] && wrapper_opts="$2" && shift 2
+#   qeval gw $wrapper_opts $@
+# }
 
 #
 ### PS1 COMMAND LINE PROMPT
@@ -802,58 +963,72 @@ alias gw='qeval ./gradlew'
 # __git_ps1 shows the current git branch, if any, and is configured below
 # - \u = user, \h = hostname, \w = working dir
 #
-.setup-ps1() {
-  .tick-bash-profile "[start] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"  #  PS1=[\h:\W \u\[\]\$\[\] ]
-  [[ -z "$PS1" ]] && .tick-bash-profile '[end] .setup-ps1: non-interactive shell' && return 0
+# .setup-ps1() {
+#   .tick-bash-profile "[start] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"  #  PS1=[\h:\W \u\[\]\$\[\] ]
+#   [[ -z "$PS1" ]] && .tick-bash-profile '[end] .setup-ps1: non-interactive shell' && return 0
 
-  export PROMPT_COMMAND='.ps1-set-last-command-state;_prompt_command'
+#   export PROMPT_COMMAND='.ps1-set-last-command-state;_prompt_command'
 
-  # Hijack git prompt's saved status from prior command
-  .ps1-set-last-command-state() {
-    export GIT_PROMPT_LAST_COMMAND_STATE=$?
-  }
+#   # Hijack git prompt's saved status from prior command
+#   .ps1-set-last-command-state() {
+#     export GIT_PROMPT_LAST_COMMAND_STATE=$?
+#   }
 
-  _prompt_command() {
-    # .tick-bash-profile "[start] _prompt_command: on entry, PROMPT_COMMAND=[$PROMPT_COMMAND], \$\?=$GIT_PROMPT_LAST_COMMAND_STATE, PS1=[$PS1]"
+#   _prompt_command() {
+#     # .tick-bash-profile "[start] _prompt_command: on entry, PROMPT_COMMAND=[$PROMPT_COMMAND], \$\?=$GIT_PROMPT_LAST_COMMAND_STATE, PS1=[$PS1]"
 
-    history -a 
+#     history -a 
 
-    local ps1_suffix='$'; ((GIT_PROMPT_LAST_COMMAND_STATE>0)) && ps1_suffix='!$'
+#     local ps1_suffix='$'; ((GIT_PROMPT_LAST_COMMAND_STATE>0)) && ps1_suffix='!$'
 
-    # if type -t kube_ps1 &>/dev/null && [[ "$KUBE_PS1_ENABLED" = on ]]; then
-    #   _kube_ps1_update_cache
-    #   local k_ps1_text="$(kube_ps1)"
-    #   local len_k_ps1_text=${#k_ps1_text}
-    #   ((len_k_ps1_text>0)) && k_ps1_text="$k_ps1_text\\n"
-    #   # .tick-bash-profile "... k_ps1_text=[$k_ps1_text], len(k_ps1_text)=[$len_k_ps1_text]"
-    # fi
+#     # if type -t kube_ps1 &>/dev/null && [[ "$KUBE_PS1_ENABLED" = on ]]; then
+#     #   _kube_ps1_update_cache
+#     #   local k_ps1_text="$(kube_ps1)"
+#     #   local len_k_ps1_text=${#k_ps1_text}
+#     #   ((len_k_ps1_text>0)) && k_ps1_text="$k_ps1_text\\n"
+#     #   # .tick-bash-profile "... k_ps1_text=[$k_ps1_text], len(k_ps1_text)=[$len_k_ps1_text]"
+#     # fi
 
-    local g_ps1_text=
-    if type -t setGitPrompt &>/dev/null; then
-      export GIT_PROMPT_START=
-      export GIT_PROMPT_END=
-      export GIT_PROMPT_LEADING_SPACE=0
-      setGitPrompt
-      g_ps1_text="$PS1"
-    fi
-    g_ps1_text="$g_ps1_text\\n${LAST_COMMAND_INDICATOR}${ResetColor} $(tilde-compress \\w) $ps1_suffix "
-    # .tick-bash-profile "... g_ps1_text=[$g_ps1_text]"
+#     local g_ps1_text=
+#     if type -t setGitPrompt &>/dev/null; then
+#       export GIT_PROMPT_START=
+#       export GIT_PROMPT_END=
+#       export GIT_PROMPT_LEADING_SPACE=0
+#       setGitPrompt
+#       g_ps1_text="$PS1"
+#     fi
+#     g_ps1_text="$g_ps1_text\\n${LAST_COMMAND_INDICATOR}${ResetColor} $(tilde-compress \\w) $ps1_suffix "
+#     # .tick-bash-profile "... g_ps1_text=[$g_ps1_text]"
 
-    export PS1="$(printf '%s%s' "${k_ps1_text}" "${g_ps1_text}")"
+#     export PS1="$(printf '%s%s' "${k_ps1_text}" "${g_ps1_text}")"
 
-    # .tick-bash-profile "[end] _prompt_command: on exit, PS1=[$PS1]"
-  }
+#     # .tick-bash-profile "[end] _prompt_command: on exit, PS1=[$PS1]"
+#   }
 
-  .tick-bash-profile "[end] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"
-}
+#   .tick-bash-profile "[end] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"
+# }
 # .setup-ps1
 
 
+.source-extra-bash-profiles() {
+  .tick-bash-profile '[start] .source-extra-bash-profiles'
+  if glob-path-exists ~/.bash_profile.*; then
+    for f in ~/.bash_profile.*; do
+      .tick-bash-profile "... sourcing $f"
+      . $f
+    done
+  fi
+  .tick-bash-profile '[end] .source-extra-bash-profiles'
+}
+.source-extra-bash-profiles
+
+
 alias .reload-shell='qeval exec $SHELL -l'
-alias .reload-bash-profile='qeval . ~/.bash_profile'
+alias .reload-bash-profile='qeval . ~/.bash_profile' .rbp='.reload-bash-profile'
+alias .rlbp='qeval .reload-bash-profile'
 
 #? # Make sure prompt show success first time thru
 #? ((1)) && eval "$PROMPT_COMMAND"
 
-.tick-bash-profile "[END-FILE]   (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
+.tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
 

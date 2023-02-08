@@ -9,7 +9,8 @@
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
 # TICK_x variables control its behavior; all default to false/0/off.
-# export TICK_ENABLED= TICK_STDERR= TICK_STDOUT=
+# export TICK_DISABLED= TICK_ENABLED=
+# export TICK_STDERR= TICK_STDOUT=
 type -t .tick >&/dev/null || . ~/.tick.sh
 
 .tick-profile() { .tick -s '.profile' "$@"; }

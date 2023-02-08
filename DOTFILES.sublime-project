@@ -24,6 +24,31 @@
 		{
 			"path": "."
 		},
+    {
+      "name": "~",
+      "path": "~",
+      "folder_include_patterns": [
+        ".*",
+        ".*/*"
+      ],
+      "folder_exclude_patterns": [
+        ".android",
+        ".bash_sessions",
+        ".cups",
+        ".npm",
+        ".Trash",
+        ".vmware",
+        ".gradle/caches", ".gradle/daemon", ".gradle/native", ".gradle/.tmp",
+        ".sdkman/libexec", ".sdkman/tmp",
+      ],
+      "file_include_patterns": [
+        ".*/*",
+        ".bashrc*",
+        ".bash_profile*",
+        ".bash_login*",
+        ".profile*"
+      ],
+    },
 	]
 }
 

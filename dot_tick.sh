@@ -9,11 +9,12 @@
 
 # Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
 .do-tick() {
-  local scriptf="$1"
-  local scriptv="${1//./dot_}"
+  local scriptf="$1" scriptv="${1//./dot_}"
   if [[ -n "$scriptv" ]]; then
-    [[ -n "$(echo $TICK_${scriptv}_DISABLED)" || -e ~/.tick${scriptf}.disabled ]] && return 1
-    [[ -n "$(echo $TICK_${scriptv}_ENABLED)" || -e ~/.tick${scriptvf}.enabled ]] && return 0
+    v="TICK_${scriptv}_DISABLED"
+    [[ -n "$(eval echo "\${!v}")" || -e ~/.tick${scriptf}.disabled ]] && return 1
+    local v="TICK_${scriptv}_ENABLED"
+    [[ -n "$(eval echo "\${!v}")" || -e ~/.tick${scriptf}.enabled ]] && return 0
   fi
   [[ -n "$TICK_DISABLED" || -e ~/.tick.disabled ]] && return 1
   [[ -n "$TICK_ENABLED" || -e ~/.tick.enabled ]] && return 0

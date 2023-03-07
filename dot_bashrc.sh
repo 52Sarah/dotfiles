@@ -13,12 +13,14 @@ type -t .tick >&/dev/null || . ~/.tick.sh
 
 .tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
 
+# Optional pre-script hook.
 [[ -e ~/.bashrc_pre ]] && . ~/.bashrc_pre
 
+# Private env vars, etc. can be in the optional file ~/.secrets.
+[[ -e ~/.secrets ]] && . ~/.secrets
 
 # Put my homemade scripts and other miscellany here at the start of the classpath.
 [[ ! "$PATH" =~ $HOME/bin(:|$) ]] && export PATH="$HOME/bin:$PATH"
-
 
 #
 ### 'echo/printf' helpers
@@ -108,15 +110,12 @@ echo-unescape() {
 }
 
 #
-### 'eval' helpers
+### 'echo' / 'eval' helpers
 #
 # Always ECHO the given expression; but do not EVAL if SH_WHATIF is set.
 : ${EVAL_WHATIF_PREFIX:=#$}
 eval-whatif()   { ((SH_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" "$@" || eval-echo "$@"; }
 weval() { eval-whatif "$@"; }
-
-#
-### 'echo'/'eval' helpers
 #
 # Conditionally echo the expression to stderr before executing it, using
 # similar logic as echo-* and printf-*.
@@ -266,24 +265,32 @@ lower() {
   lower <<< $@
 }
 substring_before_first() {
-  [[ ! -t 0 ]] && read line && printf "%s\n" "${line%%.*}" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: substring_before_first text, or ... | substring_before_first" && return 1
-  substring_before_first <<< $@
+  local delim='.'; [[ "$1" =~ --delim|-d ]] && delim="$2" && shift 2
+  [[ ! -t 0 ]] && read line && printf "%s\n" "${line%%${delim}*}" && return 0
+  [[ -z "$1" ]] && >&2 echo "usage: substring_before_first [--delim DELIM] text [DELIM], or ... | substring_before_first [--delim DELIM]" && return 1
+  [[ -n "$2" ]] && delim="$2"
+  substring_before_first --delim "$delim" <<< "$1"
 }
 substring_before_last() {
-  [[ ! -t 0 ]] && read line && printf "%s\n" "${line%.*}" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: substring_before_last text, or ... | substring_before_last" && return 1
-  substring_before_last <<< $@
+  local delim='.'; [[ "$1" =~ --delim|-d ]] && delim="$2" && shift 2
+  [[ ! -t 0 ]] && read line && printf "%s\n" "${line%${delim}*}" && return 0
+  [[ -z "$1" ]] && >&2 echo "usage: substring_before_last [--delim DELIM] text [DELIM], or ... | substring_before_last [--delim DELIM]" && return 1
+  [[ -n "$2" ]] && delim="$2"
+  substring_before_last --delim "$delim" <<< "$1"
 }
 substring_after_first() {
-  [[ ! -t 0 ]] && read line && printf "%s\n" "${line#*.}" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: substring_after_first text, or ... | substring_after_first" && return 1
-  substring_after_first <<< $@
+  local delim='.'; [[ "$1" =~ --delim|-d ]] && delim="$2" && shift 2
+  [[ ! -t 0 ]] && read line && printf "%s\n" "${line#*${delim}}" && return 0
+  [[ -z "$1" ]] && >&2 echo "usage: substring_after_first [--delim DELIM] text [DELIM], or ... | substring_after_first [--delim DELIM]" && return 1
+  [[ -n "$2" ]] && delim="$2"
+  substring_after_first --delim "$delim" <<< "$1"
 }
 substring_after_last() {
-  [[ ! -t 0 ]] && read line && printf "%s\n" "${line##*.}" && return 0
-  [[ -z "$1" ]] && >&2 echo "usage: substring_after_last text, or ... | substring_after_last" && return 1
-  substring_after_last <<< $@
+  local delim='.'; [[ "$1" =~ --delim|-d ]] && delim="$2" && shift 2
+  [[ ! -t 0 ]] && read line && printf "%s\n" "${line##*${delim}}" && return 0
+  [[ -z "$1" ]] && >&2 echo "usage: substring_after_last [--delim DELIM] text [DELIM], or ... | substring_after_last [--delim DELIM]" && return 1
+  [[ -n "$2" ]] && delim="$2"
+  substring_after_last --delim "$delim" <<< "$1"
 }
 #
 # Expand '~' to value of $HOME, or compress value of $HOME to ~
@@ -329,6 +336,7 @@ alias .reload-bashrc='qeval . ~/.bashrc'
 alias .rlbrc='qeval .reload-bashrc'
 alias .rlbr='qeval .reload-bashrc'
 
+# Optional post-script hook.
 [[ -e ~/.bashrc_post ]] && . ~/.bashrc_post
 
 .tick-bashrc "[END-FILE] (\$\$=$$, \$PATH=[$PATH])"

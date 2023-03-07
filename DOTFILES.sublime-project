@@ -10,14 +10,6 @@
     	"*.BAK.*", 
     	".git", ".svn", "CVS",
     ],
-    "file_exclude_patterns": [
-    	"*.pyc", "*.pyo", 
-    	"*.exe", "*.dll", "*.obj",
-    	"*.o", "*.a", "*.lib", "*.so", "*.dylib", "*.class",
-    	"*.ncb", "*.sdf", "*.suo", "*.pdb", "*.idb", "*.psd", "*.db", 
-    	"*.sublime-workspace",
-    ],
-	    
 	},
 	"folders":
 	[
@@ -38,7 +30,7 @@
         ".npm",
         ".Trash",
         ".vmware",
-        ".gradle/caches", ".gradle/daemon", ".gradle/native", ".gradle/.tmp",
+        ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
         ".sdkman/libexec", ".sdkman/tmp",
       ],
       "file_include_patterns": [

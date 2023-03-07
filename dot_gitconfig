@@ -13,6 +13,9 @@
   brm = branch -M
   brd = branch -D
 
+  brsu = branch --set-upstream-to
+  brsuc = !git branch --set-upstream-to origin/$(git branch --show-current)
+
   br = !args="\"$@\"" && shift "$#" &&\
     color_dc="$(git config --get-color color.diff.commit)" &&\
     color_bc="$(git config --get-color color.branch.current)" &&\
@@ -318,6 +321,7 @@
 
 [include]
   path = .gitconfig__colors
+  
 [filter "lfs"]
 	required = true
 	clean = git-lfs clean -- %f

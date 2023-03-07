@@ -22,7 +22,7 @@ export TICK__INDENT=
 export BASH_ENV=~/.bashrc
 export ENV=~/.profile
 
-[[ -e "$BASH_ENV" ]] && . "$BASH_ENV"
+[[ -e ~/.bashrc ]] && . ~/.bashrc
 
 export EDITOR=vim
 export CLICOLOR=1
@@ -47,7 +47,7 @@ export CLICOLOR_FORCE=1
 # -S, --chop-long-lines     Truncate long lines, do not wrap
 # -w, --hilite-unread       Highlight "new" line after 1+ pages forward movement; -W after any 1+ lines
 # -X, --no-init             Do not clear screen when loading
-export LESS='--shift=.33 --SEARCH-SKIP --quit-if-one --status-col --LONG-PR --quit-at-eof --raw --squeeze --HILITE-UNREAD --no-init'
+export LESS='--shift=.33 --SEARCH-SKIP --quit-if-one --status-column --LONG-PR --quit-at-eof --raw --squeeze --HILITE-UNREAD --no-init'
 export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
 
 # Ignore repeated lines and lines starting with ' '
@@ -142,6 +142,7 @@ alias l='less'
 # Lines will NOT wrap, but CTRL-C, arrow keys can scroll left and right. Press 'F' to resume "tailing".
 alias tl='qeval less --chop-long-lines +F'
 
+
 #
 ### 'ls' helpers
 #
@@ -222,16 +223,34 @@ lso() {
 #         %mem
 #         command - very long, so we limit line length to window size
 ps-grep() {
-  line_width=$COLUMNS; ((line_width < 100)) && line_width=100
-  ps_cmd="ps -e -o user,pid,ppid,start,time,%cpu,%mem,command"
+  local USAGE='Usage: ps-grep [--long] [patt...]'
+  local opt_long=; [[ "$1" =~ -l|--long ]] && opt_long=1 && shift 1
+
+  local ps_cmd="ps -e -o user,pid,ppid,start,time"
+  ((opt_long)) && ps_cmd="${ps_cmd},%cpu,%mem,command" || ps_cmd="${ps_cmd},comm"
   if [[ -n "$1" ]]; then
     ps_cmd="$ps_cmd | egrep -e 'USER\s+PID\s+PPID'"
     while [[ -n "$1" ]]; do
-      ps_cmd="$ps_cmd -e '$1'" && shift
+      ps_cmd="$ps_cmd -e '$1'" && shift 1
     done
   fi
-  ps_cmd="$ps_cmd | cut -c 1-12,19-$line_width | egrep -v -e '$$ .+ egrep -e USER'"
+  # ((! opt_long)) && ps_cmd="$ps_cmd | awk '{printf(\"%-10s %5s %5s %5s %s\n\", \$1,\$2,\$3,\$4,\$8)}'"
+  # ps_cmd="$ps_cmd | egrep -v -e '$$ .+ egrep -e USER'"
+  ps_cmd="$ps_cmd | egrep -v -e ' egrep '"
+  ps_cmd="$ps_cmd | head -n 15"
   qeval $ps_cmd
+}
+ps-java() {
+  qeval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +([[:digit:]]+ +){2}([^[:space:]]+ +){4}([^[:space:]]+) +).*( ([a-z]+\.)+[A-Z][^.]+.*)$/\1 - \5/p;'" \
+    | sed -E 's:\/Library\/Java\/JavaVirtualMachines\/::'
+  # qeval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +(?:[[:digit:]]+ +){2} +(?:[^[:space:]]+ +){4} +([^[:space:]]+) +).+$/\1/; p;'" # + \d+ +\d+/p;' #' +\w+ +\w+ +\w+ +'
+  # qeval "ps-grep -l java | sed -E -n 's/^(USER.+)|([[:alnum:]]+ +([[:digit:]]+ +){2} +([[:digit:]]+ +){5} +.+)$/\2/; p;'" # + \d+ +\d+/p;' #' +\w+ +\w+ +\w+ +'
+}
+ps-ports() {
+  lsof -b -i4 -n -P -w \
+  | egrep '^COMMAND|TCP.+:[0-9]{2,4} .+LISTEN' \
+  | awk '{printf("%s %s\n", $2, $9);}'
+  # | awk '{split($9,hostport,":"); printf("%s %s\n", $2, hostport[2]);}'
 }
 
 ### 'rm' helpers
@@ -262,6 +281,28 @@ alias tf='tail -f'
 # toggle wrap/truncate
 alias term-wrap='qeval tput smam'
 alias term-trunc='qeval tput rmam'
+#
+# colored text, from https://www.shellhacks.com/bash-colors/
+echo-color() {
+  local USAGE="Usage: echo-color [-n] black|red|green|brown|blue|purple|cyan|light-gray TEXT [...]"
+  local opt_no_crlf=; [[ "$1" == "-n" ]] && opt_no_crlf='-n' && shift 1
+  [[ -z "$2" ]] && eecho "$USAGE" && return 1
+
+  local color="$(lower $1)"; shift 1
+  local code
+  case "$color" in
+    black)  code=30;;
+    red)    code=31;;
+    green)  code=32;;
+    brown)  code=33;;
+    blue)   code=34;;
+    purple) code=35;;
+    cyan)   code=36;;
+    gray)   code=37;;
+    *) eecho "echo-color: invalid color: $color"; return 1;
+  esac
+  echo -e $opt_no_crlf "\e[${code}m$@\e[0m"
+}
 
 #
 ### 'touch' helpers
@@ -339,10 +380,43 @@ glob-path-first() {
       return 1
     fi
 }
+
 #
-is-valid-symlink() {
-    [[ -z "$1" ]] && eecho "usage: is-valid-symlink file" && return 1
-    [[ -L "$1" && -e "$1" ]] 
+### symlink/ln helpers
+#
+ln-valid() {
+  local USAGE="Usage: ln-valid [FILE ...]; default is *"
+  
+  local opt_quiet= opt_verbose=
+  while [[ "$1" =~ ^-.+ ]]; do case "$1" in
+    -q|--quiet)    opt_quiet=1; opt_verbose=; shift 1;;
+    -v|--verbose)  opt_verbose=1; opt_quiet=; shift 1;;
+    *) eecho "$USAGE" && return 1
+  esac; done
+  
+  local files="${@:-*}"
+  local ret=0
+  for link in $files; do
+    local target=
+    local status="OK"
+    if [[ ! -L "$link" ]]; then
+      ((! opt_verbose)) && continue
+      status="NON-LINK"
+    else
+      target="$(readlink "$link")"
+      [[ ! -e "$target" ]] && status="INVALID"
+    fi
+    local line="$(printf '%-9s %s -> %s\n' $status $link $target)"
+    if [[ "$status" == "OK" ]]; then
+      ((! opt_quiet)) && echo "$line"
+    elif [[ "$status" == "NON-LINK" ]]; then
+      echo-color blue "$line"
+    else
+      ret=1
+      echo-color red "$line"
+    fi
+  done
+  return $ret
 }
 
 # Inspect $1 and, using javascript-like truthy rules, return status 0 (true) or 1 (false).
@@ -532,12 +606,18 @@ fwf-nice() {
   local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
   if [[ -e "$gnu_getopt_home" ]]; then
     path-prepend PATH "$gnu_getopt_home/bin"
-    .tick-bash-profile "... prepended gnu-getopt/bin to PATH"
+    .tick-bash-profile "... prepended $gnu_getopt_home/bin to PATH"
+  fi
+
+  local openssl_home="$HOMEBREW_PREFIX/opt/openssl@1.1"
+  if [[ -e "$openssl_home" ]]; then
+    path-prepend PATH "$openssl_home/bin"
+    .tick-bash-profile "... prepended $openssl_home/bin to PATH"
   fi
 
   .tick-bash-profile "[end] .setup-homebrew, PATH=$PATH"
 }
-.setup-homebrew
+((! SETUP_HOMEBREW_DISABLED)) && .setup-homebrew
 
 
 #
@@ -549,8 +629,8 @@ fwf-nice() {
 
   # From https://superuser.com/a/344397/17666
   # $1 = type; 0 - both, 1 - tab, 2 - window
-  set-terminal-text () {
-    [[ -z "$2" || ! "$1" =~ -b|-t|-w ]] && eecho "usage: set-terminal-text --both|--tab|--window text" && return 1
+  iterm-set-title () {
+    [[ -z "$2" || ! "$1" =~ -b|-t|-w ]] && eecho "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
     local mode=0
     [[ "$1" =~ -t ]] && mode=1
     [[ "$1" =~ -w ]] && mode=2
@@ -560,7 +640,7 @@ fwf-nice() {
 
   .tick-bash-profile "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
 }
-.setup-iterm
+((! SETUP_ITERM_DISABLED)) && .setup-iterm
 
 
 #
@@ -690,7 +770,7 @@ fwf-nice() {
 
   .tick-bash-profile '[end] .setup-git'
 }
-.setup-git
+((! SETUP_GIT_DISABLED)) && .setup-git
 
 
 #
@@ -722,18 +802,14 @@ fwf-nice() {
     .tick-bash-profile "sdkman non-directory JAVA_HOME/bin: $JAVA_HOME/bin"
   fi
 
-  sdk-set-java-home() {
-    [[ -z "$1" ]] && eecho "usage: sdk-set-java-home version_glob" && return 1
-    local version_glob="$1*"; shift
-    local java_cand_dir="$(glob-path-first $SDKMAN_DIR/candidates/java/$version_glob)"
-    echo "java_cand_dir=$java_cand_dir"
-    # qeval export JAVA_HOME="$(cd-ln "$java_cand_dir/bin"; cd "$(pwd -P)/.."; pwd)"
-    qeval export JAVA_HOME="$(cd "$java_cand_dir/bin"; cd "$(pwd -P)/.."; pwd)"
+  sdk-ls() {
+    sdk ls java '$@' | head -n 5
+    sdk ls java '$@' | egrep '>>>| installed | local only '
   }
 
   .tick-bash-profile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
-.setup-java-sdkman
+((! SETUP_SDKMAN_DISABLED)) && .setup-java-sdkman
 
 
 #
@@ -770,7 +846,7 @@ if ! type -t sdk &>/dev/null; then
 
     .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
   }
-  .setup-java-jenv
+  ((! SETUP_JENV_DISABLED)) && .setup-java-jenv
 fi
 
 
@@ -787,7 +863,7 @@ fi
   alias pg-stop='qeval brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
   .tick-bash-profile '[end] .setup-pg, PATH=$PATH"'
 }
-.setup-pg
+((! SETUP_POSTGRES_DISABLED)) && .setup-pg
 
 
 #
@@ -797,6 +873,7 @@ fi
   ! type -t VBoxManage &>/dev/null && .tick-bash-profile '[end] .setup-vbox, VirtualBox not installed' && return 1
 
   export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
+  export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
 
   alias vb='qeval VBoxManage'
   alias vb-ls='qeval VBoxManage list'
@@ -806,12 +883,11 @@ fi
     qeval "vb-ls --long --sorted vms | egrep '^(Name|State|UUID):\s{2,}'" \
       | sed -E -e 's/^(State:.+\))/\1\n/'
     
-    qeval "vb-ls runningvms"
+    vb-ls runningvms
     printf '\n'
     
-    qeval "vb-ls hostonlynets" \
-      | egrep '.+'
-    printf '\n'
+    local hostonly='hostonlynets'; [[ "$VBOX_VERSION" =~ ^6 ]] && hostonly='hostonlyifs'
+    vb-ls "$hostonly"
   }
 
   # Lookup full vm name given a pattern; if not found, return pattern with error status.
@@ -863,7 +939,7 @@ fi
     qeval tail $@ '"$VBOX_VMS_HOME/$(vb-vm-name $vm_name_patt)/Logs/VBox.log"'
   }
 }
-.setup-vbox
+((! SETUP_VBOX_DISABLED)) && .setup-vbox
 
 
 #
@@ -874,11 +950,11 @@ fi
   [[ ! -e "/opt/mapr" ]] && .tick-bash-profile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
 
   export MAPR_HOME="/opt/mapr"
-  path-append PATH "$MAPR_HOME/bin"
+  path-prepend PATH "$MAPR_HOME/bin"
 
   .tick-bash-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
 }
-.setup-mapr
+((! SETUP_MAPR_DISABLED)) && .setup-mapr
 
 
 #
@@ -898,8 +974,7 @@ fi
 
   .tick-bash-profile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
 }
-.setup-hadoop
-
+((! SETUP_HADOOP_DISABLED)) && .setup-hadoop
 
 #
 ### GRADLE/GRADLEW
@@ -937,15 +1012,16 @@ alias gw='qeval ./gradlew'
 # --write-locks                      Persists dependency resolution for locked configurations, ignoring existing locking information if it exists
 # -x, --exclude-task                 Specify a task to be excluded from execution.
 gw-task() {
-  local USAGE='Usage: gw-task [wrapper_opt... --] task [opt...]'
-  local wrapper_opts= task_opts=
-  while [[ -n "$1" ]]; do
-    case "$1" in
-      --) shift 1; task_opts="$@"; break;;
-       *) wrapper_opts="$wrapper_opts $1"; shift 1
-    esac
-  done
-  qeval gw $wrapper_opts $task_opts
+  # local USAGE='Usage: gw-task [wrapper_opt... --] task [opt...]'
+  # local wrapper_opts= task_opts=
+  # while [[ -n "$1" ]]; do
+  #   case "$1" in
+  #     --) shift 1; task_opts="$@"; break;;
+  #      *) wrapper_opts="$wrapper_opts $1"; shift 1
+  #   esac
+  # done
+  # qeval gw $wrapper_opts $task_opts
+  qeval gw $@
 }
 # gw-task() {
 #   local USAGE='Usage: gw-task [-w wrapper_option... --] task [args...]'
@@ -1024,7 +1100,7 @@ gw-task() {
 
 
 alias .reload-shell='qeval exec $SHELL -l'
-alias .reload-bash-profile='qeval . ~/.bash_profile' .rbp='.reload-bash-profile'
+alias .reload-bash-profile='qeval . "~/.bash_profile"'
 alias .rlbp='qeval .reload-bash-profile'
 
 #? # Make sure prompt show success first time thru

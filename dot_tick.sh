@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# If .do-tick() is true, .tick logs to ~/.tick.log.
+# If .tick-enabled() is true, .tick logs to ~/.tick.log.
 # Then it also echoes to stdout/stderr if TICK_STDOUT/TICK_STDERR is set.
 # Optional .tick options:
 #   --scriptname  used with '.tick' to determine whether this script's ticks should fire
@@ -8,7 +8,7 @@
 #   --vars        log each variable given along with its value
 
 # Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
-.do-tick() {
+.tick-enabled() {
   local scriptf="$1" scriptv="${1//./dot_}"
   if [[ -n "$scriptv" ]]; then
     v="TICK_${scriptv}_DISABLED"
@@ -18,6 +18,7 @@
   fi
   [[ -n "$TICK_DISABLED" || -e ~/.tick.disabled ]] && return 1
   [[ -n "$TICK_ENABLED" || -e ~/.tick.enabled ]] && return 0
+  [[ -n "$TICK_STDOUT" || -n "$TICK_STDERR" ]] && return 0
   return 1
 }
 
@@ -29,7 +30,7 @@
     -v|--vars) opt_vars=1; shift;;
     *) >&2 echo ".tick: $1: invalid option" && return 1;;
   esac; done
-  .do-tick "$script_name" || return 1
+  .tick-enabled "$script_name" || return 0
 
   local msg=
   if ((opt_eval)); then

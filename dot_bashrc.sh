@@ -4,6 +4,9 @@
 # .bash_profile || .bash_login || .profile; once it finds one it stops looking.
 # Our stuff is mainly in .bash_profile since this file is executed for every process.
 
+# Optional pre-script hook.
+[[ -e ~/.bashrc_pre ]] && . ~/.bashrc_pre
+
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
 # TICK_x variables control its behavior; all default to false/0/off.
 # export TICK_DISABLED= TICK_ENABLED=
@@ -12,9 +15,6 @@ type -t .tick >&/dev/null || . ~/.tick.sh
 .tick-bashrc() { .tick -s '.bashrc' "$@"; }
 
 .tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
-
-# Optional pre-script hook.
-[[ -e ~/.bashrc_pre ]] && . ~/.bashrc_pre
 
 # Private env vars, etc. can be in the optional file ~/.secrets.
 [[ -e ~/.secrets ]] && . ~/.secrets
@@ -30,17 +30,17 @@ type -t .tick >&/dev/null || . ~/.tick.sh
 #   e* = always print to stderr
 # usage, e.g.: echo-verbose [--prefix 'line prefix'] text
 echo-debug()    { ((SH_DEBUG)) && SH_VERBOSE=1 echo-verbose "$@"; }
-echo-verbose() { 
+echo-verbose()  { 
   ((SH_VERBOSE || SH_DEBUG)) || return 0
   local prefix=; [[ "$1" =~ -p ]] && prefix="$2" && shift 2
   >&2 echo "$prefix$@"
 }
-echo-quiet()    { ((SH_QUIET)) && return 0; echo "$@"; }
-echo-error()    { >&2 echo "$@"; }
+echo-quiet()  { ((SH_QUIET)) && return 0; echo "$@"; }
+echo-stderr() { >&2 echo "$@"; }
 decho() { echo-debug "$@"; }
 vecho() { echo-verbose "$@"; }
 qecho() { echo-quiet "$@"; }
-eecho() { echo-error "$@"; }
+eecho() { echo-stderr "$@"; }
 #
 printf-debug()    { ((SH_DEBUG)) && SH_VERBOSE=1 printf-verbose "$@"; }
 printf-verbose() {
@@ -49,11 +49,11 @@ printf-verbose() {
   >&2 printf "$prefix$@"
 }
 printf-quiet()    { ((SH_QUIET)) && return 0; printf "$@"; }
-printf-error()    { >&2 printf "$@"; }
+printf-stderr()   { >&2 printf "$@"; }
 dprintf() { printf-debug "$@"; }
 vprintf() { printf-verbose "$@"; }
 qprintf() { printf-quiet "$@"; }
-eprintf() { printf-error "$@"; }
+eprintf() { printf-stderr "$@"; }
 #
 # Echo (and bubble) return status ($?) as-is, or use $1 for 0, $2 for non-0.
 echo-status() {
@@ -67,12 +67,13 @@ echo-status() {
   fi
   return $status
 }
-eecho-status() { >&2 echo-status "$@"; }
+eecho-status() { >&2 echo-status $@; }
+est() { echo-status $@; }
 #
 # List all variables on stdout matching $1 (globbing *, etc.) and their values.
 # Return error status if no such variable (as-is or glob expanded) is defined.
 echo-glob() {
-  [[ -z "$1" ]] && echo-error "usage: echo-glob patt [...]" && return 1
+  [[ -z "$1" ]] && echo-stderr "usage: echo-glob patt [...]" && return 1
   local ret=1
   for patt in $@; do
     if [[ "$patt" =~ [*?] ]]; then
@@ -121,34 +122,34 @@ weval() { eval-whatif "$@"; }
 # similar logic as echo-* and printf-*.
 : ${EVAL_ECHO_PREFIX:=\>$}
 eval-echo()     { >&2 echo "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
-eval-debug() { ((SH_DEBUG)) && SH_VERBOSE=1 eval-verbose "$@"; }
+eval-debug()    { ((SH_DEBUG)) && SH_VERBOSE=1 eval-verbose "$@"; }
 eval-verbose() {
   local prefix=; [[ "$1" =~ -p ]] && prefix="$2" && shift 2
-  >&2 echo-verbose "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
+  echo-verbose "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
 }
 eval-quiet() {
   local prefix=; [[ "$1" =~ -p ]] && prefix="$2" && shift 2
-  >&2 echo-quiet "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
+  echo-quiet "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
 }
-eval-error() {
+eval-stderr() {
   local prefix=; [[ "$1" =~ -p ]] && prefix="$2" && shift 2
-  >&2 echo-error "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
+  echo-stderr "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
 }
 deval() { eval-debug "$@"; }
 veval() { eval-verbose "$@"; }
 qeval() { eval-quiet "$@"; }
-eeval() { eval-error "$@"; }
+eeval() { eval-stderr "$@"; }
 
 # Source given file(s). If a file does not exist, echo-quiet a warning and ignore.
 safe-source() {
   local SH_QUIET=$SH_QUIET
   [[ "$1" =~ ^(-q|--quiet)$ ]] && SH_QUIET=1 && shift
-  [[ -z "$1" ]] && echo-error "usage: safe-source [--quiet] file [...]" && return 1
+  [[ -z "$1" ]] && echo-stderr "usage: safe-source [--quiet] file [...]" && return 1
 
   while [[ -n "$1" ]]; do
     local script_path="$1"; shift
     if [[ ! -e "$script_path" ]]; then
-      ((! SH_QUIET)) && echo-error "safe-source: $script_path: No such file"
+      ((! SH_QUIET)) && echo-stderr "safe-source: $script_path: No such file"
     else
       eval-quiet . "$script_path"
     fi
@@ -213,7 +214,7 @@ path-echo() { qeval path-list "$@"; }
 path-append() {
   local opt_prepend=; [[ "$1" =~ -p ]] && opt_prepend='--prepend' && shift
   local var='PATH'; [[ -n "$2" ]] && var="$1" && shift
-  [[ -z "$1" ]] && echo-error "usage: path-append [var] path" && return 1
+  [[ -z "$1" ]] && echo-stderr "usage: path-append [var] path" && return 1
   
   local elem="$1" && shift
   local elements="${!var}"
@@ -224,12 +225,13 @@ path-append() {
     return 0
   fi
 
-  deduped_elems="$(sed -e 's!:'"$elem"':!:!g' <<< ":$elements:")"
-  ((SH_VERBOSE)) && printf "\n\$\$ path-append %s %s %s\n" "$opt_prepend" "$var" "$elem" && eeval path-list deduped_elems
+  elems_minus_elem="$(sed -e 's!:'"$elem"':!:!g' <<< ":$elements:")"
+  vecho "elems_minus_elem=[$elems_minus_elem]"
+  ((SH_VERBOSE)) && printf "$EVAL_ECHO_PREFIX path-append %s %s %s\n" "$opt_prepend" "$var" "$elem" && eeval path-list elems_minus_elem
   if ((opt_prepend)); then
-    veval export $var="$elem${deduped_elems:0:-1}"
+    veval export $var="$elem${elems_minus_elem:0:((${#elems_minus_elem}-1))}"
   else
-    veval export $var="${deduped_elems:1}$elem"
+    veval export $var="${elems_minus_elem:1}$elem"
   fi
 }
 path-prepend() { path-append --prepend $@; }

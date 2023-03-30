@@ -14,7 +14,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 # export TICK_DISABLED= TICK_ENABLED=
 # export TICK_STDERR= TICK_STDOUT=
 export TICK__INDENT=
-. ~/.tick.sh
+type -t .tick >&/dev/null || . ~/.tick.sh
 .tick-bash-profile() { .tick -s '.bash_profile' "$@"; }
 
 .tick-bash-profile "[START-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
@@ -583,16 +583,17 @@ fwf-nice() {
 #
 .setup-homebrew() {
   .tick-bash-profile '[start] .setup-homebrew'
-  if ! type -t brew &>/dev/null; then
+  if [[ ! -x /opt/homebrew/bin/brew ]]; then
     .tick-bash-profile "... homebrew not installed"
-    return 0
+    .tick-bash-profile "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    return 1
   fi
 
-  ((SH_VERBOSE)) && printf "\$\$ .setup-homebrew: before 'brew shellenv':\n" && eeval path-list
-  eval "$(brew shellenv 2>/dev/null)"
-  ((SH_VERBOSE)) && printf "\$\$ .setup-homebrew: after 'brew shellenv':\n" && eeval path-list
-  if [[ -z "$HOMEBREW_PREFIX" ]]; then
-    .tick-bash-profile "... homebrew 'shellenv' did not set \$HOMEBREW_PREFIX"
+  ((SH_DEBUG)) && .tick-bash-profile "... PATH before 'brew shellenv': [$PATH]"
+  eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"
+  ((SH_DEBUG)) && .tick-bash-profile "... PATH after  'brew shellenv': [$PATH]"
+  if [[ ! -d "$HOMEBREW_PREFIX" ]]; then
+    .tick-bash-profile "... homebrew 'shellenv' did not properly set \$HOMEBREW_PREFIX"
     return 1
   fi
   # Let path-prepend de-dupe the /usr/local/... paths.
@@ -648,7 +649,7 @@ fwf-nice() {
 #
 .setup-git() {
   .tick-bash-profile '[start] .setup-git'
-  ! type -t git &>/dev/null && .tick-bash-profile "[end] .setup-git: git not installed" && return 0
+  ! type -t git &>/dev/null && .tick-bash-profile "[end] .setup-git: git not installed" && return 1
 
   .tick-bash-profile "... using $(git --version)"
 
@@ -778,7 +779,10 @@ fwf-nice() {
 #
 .setup-java-sdkman() {
   .tick-bash-profile '[start] .setup-java-sdkman'
-  [[ ! -s "$HOME/.sdkman/bin/sdkman-init.sh" ]] && .tick-bash-profile "[end] SDKMAN not installed" && return 0
+  if [[ ! -e "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
+    .tick-bash-profile "[end] SDKMAN not installed"
+    return 1
+  fi
 
   export SDKMAN_DIR="$HOME/.sdkman"
 
@@ -815,38 +819,41 @@ fwf-nice() {
 #
 ### JENV/JAVA
 #
-if ! type -t sdk &>/dev/null; then
-  .setup-java-jenv() {
-    .tick-bash-profile '[start] .setup-java-jenv'
-    ! type -t jenv &>/dev/null && .tick-bash-profile "[end] .setup-java-jenv, jenv not installed" && return 0
+.setup-java-jenv() {
+  .tick-bash-profile '[start] .setup-java-jenv'
+  if ! type -t jenv &>/dev/null; then
+    .tick-bash-profile "[end] .setup-java-jenv, jenv not installed"
+    return 1
+  fi
 
-    if [[ "$(type -t jenv &>/dev/null)" == "function" ]]; then
-      .tick-bash-profile 'jenv already initialized'
-    else
-      .tick-bash-profile '... initializing jenv'
-      eval "$(jenv init --no-rehash -)"
-      path-prepend "$HOME/.jenv/bin"
-      .tick-bash-profile "... initialized jenv"
-    fi
-    # .tick-bash-profile -e 'echo "... using $(jenv --version)"'
-    # .tick-bash-profile -e 'echo "... using java $(jenv version)"'
-    # .tick-bash-profile -e 'echo "... $ which javac: $(2>&1 which javac)"'
-    # .tick-bash-profile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
-    
-    local javahome="$(jenv javahome)"
-    if [[ -z "$javahome" ]]; then
-      .tick-bash-profile "jenv reports a blank JAVA_HOME"
-    elif [[ ! -d "$javahome" ]]; then
-      .tick-bash-profile "jenv reports a non-directory JAVA_HOME: $javahome"
-    elif [[ ! -d "$javahome/bin" ]]; then
-      .tick-bash-profile "jenv non-directory JAVA_HOME/bin: $javahome/bin"
-    else
-      export JAVA_HOME="$javahome"
-    fi
+  if [[ "$(type -t jenv &>/dev/null)" == "function" ]]; then
+    .tick-bash-profile 'jenv already initialized'
+  else
+    .tick-bash-profile '... initializing jenv'
+    eval "$(jenv init --no-rehash -)"
+    path-prepend "$HOME/.jenv/bin"
+    .tick-bash-profile "... initialized jenv"
+  fi
+  # .tick-bash-profile -e 'echo "... using $(jenv --version)"'
+  # .tick-bash-profile -e 'echo "... using java $(jenv version)"'
+  # .tick-bash-profile -e 'echo "... $ which javac: $(2>&1 which javac)"'
+  # .tick-bash-profile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
+  
+  local javahome="$(jenv javahome)"
+  if [[ -z "$javahome" ]]; then
+    .tick-bash-profile "jenv reports a blank JAVA_HOME"
+  elif [[ ! -d "$javahome" ]]; then
+    .tick-bash-profile "jenv reports a non-directory JAVA_HOME: $javahome"
+  elif [[ ! -d "$javahome/bin" ]]; then
+    .tick-bash-profile "jenv non-directory JAVA_HOME/bin: $javahome/bin"
+  else
+    export JAVA_HOME="$javahome"
+  fi
 
-    .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
-  }
-  ((! SETUP_JENV_DISABLED)) && .setup-java-jenv
+  .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
+}
+if ! type -t sdk &>/dev/null && ((! SETUP_JENV_DISABLED)); then
+  .setup-java-jenv
 fi
 
 
@@ -856,7 +863,10 @@ fi
 .setup-pg() {
   .tick-bash-profile '[start] .setup-pg'
   export HOMEBREW_POSTGRESQL_SERVICE="$(readlink /usr/local/opt/postgresql)"
-  [[ ! -e "$HOMEBREW_POSTGRESQL_SERVICE" ]] && .tick-bash-profile '[end] .setup-pg, no /usr/local/opt/postgresql, pg not installed' && return 1
+  if [[ ! -e "$HOMEBREW_POSTGRESQL_SERVICE" ]]; then
+    .tick-bash-profile '[end] .setup-pg, no /usr/local/opt/postgresql; pg not installed'
+    return 1
+  fi
   path-append '/usr/local/opt/postgresql/bin'
   alias pg-restart='qeval brew services restart $HOMEBREW_POSTGRESQL_SERVICE'
   alias pg-start='qeval brew services start $HOMEBREW_POSTGRESQL_SERVICE'
@@ -870,7 +880,10 @@ fi
 ### VIRTUAL BOX general helpers
 #
 .setup-vbox() {
-  ! type -t VBoxManage &>/dev/null && .tick-bash-profile '[end] .setup-vbox, VirtualBox not installed' && return 1
+  if ! type -t VBoxManage &>/dev/null; then
+    .tick-bash-profile '[end] .setup-vbox, VirtualBox not installed'
+    return 1
+  fi
 
   export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
   export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
@@ -1103,8 +1116,4 @@ alias .reload-shell='qeval exec $SHELL -l'
 alias .reload-bash-profile='qeval . "~/.bash_profile"'
 alias .rlbp='qeval .reload-bash-profile'
 
-#? # Make sure prompt show success first time thru
-#? ((1)) && eval "$PROMPT_COMMAND"
-
-.tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
-
+.tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH])"

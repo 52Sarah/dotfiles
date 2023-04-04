@@ -1,62 +1,7 @@
 [alias]
 
-  a = add --verbose
-  alias = !git config --get-regexp '^alias\\.' | awk '{print $1}'
-
-  # -C - detect moved or copied lines, even from other files in the same commit
-  # -w - ignore whitespace
-  bl = blame -C -w
-
 
   b = branch
-  brc = branch -C
-  brm = branch -M
-  brd = branch -D
-
-  brsu = branch --set-upstream-to
-  brsuc = !git branch --set-upstream-to origin/$(git branch --show-current)
-
-  br = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get-color color.diff.commit)" &&\
-    color_bc="$(git config --get-color color.branch.current)" &&\
-    color_br="$(git config --get-color color.branch.remote)" &&\
-    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:40,left)%(refname:short)%(end)%(color:reset)' &&\
-    git branch --list --ignore-case --sort='-authordate' --sort='refname:rstrip=-3' \
-      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset)' \
-    "$args"
-
-  # $ git brr
-  # SHA..6* branch_name...........................40  au_dt_rel.14  [upstream] subject...
-  # Highlight date using stash's color, which is generally bright.
-  brr = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get-color color.diff.commit)" &&\
-    color_bc="$(git config --get-color color.branch.current)" &&\
-    color_br="$(git config --get-color color.branch.remote)" &&\
-    color_ds="$(git config --get-color color.decorate.stash)" &&\
-    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:40,left)%(refname:short)%(end)%(color:reset)' &&\
-    f_date="$color_ds"'%(align:14,left)%(authordate:relative)%(end)%(color:reset)' &&\
-    git branch --list --ignore-case --sort='-authordate' --sort='refname:rstrip=-3' \
-      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset) '"$f_date"' %(contents:subject)' \
-    "$args" |\
-    awk -v LEN=190 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
-
-  # $ git brrr
-  # SHA..6 * branch_name..........................................55  authrdt__med.15  author_name...16 [upstream] subject...
-  # Branches' refname prefixes: local: ref/heads; remote: refs/remotes
-  # Highlight date using stash's color, which is generally bright.
-  brrr = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get-color color.diff.commit)" &&\
-    color_bc="$(git config --get-color color.branch.current)" &&\
-    color_br="$(git config --get-color color.branch.remote)" &&\
-    color_ds="$(git config --get-color color.decorate.stash)" &&\
-    color_bu="$(git config --get-color color.branch.upstream)" &&\
-    f_refname='%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)'"$color_br"'%(end)%(align:55,left)%(refname:short)%(end)%(color:reset)' &&\
-    f_authorname='%(align:16,left)%(authorname)%(end)' &&\
-    git branch --list --ignore-case --all --sort='-authordate' --sort='refname:rstrip=-3' \
-      --format='%(if)%(HEAD)%(then)'"$color_bc"'%(objectname:short)* %(else)'"$color_dc"'%(objectname:short)  %(color:reset)%(end)'"$f_refname"'%(color:reset) '"$color_ds"'%(authordate:format:%a %m/%d %H:%M)%(color:reset)  '"$f_authorname"' %(if)%(upstream)%(then)'"$color_bu"'[%(upstream:short)] %(end)%(color:reset)%(contents:subject)' \
-    "$args" |\
-    awk -v LEN=210 '{ if (LEN<=0 || length()<=LEN) {print $0} else {printf (\"%-\" LEN \".\" LEN \"s...\\n\"), $0} }'
-
 
   co = checkout
   com = checkout master
@@ -67,11 +12,9 @@
 
   cp = cherry-pick
   
-  d = diff
-  ds = diff --stat
-  dsc = diff --stat --compact-summary
-  dds = diff --dirstat
-  ddsc = diff --dirstat --compact-summary
+  df = diff
+  dfs = diff --stat
+  dfds = diff --dirstat
 
   f = fetch --progress --verbose
   ft = f --tags
@@ -200,7 +143,7 @@
 # Values are always|NEVER|auto, COLUMN|row|plain, dense|NODENSE
 [column]
   #! ui = never,column,nodense
-  branch = always   #! never
+  branch = auto
   status = always  # nodense seems to have no effect on status (set here or on .ui)
   tag = always
 

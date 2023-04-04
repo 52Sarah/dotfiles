@@ -2,8 +2,13 @@
 
 **/.DS_Store
 **/Icon?
+
 **/*.sublime-workspace
-**/*.BAK
-**/*.BAK.*
 .idea/
 *.iml
+.sdkmanrc
+
+**/*.BAK
+**/*.BAK.*
+
+**/build/

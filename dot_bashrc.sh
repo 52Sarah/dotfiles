@@ -76,20 +76,14 @@ echo-glob() {
   [[ -z "$1" ]] && echo-stderr "usage: echo-glob patt [...]" && return 1
   local ret=1
   for patt in $@; do
-    if [[ "$patt" =~ [*?] ]]; then
-      local indirect_vars="$(eval echo $(printf "\${!%s}" "$patt"))"
-      [[ -z "$indirect_vars" ]] && printf '%s=\n' "$patt" && continue
-      local IFS=' '
-      for var in $indirect_vars; do
-        printf "%s=%s\n" "$var" "${!var}"
-        ret=0
-      done
-    else     
-      local simple_val="$(eval echo $(printf "\${%s}" "$patt"))"
-      [[ -z "$simple_val" ]] && printf '%s=\n' "$patt" && continue
-      printf "%s=%s\n" "$patt" "$simple_val"
+    [[ ! "$patt" =~ \* ]] && patt="${patt}*"
+    local indirect_vars="$(eval echo $(printf "\${!%s}" "$patt"))"
+    [[ -z "$indirect_vars" ]] && printf '%s=\n' "$patt" && continue
+    local IFS=' '
+    for var in $indirect_vars; do
+      printf "%s=%s\n" "$var" "${!var}"
       ret=0
-    fi
+    done
   done
   return $ret
 }
@@ -115,14 +109,14 @@ echo-unescape() {
 #
 # Always ECHO the given expression; but do not EVAL if SH_WHATIF is set.
 : ${EVAL_WHATIF_PREFIX:=#$}
-eval-whatif()   { ((SH_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" "$@" || eval-echo "$@"; }
+eval-whatif() { ((SH_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" "$@" || eval-echo "$@"; }
 weval() { eval-whatif "$@"; }
 #
 # Conditionally echo the expression to stderr before executing it, using
 # similar logic as echo-* and printf-*.
 : ${EVAL_ECHO_PREFIX:=\>$}
-eval-echo()     { >&2 echo "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
-eval-debug()    { ((SH_DEBUG)) && SH_VERBOSE=1 eval-verbose "$@"; }
+eval-echo() { >&2 echo "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
+eval-debug() { ((SH_DEBUG)) && SH_VERBOSE=1 eval-verbose "$@"; }
 eval-verbose() {
   local prefix=; [[ "$1" =~ -p ]] && prefix="$2" && shift 2
   echo-verbose "$prefix$EVAL_ECHO_PREFIX $@"; eval "$@"
@@ -187,9 +181,9 @@ uniq-array() {
     echo "$buff" | sort -s | uniq
 }
 #
-# Concatenate trimmed lines from stdin onto a single line, delimited by $1 [, ]
+# Concatenate trimmed lines from stdin onto a single line, delimited by $1 (or '')
 join-lines() {
-    delim="${1:-, }"
+    delim="${1:-}"
     sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do [[ -n "$not1st" ]] && printf "%s" "$delim" || not1st=1; printf "%s" "$ln"; done; printf '\n'
 }
 # Split line(s) from stdin into separate lines, using $1 [,] as delimiter

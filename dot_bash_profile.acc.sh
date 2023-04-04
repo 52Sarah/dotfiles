@@ -34,25 +34,59 @@ export JAVA_V11='11.0.18-zulu'
 #
 ### GRADLE helpers
 #
-interceptas-task() {
-  qeval cd "$HOME/Workspace/interceptas"
-  qeval gw-task $INTERCEPTAS_OPTS $@
+gw-slowest() {
+  gw-task --info --no-build-cache --no-configuration-cache --no-configure-on-demand $@
+}
+gw-normal() {
+  gw-task --info --build-cache --configuration-cache --configure-on-demand $@
+}
+gw-fast() {
+  gw-normal --no-rebuild --offline $@
+}
+gw-faster() {
+  gw-fast -x war -x explodeWar $@
+}
+#
+int-clean-start() { 
+  iterm-set-title --tab 'int'
+  gw-slowest clean start $@; 
 }
 int-start() {
-  vecho 'Listens on ports 8081'
-  qeval interceptas-task start $@
+  iterm-set-title --tab 'int'
+  gw-normal start $@;
+}
+int-start-fast() { 
+  iterm-set-title --tab 'int'
+  gw-fast start $@; 
+}
+int-db-migrate() {
+  gw-faster dbTaskInfoCore dbTaskMigrateCore $@
 }
 #
 api-start() {
   iterm-set-title --tab 'api'
-  vecho 'Listens on ports 9009'
-  qeval interceptas-task startApi -Pmapr-enabled=true -Psharding-enabled=true $@
+  gw-normal startApi -Pmapr-enabled=true -Psharding-enabled=true $@
+}
+api-start-fast() {
+  iterm-set-title --tab 'api'
+  gw-fast startApi -Pmapr-enabled=true -Psharding-enabled=true $@
+}
+api-start-faster() {
+  iterm-set-title --tab 'api'
+  gw-faster startApi -Pmapr-enabled=true -Psharding-enabled=true $@
 }
 #
 rtd-start() {
-  vecho 'Listens on ports 8088'
   iterm-set-title --tab 'rtd'
-  qeval interceptas-task startRtd $@
+  gw-normal startRtd $@
+}
+rtd-start-fast() {
+  iterm-set-title --tab 'rtd'
+  gw-fast startRtd $@
+}
+rtd-start-faster() {
+  iterm-set-title --tab 'rtd'
+  gw-faster startRtd $@
 }
 #
 flink-start() {
@@ -64,21 +98,27 @@ flink-stop() {
   qeval flink-update/docker/stop.sh
 }
 #
-int-db-sync() {
-  qeval interceptas-task dbTaskInfoCore dbTaskMigrateCore $@
-}
-#
 minion-task() {
   qeval cd "$HOME/Workspace/minion"
-  qeval gw-task $MINION_OPTS $@
+  gw-task $MINION_OPTS $@
 }
 minion-queue-writer-start() {
-  vecho 'Listens on ports 8080'
-  qeval minion-task bootRun -Pprofiles=queuewriter $@
+  iterm-set-title --tab 'queuewriter'
+  gw-normal bootRun -Pprofiles=queuewriter $@
+}
+minion-maprproxy-start() {
+  iterm-set-title --tab 'maprproxy'
+  gw-normal bootRun -Pprofiles=maprproxy $@
 }
 minion-velociraptor-direct-start() {
-  qeval minion-task bootRun -Pprofiles=velociraptor-direct $@
+  iterm-set-title --tab 'velociraptor-direct'
+  gw-normal bootRun -Pprofiles=velociraptor-direct $@
 }
+minion-mv-start() {
+  iterm-set-title --tab 'maprproxy,velociraptor-direct'
+  gw-normal bootRun -Pprofiles=maprproxy,velociraptor-direct $@
+}
+#
 minion-app-up() {
   qeval cd "$HOME/Workspace/minion"
   qeval ./app/docker/start.sh
@@ -90,12 +130,12 @@ minion-app-down() {
 #
 radar-task() {
   qeval cd "$HOME/Workspace/radar"
-  qeval gw-task $RADAR_OPTS $@
+  gw-task $RADAR_OPTS $@
 }
 #
 vertigo-task() {
   qeval cd "$HOME/Workspace/vertigo"
-  qeval gw-task $VERTIGO_OPTS $@
+  gw-task $VERTIGO_OPTS $@
 }
 
 ### ORA vm helpers
@@ -111,14 +151,15 @@ mapr-command() {
     return
   fi
   local USAGE="usage: mapr-command [--user user] command"
-  local user='maprdev'; [[ "$1" =~ ^(-u|--user)$ ]] && user="$2" && shift 2
-  [[ -z "$user" ]] && eecho "$USAGE" && return 1
+  [[ -z "$MAPR_USER" ]] && export MAPR_USER=$(whoami)
+  [[ "$1" =~ ^(-u|--user)$ ]] && MAPR_USER="$2" && shift 2
+  [[ -z "$MAPR_USER" ]] && eecho "$USAGE" && return 1
   if type -t systemctl &>/dev/null; then
     [[ -z "$1" ]] && eecho "$USAGE" && return 1
     ((SH_QUIET)) || echo ">\$ $@"
     $@
   else
-    qeval "ssh $user@mapr01.vm $@"
+    qeval "ssh ${MAPR_USER}@maprdemo $@"
   fi
 }
 #
@@ -140,7 +181,7 @@ mapr-netstat() { mapr-command sudo netstat -4 --numeric-ports -l -e -p; }
 #   --type=service | socket|busname|target|snapshot|device|mount|automount|swap|timer|path|slice|scope
 #   --state=running loaded | active | exited
 #   --show-types for sockets
-#   --no-ask-password
+#  
 #   list-units [default]
 #   list-sockets
 #   start|stop|reload|[try-]restart|reload-or-[try-]restart
@@ -151,15 +192,15 @@ mapr-sysc() { mapr-command "systemctl $@"; }
 mapr-sysc-ls() { mapr-sysc "--type=service --state=running $@"; }
 mapr-sysc-ls-all() { mapr-sysc "--type=service $@"; }
 #
-mapr-zookeper-status() { mapr-command "sudo systemctl status mapr-zookeper $@"; }
-mapr-zookeper-restart() { mapr-command "sudo systemctl reload-or-restart --no-ask-password mapr-zookeper $@"; }
-mapr-zookeper-start() { mapr-command "sudo systemctl start --no-ask-password mapr-zookeper $@"; }
-mapr-zookeper-stop() { mapr-command "sudo systemctl stop --no-ask-password mapr-zookeper $@"; }
+mapr-zookeeper-status() { mapr-command "sudo systemctl status mapr-zookeeper $@"; }
+mapr-zookeeper-restart() { mapr-command "sudo systemctl reload-or-restart mapr-zookeeper $@"; }
+mapr-zookeeper-start() { mapr-command "sudo systemctl start mapr-zookeeper $@"; }
+mapr-zookeeper-stop() { mapr-command "sudo systemctl stop mapr-zookeeper $@"; }
 #
 mapr-warden-status() { mapr-command "sudo systemctl status mapr-warden $@"; }
-mapr-warden-restart() { mapr-command "sudo systemctl reload-or-restart --no-ask-password mapr-warden $@"; }
-mapr-warden-start() { mapr-command "sudo systemctl start --no-ask-password mapr-warden $@"; }
-mapr-warden-stop() { mapr-command "sudo systemctl stop --no-ask-password mapr-warden $@"; }
+mapr-warden-restart() { mapr-command "sudo systemctl reload-or-restart mapr-warden $@"; }
+mapr-warden-start() { mapr-command "sudo systemctl start mapr-warden $@"; }
+mapr-warden-stop() { mapr-command "sudo systemctl stop mapr-warden $@"; }
 mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden.log $@"; }
 
 

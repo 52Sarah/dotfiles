@@ -38,8 +38,13 @@
         ".bashrc*",
         ".bash_profile*",
         ".bash_login*",
-        ".profile*"
+        ".profile*",
+        ".secrets",
       ],
+    },
+    {
+      "name": "~/Workspace/dotfiles",
+      "path": "~/Workspace/dotfiles",
     },
 	]
 }

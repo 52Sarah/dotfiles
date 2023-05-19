@@ -1,93 +1,43 @@
 [alias]
 
+  # -C - detect copied lines, even from other files in the same commit
+  # -M - detect moved lines, even from other files in the same commit
+  # -w - ignore whitespace
+  bl = blame -C -M -w
 
   b = branch
-
-  co = checkout
-  com = checkout master
-  cod = checkout develop
-
-  cm = !args="$@" && shift "$#" && git commit --message "\"$args\"" && git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
-  cma = !args="$@" && shift "$#" && git commit --all --message "\"$args\"" && git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
-
-  cp = cherry-pick
   
-  df = diff
-  dfs = diff --stat
-  dfds = diff --dirstat
+  brcp =  branch -C
+  brmv =  branch -M
+  brrm =  branch -D
+  brdel = branch -D
 
-  f = fetch --progress --verbose
-  ft = f --tags
+  br =    !bash -li -c 'git-branch 1'
+  brr =   !bash -li -c 'git-branch 2'
+  brrr =  !bash -li -c 'git-branch 3'
 
-# LOG/PRETTY FORMAT FIELDS
-# %h  - abbrev hash
-# %C  - color or reset
-# %cn - committer name; %cN via .mailmap
-# %ce - committer email; %cE via .mailmap
-# %cl - committer email local part; %cL via .mailmap
-# %cd - commit date in --date's format
-# %cr - commit date (relative)
-# %D  - ref name(s)
-# %s  - subject line
+  co =    checkout
+  com =   checkout master
+  cod =   checkout develop
 
-  # $ git l
-  # SHA..6 author_name...16 author_date_med.18 auth_dt_rel_14 subject (tags)
-  l = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
-    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
-    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
-    git log -10 --date=human --use-mailmap \
-      --format='%C('"$color_dc"')%h %C(reset) %<(16,trunc)%aN %<(18)%C('"$color_ds"')%ad %<(14)%C(bold)%cr%C(reset) %<(64,trunc)%s %>>(1)%C('"$color_dt"')%d%C(reset)' \
-      "$args" |\
-    sed -E \
-      -e "s:user/$USER:\\$ME:g" \
-      -e 's/ -> /->/g' \
-      -e 's/origin/$OR/g' \
-      -e 's/tag: /t:/g' |\
-    less
+  cm =    !bash -li -c 'git-commit-message'
+  cma =   cm --all
 
-  # SHA..6  author_name.......20  author_date_med.18 auth_dt_rel_14 (tags)
-  #     subject
-  ll = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
-    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
-    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
-    git log -10 --date=human --use-mailmap \
-      --format='%C('"$color_dc"')%h%C(reset)  %<(20)%aN  %<(18)%C('"$color_ds"')%ad %C(bold)(%ar)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
-      "$args" |\
-    sed -E \
-      -e "s:user/$USER:\\$ME:g" \
-      -e 's/ -> /->/g' \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g' |\
-    less
+  cp =    cherry-pick
+  
+  d =     diff
+  ds =    diff --stat-graph-width=20
+  dss =   diff --shortstat
+  dds =   diff --dirstat
+  dt =    difftool --dir-diff
 
-  # SHA..6  author_name............25  author_date_med.18 auth_dt_rel_14 (tags)
-  #     subject
-  #  compact summary
-  lll = !args="\"$@\"" && shift "$#" &&\
-    color_dc="$(git config --get color.diff.commit)" && color_dc="${color_dc##* }" &&\
-    color_ds="$(git config --get color.decorate.stash)" && color_ds="${color_ds##* }" &&\
-    color_dt="$(git config --get color.decorate.tag)" && color_dt="${color_dt##* }" &&\
-    git log -10 --date='format:%a %D %H:%M' --compact-summary --no-use-mailmap \
-      --format='%C('"$color_dc"')%h%C(reset)  %<(25)%an  %C('"$color_ds"')%<(18)%ad %C(bold)(%cr)%C(reset)  %>>(1)%C('"$color_dt"')%d%C(reset)%n    %s' \
-      "$args" |\
-    sed -E \
-      -e "s:user/$USER:\\$ME:g" \
-      -e 's/ -> /->/g' \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g' |\
-    less
+  f =     fetch --progress --verbose
+  ft =    fetch --tags
 
-  llll = !args="\"$@\"" && shift "$#" &&\
-    git log -10 --compact-summary --no-use-mailmap --source "$args" |\
-    sed -E \
-      -e "s:user/$USER:\\$ME:g" \
-      -e 's/ -> /->/g' \
-      -e 's:origin:$OR:g' \
-      -e 's/tag: /t:/g' |\
-    less
-
+  l= log
+  lo = !bash -li -c 'git-log 1'
+  loo = !bash -li -c 'git-log 2'
+  looo = !bash -li -c 'git-log 3'
 
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
   # for this function to pop.
@@ -99,32 +49,26 @@
 
   pushup = push --set-upstream origin HEAD
 
-  rc = rebase --continue
+  rab =   rebase --abort
+  rc =    rebase --continue
 
-  #
-  # GIT STATUS VARIANTS, from terse to verbose
-  #
   s = status --short
-  #
-  # Don't include hint text; show files in dense columns.
-  st = !args="\"$@\"" && shift "$#" &&\
-    git -c advice.statusHints=false status --column=dense --no-show-stash "$args" |\
-    grep -E -v "^\\#?\\s*\\$" |\
-    sed -E -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/;"
-  #
-  # Show files in columns; include stash count.
-  stt = !args="\"$@\"" && shift "$#" &&\
-    git status --column=nodense --show-stash "$args" |\
-    sed -E \
-      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
-      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
-  # 
-  # Show files in columns; include ignored files; include stash count.
-  sttt = !args="\"$@\"" && shift "$#" &&\
-    git status --column=nodense --ignored --show-stash "$args" |\
-    sed -E \
-      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
-      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
+  st = !bash -li -c 'git-status 1'
+  stt = !bash -li -c 'git-status 2'
+  sttt = !bash -li -c 'git-status 3'
+#  # Show files in columns; include stash count.
+#  stt = !args="\"$@\"" && shift "$#" &&\
+#    git status --column=nodense --show-stash "$args" |\
+#    sed -E \
+#      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
+#      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
+#  # 
+#  # Show files in columns; include ignored files; include stash count.
+#  sttt = !args="\"$@\"" && shift "$#" &&\
+#    git status --column=nodense --ignored --show-stash "$args" |\
+#    sed -E \
+#      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
+#      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
 
 
 [blame]
@@ -151,7 +95,7 @@
   verbose = true
 
 [core]
-  abbrev = 7
+  abbrev = 8
   #! commentChar = #
   editor = subl
   excludesFile = ~/.gitignore
@@ -176,7 +120,6 @@
   relative = true
   renames = copies
   # statGraphWidth = 20
-  tool = bc3
 
 [fetch]
   output = compact  # branchName -> origin/* instead of origin/branchName
@@ -193,7 +136,7 @@
   abbrevCommit = true  #! false
   #! conflictStyle = merge
   date = human #!iso
-  #! decorate = short     # none|SHORT|full|auto
+  decorate = short     # none|short|full|AUTO
   follow = true
   #! mailmap = true
 
@@ -204,13 +147,13 @@
   #! autoStash = false
   directoryRenames = true  # default: conflict
   ff = only
-  guitool = bc3
+  guitool = bc
   renames = copies
   #! stat = true
-  tool = bc3
+  tool = bc
   #! verbosity = 2  # 2 is conflicts and file changes
 
-[mergetool "bc3"]
+[mergetool "bc"]
   trustExitCode = true
 
 [pull]

@@ -45,7 +45,7 @@
   #! branch = bold green
   remoteBranch = bold cyan  #! bold red
   tag = bold cyan           #! bold cyan
-  stash = white
+  stash = bold white
   #! HEAD = green
   # grafted
 

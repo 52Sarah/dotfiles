@@ -38,42 +38,90 @@ gw-slowest() {
   gw-task --info --no-build-cache --no-configuration-cache --no-configure-on-demand $@
 }
 gw-normal() {
-  gw-task --info --build-cache --configuration-cache --configure-on-demand $@
+  gw-task --info --build-cache $@
 }
 gw-fast() {
-  gw-normal --no-rebuild --offline $@
+  gw-normal --no-rebuild --offline --configuration-cache --configure-on-demand $@
 }
 gw-faster() {
   gw-fast -x war -x explodeWar $@
 }
 #
+int-clean() { 
+  iterm-set-title --tab 'int-clean'
+  gw-slowest clean $@; 
+}
 int-clean-start() { 
-  iterm-set-title --tab 'int'
+  iterm-set-title --tab 'int-clean-start'
   gw-slowest clean start $@; 
 }
-int-start() {
-  iterm-set-title --tab 'int'
-  gw-normal start $@;
+int-start-mapr-yes() {
+  iterm-set-title --tab 'int-start'
+  gw-normal start -Pmapr-enabled=true $@;
 }
-int-start-fast() { 
-  iterm-set-title --tab 'int'
-  gw-fast start $@; 
+int-start-mapr-no() {
+  iterm-set-title --tab 'int-start'
+  gw-normal start -Pmapr-enabled=false $@;
+}
+int-start-fast-mapr-yes() {
+  iterm-set-title --tab 'int-start'
+  gw-normal start -Pmapr-enabled=true $@;
+}
+int-start-fast-mapr-no() {
+  iterm-set-title --tab 'int-start'
+  gw-normal start -Pmapr-enabled=false $@;
 }
 int-db-migrate() {
+  iterm-set-title --tab 'int-db-migrate'
   gw-faster dbTaskInfoCore dbTaskMigrateCore $@
 }
 #
-api-start() {
+# For database unit test container
+#
+int-ora-prep-db() {
+  iterm-set-title --tab 'int-ora-prep-db'
+  gw-normal oraclePrepareDatabase $@
+}
+int-ora-start() {
+  iterm-set-title --tab 'int-ora-start'
+  gw-fast oracleStart $@
+}
+int-ora-stop() {
+  iterm-set-title --tab 'int-ora-stop'
+  gw-normal oracleStop $@
+}
+#
+int-tty() {
+  if [[ -n "$1" ]]; then
+    nc localhost 9092 <<< $@
+  else
+    nc localhost 9092
+  fi
+}
+#
+api-start-mapr-yes() {
   iterm-set-title --tab 'api'
   gw-normal startApi -Pmapr-enabled=true -Psharding-enabled=true $@
 }
-api-start-fast() {
+api-start-fast-mapr-yes() {
   iterm-set-title --tab 'api'
   gw-fast startApi -Pmapr-enabled=true -Psharding-enabled=true $@
 }
-api-start-faster() {
+api-start-faster-mapr-yes() {
   iterm-set-title --tab 'api'
   gw-faster startApi -Pmapr-enabled=true -Psharding-enabled=true $@
+}
+api-start-mapr-no() {
+  iterm-set-title --tab 'api'
+  gw-normal startApi -Pmapr-enabled=false -Psharding-enabled=true $@
+}
+api-start-fast-mapr-no() {
+  iterm-set-title --tab 'api'
+  gw-fast startApi -Pmapr-enabled=false -Psharding-enabled=true $@
+}
+api-start-faster-mapr-no() {
+  iterm-set-title --tab 'api'
+  gw-faster startApi -Pmapr-enabled=false -Psharding-enabled=true $@
 }
 #
 rtd-start() {
@@ -132,10 +180,24 @@ radar-task() {
   qeval cd "$HOME/Workspace/radar"
   gw-task $RADAR_OPTS $@
 }
+radar-tty() {
+  if [[ -n "$1" ]]; then
+    nc localhost 9999 <<< $@
+  else
+    nc localhost 9999
+  fi
+}
 #
 vertigo-task() {
   qeval cd "$HOME/Workspace/vertigo"
   gw-task $VERTIGO_OPTS $@
+}
+radar-tty() {
+  if [[ -n "$1" ]]; then
+    nc localhost 9999 <<< $@
+  else
+    nc localhost 9999
+  fi
 }
 
 ### ORA vm helpers

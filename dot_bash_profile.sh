@@ -328,9 +328,9 @@ echo-color() {
 	[[ -z "$2" ]] && eecho "$USAGE" && return 1
 
 	local color="$(lower $1)"; shift 1
-	local code
 	case "$color" in
-		black)  code=30;;
+		reset)  code=0;;
+    black)  code=30;;
 		red)    code=31;;
 		green)  code=32;;
 		brown)  code=33;;
@@ -668,12 +668,15 @@ fwf-nice() {
 	[[ "$TERM_PROGRAM" != "iTerm.app" ]] && .tick-bash-profile "... iTerm2 not installed" && return 1
 
 	# From https://superuser.com/a/344397/17666
-	# $1 = type; 0 - both, 1 - tab, 2 - window
+	# $1 = type; 0 - both [default], 1 - tab, 2 - window
 	iterm-set-title () {
-		[[ -z "$2" || ! "$1" =~ -b|-t|-w ]] && eecho "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
+		[[ ! "$1" =~ -b|-t|-w ]] && eecho "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
 		local mode=0
-		[[ "$1" =~ -t ]] && mode=1
-		[[ "$1" =~ -w ]] && mode=2
+		if [[ "$1" =~ -t ]]; then
+      mode=1
+		elif [[ "$1" =~ -w ]]; then
+      mode=2
+    fi
 		shift
 		echo -ne "\033]$mode;$@\007"
 	}
@@ -692,14 +695,12 @@ fwf-nice() {
 
 	.tick-bash-profile "... using $(git --version)"
 
-	alias g='git'
-
-	g-add() {
+	git-add() {
 		qeval git add --verbose $@
 	}
 
-	# usage: g-alias [--raw] --[num-items n] [pattern]
-	g-alias() {
+	# usage: git-alias [--raw] [--num-items n] [pattern]
+	git-alias() {
 		local opt_patt= opt_numitems=999
 		while [[ -n "$1" ]]; do
 			case "$1" in
@@ -718,121 +719,182 @@ fwf-nice() {
 				done
 	}
 
-	# -C - detect copied lines, even from other files in the same commit
-	# -M - detect moved lines, even from other files in the same commit
-	# -w - ignore whitespace
-	g-blame() {
-		qeval git blame -C -M -w $@
-	}
+	git-blame() { qeval git bl $@; }
+  alias gbl='git-blame'
 
-	g-branch-cp() {
-		qeval git branch -C $@
-	}
-	g-branch-mv() {
-		qeval git branch -M $@
-	}
-	g-branch-rm() {
-		qeval git branch -D $@
-	}
-	g-branch-delete() {
-		qeval git branch -D $@
-	}
-	g-branch-set-upstream() {
+	git-branch-cp()  { qeval git brcp  $@; }
+	git-branch-mv()  { qeval git brmv  $@; }
+	git-branch-rm()  { qeval git brrm  $@; }
+	git-branch-del() { qeval git brdel $@; }
+  #
+	git-branch-set-upstream() {
 		qeval git branch --set-upstream-to "origin/$(git branch --show-current)" $@
 	}
-	g-branch-set-upstream-to() {
+	git-branch-set-upstream-to() {
 		[[ -z "$1" ]] && g-branch-set-upstream && return
 		qeval git branch --set-upstream-to $@
 	}
-	#  sha...7* branch_name...*
-	g-br() {
-		c_df_comm="$(git config --get-color color.diff.commit)"
-		c_br_curr="$(git config --get-color color.branch.current)"
-		c_br_remo="$(git config --get-color color.branch.remote)"
-		c_rst="%(color:reset)"
+  #
+  echo-vars() {
+    while [[ "$1" ]]; do
+      var="$1"; shift
+      eval "val=\$$var"
+      echo "$var=$val"
+    done
+  }
+	git-branch() {
+    local branch_level=1; while [[ "$1" =~ [123] ]]; do branch_level="$1" && shift 1; done
+    git branch --show-current 1>/dev/null || return 1
 
-		f_head="$c_br_curr%(objectname:short)* $c_rst"
-		f_nonh="$c_df_comm%(objectname:short)  $c_rst"
-		f_refname="$(join-lines <<-EOF
-			%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remo%(end)
-			%(align:left)%(refname:short)%(end)
-			$c_rst
-			EOF
-		)"
+    c_br_remote="$(git config --get-color color.branch.remote)"
+    c_br_current="$(git config --get-color color.branch.current)"
+    c_commit="$(git config --get-color color.diff.commit)"
 
-		qeval git branch --list --ignore-case \
-			--sort='-authordate' --sort='refname:rstrip=-3' \
-			--format="\"%(if)%(HEAD)%(then)$f_head%(else)$f_nonh%(end)$f_refname\"" \
-			$@
+    c_green="$(git config --get-color color.blame.repeatedlines)"
+    c_blue="$(git config --get-color color.branch.upstream)"
+    c_white="$(git config --get-color color.decorate.stash)"
+    c_red="$(git config --get-color color.status.untracked)"
+    c_reset='%(color:reset)'
+
+    f_sha="%(if)%(HEAD)%(then)$c_br_current*%(else)$c_commit %(end)%(objectname:short)$c_reset"
+    f_track="$c_red%(if)%(upstream:track)%(then)[%(upstream:track)]%(end)$c_reset"
+    f_track_short="$c_red%(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)$c_reset"
+    f_date="$c_white%(align:14,left)%(authordate:format:%F %T)%(end)$c_reset"
+    f_date_relative="$c_white%(align:20,left)%(authordate:relative)%(end)$c_reset"
+    f_date_short="$c_white%(align:14,left)%(authordate:format:%D %H:%M)%(end)$c_reset"
+    f_authorname_20="%(align:20,left)%(authorname)%(end)"
+    f_branch="%(if)%(HEAD)%(then)$c_br_current%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remote%(else)$c_reset%(end)%(end)%(refname:short)$c_reset"
+    f_comment="%(contents:subject)"
+    f_upstream="$c_blue%(if)%(upstream)%(then)   [%(upstream:short)]%(end)$c_reset"
+    f_branch_and_track_short="%(align:60,left)$f_branch%(if)%(upstream)%(then) $c_red%(align:2,left)[%(upstream:trackshort)]%(end)%(else)$c_reset%(end)%(end)"
+
+    case "$branch_level" in
+      1)  veval git branch --list --ignore-case --sort='-authordate' \
+            --format="\"$f_sha $f_date_relative $f_branch $f_track_short\"" $@
+          ;;
+      2)  veval git branch --list --ignore-case --sort='-authordate' --column=never \
+            --format="\"$f_sha  $f_date_short  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment\"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
+          ;;
+      3)  veval git branch --list --ignore-case --sort='-authordate' --column=never \
+            --format="\"$f_sha  $f_date  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment $f_track \"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
+          ;;
+      *)  eecho "git-branch: unexpected level: $branch_level"
+          return 1
+          ;;
+    esac
 	}
-	# sha...7* branch_name.........................................................60 auth_dt.......16  [upstream ] subject...
-	# Highlight date using stash's color, which is generally bright.
-	g-brr() {
-		c_df_comm="$(git config --get-color color.diff.commit)"
-		c_br_curr="$(git config --get-color color.branch.current)"
-		c_br_remo="$(git config --get-color color.branch.remote)"
-		c_br_upst="$(git config --get-color color.branch.upstream)"
-		c_st_deco="$(git config --get-color color.decorate.stash)"
-		c_rst="%(color:reset)"
+  alias gbr='git-branch 1'
+  alias gbrr='git-branch 2'
+  alias gbrrr='git-branch 3'
+  #
+  git-branches-with() {
+    local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE)) SH_DEBUG=$((SH_DEBUG))
+    local log_opts=
+    while [[ "$1" ]]; do case "$1" in
+      -q|--quiet)   SH_QUIET=1 SH_VERBOSE=0 SH_DEBUG=0; shift 1;;
+      -v|--verbose) SH_QUIET=0 SH_VERBOSE=1 SH_DEBUG=0; shift 1;;
+      -d|--debug)   SH_QUIET=0 SH_VERBOSE=1 SH_DEBUG=1; shift 1;;
+      -n|--max-count) log_opts="$log_opts $1 $2"; shift 2;;
+      -{1,2,3,4,5,6,7,8,9}*) log_opts="$log_opts -n $1"; shift 1;;
+      *) break;;
+    esac; done
+    [[ -z "$1" ]] && eecho "usage: git-branches-with [-q|-v|-d] [-n count] file_glob" && return 1
+    local file_glob="$@"
+    veval git -P log --all -n 10 --date="iso-strict" --format=\"'%h %cd %cN'\" --color=never $log_opts -- $file_glob \
+      | while read commit_sha commit_dt committer; do
+          echo-verbose "$commit_sha | $commit_dt | $committer"
+          veval git -P branch --all --list --contains=$commit_sha --format="\"%(authordate:format:%F %H:%M) | %(refname:short)\""
+        done \
+      | sort -r -s \
+      | uniq
+  }
 
-		f_head="$c_br_curr%(objectname:short)* $c_rst"
-		f_nonh="$c_df_comm%(objectname:short)  $c_rst"
-		f_refname="$(join-lines <<-EOF
-			%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remo%(end)
-			%(align:60,left)%(refname:short)%(end)
-			$c_rst
-			EOF
-		)"
-    f_date="$c_st_deco%(align:16,left)%(authordate:human-local)%(end)$c_rst"
-    f_upstream="%(if)%(upstream)%(then)$c_br_upst[%(upstream:short)]$c_rst %(end)"
+  git-commit-message() {
+    local opts=
+    while [[ "$1" =~ ^--?[a-z] ]]; do
+      opts="$opts $1"
+      shift
+    done
+    [[ -z "$1" ]] && eecho "usage: git-commit-message 'message'" && return 1
+    qeval git commit --message "$@" || return 1
+    qeval git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
+  }
 
-		# adjust for estimated number of color escape codes
-		max_width=$((COLUMNS+12))
+# LOG/PRETTY FORMAT FIELDS
+# %h  - abbrev hash
+# %C  - color or reset
+# %cn - committer name; %cN via .mailmap
+# %ce - committer email; %cE via .mailmap
+# %cl - committer email local part; %cL via .mailmap
+# %cd - commit date in --date's format
+# %cr - commit date (relative)
+# %D  - ref name(s)
+# %s  - subject line
+  git-log() {
+    local log_level=1; [[ "$1" =~ ^[123]$ ]] && log_level="$1" && shift 1
+    git branch --show-current 1>/dev/null || return 1
 
-		qeval git branch --list --ignore-case --column=never \
-			--sort='-authordate' \
-			--format="\"%(if)%(HEAD)%(then)$f_head%(else)$f_nonh%(end)$f_refname $f_date  $f_upstream%(contents:subject)\"" \
-			$@ \
-    | awk -v MAXW=$max_width \
-    	'{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
-	}
-	# sha...7* branch_name...............................................60 auth_dt.......16 author_name...16 [upstream] subject...
-  # Branches' refname prefixes: local: ref/heads; remote: refs/remotes
-  # Highlight date using stash's color, which is generally bright.
-	g-brrr() {
-		c_df_comm="$(git config --get-color color.diff.commit)"
-		c_br_curr="$(git config --get-color color.branch.current)"
-		c_br_remo="$(git config --get-color color.branch.remote)"
-		c_br_upst="$(git config --get-color color.branch.upstream)"
-		c_st_deco="$(git config --get-color color.decorate.stash)"
-		c_rst="%(color:reset)"
+    c_reset='%C(reset)'
+    c_commit="%C(yellow)"
+    c_tag="%C(bold cyan)"
+    c_white="%C(white)"
 
-		f_head="$c_br_curr%(objectname:short)*$c_rst"
-		f_nonh="$c_df_comm%(objectname:short) $c_rst"
-		f_refname="$(join-lines <<-EOF
-			%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remo%(end)
-			%(align:60,left)%(refname:short)%(end)
-			$c_rst
-			EOF
-		)"
-    f_date="$c_st_deco%(align:16,left)%(authordate:human-local)%(end)"
-    f_authorname="%(align:18,left)%(authorname)%(end)"
-    f_upstream="%(if)%(upstream)%(then)$c_br_upst[%(upstream:short)]$c_rst %(end)"
+    f_hash="${c_commit}%h"
+    f_author_name_mailmap="${c_reset}%<(18)%aN"
+    f_author_name="${c_reset}%<(20)%an"
+    f_author_date_rel="${c_white}%<(12)%ar"
+    f_author_date_short="${c_white}%<(8)%as"
+    f_author_date="${c_white}%ad"
+    f_tags="${c_tag}%d"
+    f_subject_line="${c_reset}%s"
+    f_subject_line_white="${c_white}%s"
+    f_body="${c_reset}%b"
 
-    # adjust for estimated number of color escape codes
-    max_width=$((COLUMNS+12))
-
-		qeval git branch --list --all --ignore-case --column=never \
-			--sort='-authordate' \
-			--format="\"%(if)%(HEAD)%(then)$f_head %(else)$f_nonh %(end)$f_refname $f_date  $f_authorname $f_upstream%(contents:subject)\"" \
-			$@ \
-    | awk -v MAXW=$max_width \
-    	'{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
-	}
+    case "$log_level" in
+      1)  veval git log -20 --date=human --use-mailmap \
+            --format="\"$f_hash  $f_author_name_mailmap $f_author_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | less
+    #   "$args" |\
+    # sed -E \
+    #   -e "s:user/$USER:\\$ME:g" \
+    #   -e 's/ -> /->/g' \
+    #   -e 's/origin/$OR/g' \
+    #   -e 's/tag: /t:/g' |\
+    # lessR
+          ;;
+      2) veval git log --date=human --use-mailmap \
+            --format="\"$f_hash  $f_author_name_mailmap  $f_author_date_short $f_author_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | less
+          ;;
+      3) veval git log --date=human --no-use-mailmap --stat \
+            --format="\"$f_hash  $f_author_name  $f_author_date  $f_author_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | less
+          ;;
+      *)  eecho "git-log: unexpected level: $log_level"
+          return 1
+          ;;
+    esac
+  }
+  alias glo='git-log 1'
+  alias glog='git-log 2'
+  alias glogg='git-log 3'
+  # llll = !args="\"$@\"" && shift "$#" &&\
+  #   git log -10 --compact-summary --no-use-mailmap --source "$args" |\
+  #   sed -E \
+  #     -e "s:user/$USER:\\$ME:g" \
+  #     -e 's/ -> /->/g' \
+  #     -e 's:origin:$OR:g' \
+  #     -e 's/tag: /t:/g' |\
+  #   less
 
 	# cd into each given directory and perform a git pull --ff-only
 	# usage: git-pulld [dir ...]
-	g-pulld() {
+	git-pulld() {
 		local dirs="$@"
 		[[ -z "$dirs" ]] && dirs="$(find . -maxdepth 1 -type d)"
 
@@ -848,9 +910,43 @@ fwf-nice() {
 		done
 	}
 
+  git-status() {
+    local status_level=1; [[ -n "$1" ]] && status_level="$1" && shift 1
+    [[ ! "$status_level" =~ [123] ]] && eecho "usage: g-status [1|2|3]" && return 1
+    git branch --show-current 1>/dev/null || return 1
+
+    c_remote_branch="$(git config --get-color color.status.remotebranch)"
+    c_stash="$(git config --get-color color.decorate.stash)"
+    c_reset="$(git config --get-color '' reset)"
+    
+    case "$status_level" in
+
+      1)  veval git -c advice.statusHints=false status --column=dense --no-show-stash $@ \
+          | grep -E -v '^\#?\s*$' \
+          | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;"
+          ;;
+      2)  echo "#"
+          veval git -c advice.statusHints=false status --column=nodense --show-stash $@ \
+          | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;" \
+          | sed -E -e "s/(Your stash.+has [[:digit:]]+ entr(ies|y))/${c_stash}\\1${c_reset}/;"
+          ;;
+      3)  echo "#"
+          veval git -c advice.statusHints=false status --column=nodense --show-stash --ignored=traditional --verbose $@ \
+          | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;" \
+          | sed -E -e "s/(Your stash.+has [[:digit:]]+ entr(ies|y))/${c_stash}\\1${c_reset}/;"
+          ;;
+      *)  eecho "git-status: unexpected level: $status_level"
+          return 1
+          ;;
+    esac
+  }
+  alias gst='git-status'
+  alias gstt='git-status 2'
+  alias gsttt='git-status 3'
+
 	# update local mtime based on git log
 	# from: https://stackoverflow.com/a/2038768/160955
-	g-touch() {
+	git-touch() {
 		[[ -z "$1" ]] && eecho "usage: git-touch file [...]" && return 1
 		while [[ -n "$1" ]]; do
 			local f="$1"; shift
@@ -1261,7 +1357,7 @@ gw-task() {
 
 
 alias .reload-shell='qeval exec $SHELL -l'
-alias .reload-bash-profile='qeval . "~/.bash_profile"'
-alias .rlbp='qeval .reload-bash-profile'
+alias .reload-bash-profile='eval-verbose . "~/.bash_profile"'
+alias .rlbp='eval-verbose .reload-bash-profile'
 
 .tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH])"

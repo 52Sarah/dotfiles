@@ -46,6 +46,10 @@
       "name": "~/Workspace/dotfiles",
       "path": "~/Workspace/dotfiles",
     },
+    {
+      "name": "~/ttpp/bin",
+      "path": "~/ttpp/bin",
+    },
 	]
 }
 

@@ -833,46 +833,66 @@ fwf-nice() {
 # %D  - ref name(s)
 # %s  - subject line
   git-log() {
-    local log_level=1; [[ "$1" =~ ^[123]$ ]] && log_level="$1" && shift 1
+    local log_level=1; [[ "$1" =~ ^[0123]$ ]] && log_level="$1" && shift 1
     git branch --show-current 1>/dev/null || return 1
+
+    local hash_len=7
 
     c_reset='%C(reset)'
     c_commit="%C(yellow)"
     c_tag="%C(bold cyan)"
     c_white="%C(white)"
 
-    f_hash="${c_commit}%h"
+    f_hash="%<($hash_len)${c_commit}%h"
     f_author_name_mailmap="${c_reset}%<(18)%aN"
+    f_author_name_mailmap_long="${c_reset}%<(22)%aN"
     f_author_name="${c_reset}%<(20)%an"
     f_author_date_rel="${c_white}%<(12)%ar"
-    f_author_date_short="${c_white}%<(8)%as"
+    f_author_date_short="${c_white}%<(8)%ad"
     f_author_date="${c_white}%ad"
     f_tags="${c_tag}%d"
+    f_tags_short="${c_tag}%D"
     f_subject_line="${c_reset}%s"
     f_subject_line_white="${c_white}%s"
     f_body="${c_reset}%b"
 
     case "$log_level" in
-      1)  veval git log -20 --date=human --use-mailmap \
-            --format="\"$f_hash  $f_author_name_mailmap $f_author_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
+      0)  hash_len=6
+          veval git log -20 --abbrev=$hash_len --decorate=short --date='format:%D' \
+            --format="\"$f_hash  $f_author_name_mailmap $f_author_date_short $f_tags_short $f_subject_line$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | sed -E \
+              -e 's/origin/$O/g' \
+              -e 's/tag: ?/$T:/g' \
+              -e 's/ -> /->/g' \
             | less
-    #   "$args" |\
-    # sed -E \
-    #   -e "s:user/$USER:\\$ME:g" \
-    #   -e 's/ -> /->/g' \
-    #   -e 's/origin/$OR/g' \
-    #   -e 's/tag: /t:/g' |\
-    # lessR
-          ;;
-      2) veval git log --date=human --use-mailmap \
-            --format="\"$f_hash  $f_author_name_mailmap  $f_author_date_short $f_author_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
+              # -e "s/$(git config --get user.name)/\$ME/g" \
+            ;;
+      1)  veval git log -20 --abbrev=$hash_len --date=human --use-mailmap \
+            --format="\"$f_hash  $f_author_name_mailmap_long $f_author_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | sed -E \
+              -e 's/origin/$O/g' \
+              -e 's/tag: ?/$T:/g' \
+              -e 's/ -> /->/g' \
+            | less
+            ;;
+      2) veval git log -20 --abbrev=$hash_len --date=human --use-mailmap \
+            --format="\"$f_hash  $f_author_name_mailmap_long  $f_author_date_short $f_author_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | sed -E \
+              -e 's/origin/$O/g' \
+              -e 's/tag: ?/$T:/g' \
+              -e 's/ -> /->/g' \
             | less
           ;;
-      3) veval git log --date=human --no-use-mailmap --stat \
-            --format="\"$f_hash  $f_author_name  $f_author_date  $f_author_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
+      3) veval git log -20 --abbrev=$hash_len --date=human --no-use-mailmap --stat \
+            --format="\"$f_hash  $f_author_name_mailmap_long  $f_author_date  $f_author_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | sed -E \
+              -e 's/origin/$O/g' \
+              -e 's/tag: ?/$T:/g' \
+              -e 's/ -> /->/g' \
             | less
           ;;
       *)  eecho "git-log: unexpected level: $log_level"
@@ -880,17 +900,10 @@ fwf-nice() {
           ;;
     esac
   }
-  alias glo='git-log 1'
-  alias glog='git-log 2'
-  alias glogg='git-log 3'
-  # llll = !args="\"$@\"" && shift "$#" &&\
-  #   git log -10 --compact-summary --no-use-mailmap --source "$args" |\
-  #   sed -E \
-  #     -e "s:user/$USER:\\$ME:g" \
-  #     -e 's/ -> /->/g' \
-  #     -e 's:origin:$OR:g' \
-  #     -e 's/tag: /t:/g' |\
-  #   less
+  alias glo='git-log 0'
+  alias gloo='git-log 1'
+  alias glooo='git-log 2'
+  alias gloooo='git-log 3'
 
 	# cd into each given directory and perform a git pull --ff-only
 	# usage: git-pulld [dir ...]
@@ -912,7 +925,7 @@ fwf-nice() {
 
   git-status() {
     local status_level=1; [[ -n "$1" ]] && status_level="$1" && shift 1
-    [[ ! "$status_level" =~ [123] ]] && eecho "usage: g-status [1|2|3]" && return 1
+    [[ ! "$status_level" =~ [0123] ]] && eecho "usage: g-status [1|2|3]" && return 1
     git branch --show-current 1>/dev/null || return 1
 
     c_remote_branch="$(git config --get-color color.status.remotebranch)"
@@ -921,6 +934,10 @@ fwf-nice() {
     
     case "$status_level" in
 
+      0)  veval git -c advice.statusHints=false status --short $@ \
+          | grep -E -v '^\#?\s*$' \
+          | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;"
+          ;;
       1)  veval git -c advice.statusHints=false status --column=dense --no-show-stash $@ \
           | grep -E -v '^\#?\s*$' \
           | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;"
@@ -940,9 +957,10 @@ fwf-nice() {
           ;;
     esac
   }
-  alias gst='git-status'
-  alias gstt='git-status 2'
-  alias gsttt='git-status 3'
+  alias gst='git-status 0'
+  alias gstt='git-status 1'
+  alias gsttt='git-status 2'
+  alias gstttt='git-status 3'
 
 	# update local mtime based on git log
 	# from: https://stackoverflow.com/a/2038768/160955
@@ -1030,7 +1048,7 @@ fwf-nice() {
 
 	export SDKMAN_DIR="$HOME/.sdkman"
 
-	if [[ "$(type -t sdk &>/dev/null)" == "function" ]]; then
+	if [[ "$(type -t sdk)" == "function" ]]; then
 		.tick-bash-profile 'sdkman already initialized'
 	else
 		.tick-bash-profile '... initializing sdkman'
@@ -1070,7 +1088,7 @@ fwf-nice() {
     return 1
   fi
 
-  if [[ "$(type -t jenv &>/dev/null)" == "function" ]]; then
+  if [[ "$(type -t jenv)" == "function" ]]; then
     .tick-bash-profile 'jenv already initialized'
   else
     .tick-bash-profile '... initializing jenv'
@@ -1118,6 +1136,70 @@ fi
   .tick-bash-profile '[end] .setup-pg, PATH=$PATH"'
 }
 ((! SETUP_POSTGRES_DISABLED)) && .setup-pg
+
+
+#
+### SCHEMASPY
+#
+.setup-schemaspy() {
+  if [[ ! -e "$HOME/lib/schemaspy.jar" ]] then
+    .tick-bash-profile "[end] .setup-schemaspy, schemaspy.jar not installed in ~/lib"
+    return 1
+  fi
+
+  schemaspy() {
+    local driver_path="$HOME/lib"
+    local spy_output="schemaspy-out"
+    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
+      -dp|--driver-path)    driver_path="$2"; shift 2;;
+      -o|--outputDirectory) spy_output="$2"; shift 2;;
+      *) break;;
+    esac; done
+    qeval java -jar "$HOME/lib/schemaspy.jar" \
+      -cat '%' \
+      -dp "$driver_path" \
+      -o  "$spy_output" \
+      -noviews -noimplied -nopages -maxdet 9999 \
+      $@
+  }
+  schemaspy-ora() {
+    local db_type=orathin
+    local db_host=db01.vm db_port=1521
+    local db_name=COREVM db_user=core db_password=core
+    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
+      -host|--host)         db_host="$2"; shift 2;;
+      -port|--port)         db_port="$2"; shift 2;;
+      -db|--database-name)  db_name="$2"; shift 2;;
+      -u|--user)            db_user="$2"; shift 2;;
+      -p|--password)        db_password="$2"; shift 2;;
+      *) break;;
+    esac; done
+    qeval schemaspy \
+      -t  "$db_type" \
+      -db "$db_name" -host "$db_host" -port "$db_port" \
+      -u  "$db_user" -p "$db_password" \
+      $@
+  }
+  schemaspy-pg() {
+    local db_type=pgsql11
+    local db_host=localhost db_port=5432
+    local db_name=core db_user=core db_password=core
+    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
+      -host|--host)         db_host="$2"; shift 2;;
+      -port|--port)         db_port="$2"; shift 2;;
+      -db|--database-name)  db_name="$2"; shift 2;;
+      -u|--user)            db_user="$2"; shift 2;;
+      -p|--password)        db_password="$2"; shift 2;;
+      *) break;;
+    esac; done
+    veval schemaspy \
+      -t "$db_type" \
+      -db "$db_name" -host "$db_host" -port "$db_port" \
+      -u "$db_user" -p "$db_password" \
+      $@
+  }
+}
+((! SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy
 
 
 #

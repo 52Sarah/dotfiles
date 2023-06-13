@@ -34,10 +34,10 @@
   f =     fetch --progress --verbose
   ft =    fetch --tags
 
-  l= log
-  lo = !bash -li -c 'git-log 1'
-  loo = !bash -li -c 'git-log 2'
-  looo = !bash -li -c 'git-log 3'
+  lo = log -20 --abbrev=6 --date='format:%D'
+  loo = log -20 --abbrev=short --date=human --use-mailmap
+  looo = log -20 --abbrev=short --date=human --use-mailmap --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%<(8)%ad %C(white)%<(12)%ar %C(bold cyan)%d%n  %C(reset)%s%C(reset)'
+  loooo = log -20 --abbrev=short --date=human --no-use-mailmap --stat --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%ad  %C(white)%<(12)%ar%C(bold cyan)%d%n  %C(white)%s%n  %C(reset)%b%C(reset)'
 
   # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
   # for this function to pop.
@@ -52,24 +52,12 @@
   rab =   rebase --abort
   rc =    rebase --continue
 
-  s = status --short
-  st = !bash -li -c 'git-status 1'
-  stt = !bash -li -c 'git-status 2'
-  sttt = !bash -li -c 'git-status 3'
-#  # Show files in columns; include stash count.
-#  stt = !args="\"$@\"" && shift "$#" &&\
-#    git status --column=nodense --show-stash "$args" |\
-#    sed -E \
-#      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
-#      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
-#  # 
-#  # Show files in columns; include ignored files; include stash count.
-#  sttt = !args="\"$@\"" && shift "$#" &&\
-#    git status --column=nodense --ignored --show-stash "$args" |\
-#    sed -E \
-#      -e "s/\\'\\(.+\\)\\'/\\'$(git config --get-color color.status.remotebranch)\\\\1$(git config --get-color '' reset)\\'/" \
-#      -e "s/\\(stash.+has\\ \\)\\([[:digit:]]+\\)\\(\\ entries\\)/\\\\1$(git config --get-color color.decorate.stash)\\\\2$(git config --get-color '' reset)\\\\3/"
-
+  st = status --short
+  stt = status --column=dense --no-show-stash
+  # Show files in columns
+  sttt = status --column=nodense --show-stash
+  # Show files in columns, include ignored files; show diffs
+  stttt = status --column=nodense --show-stash --ignored=traditional --verbose
 
 [blame]
   coloring = highlightRecent  # options: repeatedLines, highlightRecent, NONE
@@ -195,7 +183,7 @@
 
 [user]
   name = Todd Pierzina
-  email = todd.pierzina@collectivehealth.com
+  email = tpierzina@accertify.com
 
 
 #

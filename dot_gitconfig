@@ -1,29 +1,74 @@
 [alias]
 
+  alias = !bash -li -c 'git-alias'
+
   # -C - detect copied lines, even from other files in the same commit
   # -M - detect moved lines, even from other files in the same commit
   # -w - ignore whitespace
   bl = blame -C -M -w
 
-  b = branch
+  brcp = branch -C
+  brmv = branch -M
+  brrm = branch -D
+  brsu = branch --set-upstream-to
+
+  b = branch --list --ignore-case --sort=-committerdate --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:12,left)%(committerdate:relative)%(end)\\ \\ %(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(color:white)\\ %(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)%(color:reset)"
+  br = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(if)%(upstream)%(then)\\ %(color:white)%(align:2,left)[%(upstream:trackshort)]%(end)%(color:reset)%(end)%(end)\\ %(contents:subject)"
   
-  brcp =  branch -C
-  brmv =  branch -M
-  brrm =  branch -D
-  brdel = branch -D
+  bra = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(if)%(HEAD)%(then)%(color:magenta)%(else)%(color:reset)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(color:reset)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(else)%(color:reset)%(end)%(end)%(refname:short)%(color:cyan)%(if)%(upstream)%(then)\\ %(upstream:track)%(end)%(color:reset)%(end)\\ %(contents:subject)"
 
-  br =    !bash -li -c 'git-branch 1'
-  brr =   !bash -li -c 'git-branch 2'
-  brrr =  !bash -li -c 'git-branch 3'
-
+#  xbra = branch --list --ignore-case --sort=-committerdate --column=never --format="
+#    %(if)%(HEAD)%(then)
+#      %(color:magenta)*
+#    %(else)
+#      %(color:yellow)
+#      \\ 
+#    %(end)
+#    %(objectname:short)
+#    \\ \\
+#    %(if)%(HEAD)%(then)
+#      %(color:magenta)
+#    %(else)
+#      %(color:reset)
+#    %(end)
+#    %(align:14,left)
+#      %(committerdate:format:%D\\ %H:%M)
+#    %(end)
+#    \\ \\ 
+#    %(align:20,left)%(authorname)%(end)
+#    \\ 
+#    %(align:60,left)
+#      %(if)%(HEAD)%(then)%(else)
+#        %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
+#          %(color:cyan)
+#        %(else)
+#          %(color:reset)
+#        %(end)
+#      %(end)
+#      %(refname:short)
+#      %(color:white)
+#      %(if)%(upstream)%(then)
+#        \\ 
+#        %(upstream:track)
+#      %(end)
+#      %(color:reset)
+#    %(end)
+#    \\
+#    %(color:cyan) 
+#    %(if)%(upstream)%(then)
+#      [%(upstream:short)]
+#      \\ 
+#    %(end)
+#    %(color:reset)
+#    \\ 
+#    %(contents:subject)
+#"
+ 
   co =    checkout
   com =   checkout master
   cod =   checkout develop
 
-  cm =    !bash -li -c 'git-commit-message'
-  cma =   cm --all
-
-  cp =    cherry-pick
+  cp =    cherry-pick --edit
   
   d =     diff
   ds =    diff --stat-graph-width=20
@@ -31,8 +76,8 @@
   dds =   diff --dirstat
   dt =    difftool --dir-diff
 
-  f =     fetch --progress --verbose
-  ft =    fetch --tags
+  fet =   fetch --progress --verbose
+  fett =  fetch --tags
 
   lo = log -20 --abbrev=6 --date='format:%D'
   loo = log -20 --abbrev=short --date=human --use-mailmap
@@ -66,7 +111,7 @@
 [branch]
   autoSetupMerge  = false
   autoSetupRebase = always
-  sort = -authordate
+  sort = -committerdate
 
 [checkout]
   defaultRemote = origin

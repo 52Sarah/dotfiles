@@ -28,52 +28,80 @@ export JAVA_V11='11.0.18-zulu'
   alias vb-$abbr-log="vb-log \"$vm_name\""
 }
 
-.setup-acc-vb-vm-aliases ora "${VBOX_ORA_NAME:=Oracle_19c}"
+.setup-acc-vb-vm-aliases ora "${VBOX_ORA_NAME:=Oracle19c_19_18}"
 .setup-acc-vb-vm-aliases mapr "${VBOX_MAPR_NAME:=MapR-Sandbox-6.1.0-Secure}"
 
 #
 ### GRADLE helpers
 #
-gw-slowest() {
+gw-slow() {
   gw-task --info --no-build-cache --no-configuration-cache --no-configure-on-demand $@
 }
 gw-normal() {
-  gw-task --info --build-cache $@
+  gw-task --build-cache $@
 }
 gw-fast() {
-  gw-normal --no-rebuild --offline --configuration-cache --configure-on-demand $@
+  gw-normal --no-rebuild --configuration-cache --configure-on-demand $@
 }
 gw-faster() {
-  gw-fast -x war -x explodeWar $@
+  gw-fast  --offline -x war -x explodeWar $@
 }
 #
 int-clean() { 
   iterm-set-title --tab 'int-clean'
-  gw-slowest clean $@; 
+  gw-slow clean $@
 }
 int-clean-start() { 
   iterm-set-title --tab 'int-clean-start'
-  gw-slowest clean start $@; 
+  gw-normal clean start $@
+}
+int-clean-start-mapr-no() { 
+  iterm-set-title --tab 'int-clean-start'
+  gw-normal clean start -Pmapr-enabled=false $@
+}
+int-clean-start-slow() { 
+  iterm-set-title --tab 'int-clean-start-slow'
+  gw-slow clean start $@
+}
+int-clean-start-slow-mapr-no() { 
+  iterm-set-title --tab 'int-clean-start-slow'
+  gw-slow clean start -Pmapr-enabled=false $@
 }
 int-start-mapr-yes() {
   iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=true $@;
+  gw-normal start -Pmapr-enabled=true $@
 }
 int-start-mapr-no() {
   iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=false $@;
+  gw-normal start -Pmapr-enabled=false $@
+}
+int-start-slow() {
+  iterm-set-title --tab 'int-start-slow'
+  gw-slow start $@
+}
+int-start-slow-mapr-yes() {
+  iterm-set-title --tab 'int-start-slow'
+  gw-slow start -Pmapr-enabled=true $@
+}
+int-start-slow-mapr-no() {
+  iterm-set-title --tab 'int-start-slow'
+  gw-slow start -Pmapr-enabled=false $@
+}
+int-start-fast() {
+  iterm-set-title --tab 'int-start-fast'
+  gw-fast start $@
 }
 int-start-fast-mapr-yes() {
-  iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=true $@;
+  iterm-set-title --tab 'int-start-fast'
+  gw-fast start -Pmapr-enabled=true $@
 }
 int-start-fast-mapr-no() {
-  iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=false $@;
+  iterm-set-title --tab 'int-start-fast'
+  gw-fast start -Pmapr-enabled=false $@
 }
 int-db-migrate() {
   iterm-set-title --tab 'int-db-migrate'
-  gw-faster dbTaskInfoCore dbTaskMigrateCore $@
+  gw-normal dbTaskInfoCore dbTaskMigrateCore $@
 }
 #
 # For database unit test container
@@ -91,37 +119,41 @@ int-ora-stop() {
   gw-normal oracleStop $@
 }
 #
-int-tty() {
-  if [[ -n "$1" ]]; then
-    nc localhost 9092 <<< $@
-  else
-    nc localhost 9092
-  fi
+api-start() {
+  iterm-set-title --tab 'api-start'
+  gw-normal startApi -Psharding-enabled=true $@
 }
-#
 api-start-mapr-yes() {
-  iterm-set-title --tab 'api'
-  gw-normal startApi -Pmapr-enabled=true -Psharding-enabled=true $@
-}
-api-start-fast-mapr-yes() {
-  iterm-set-title --tab 'api'
-  gw-fast startApi -Pmapr-enabled=true -Psharding-enabled=true $@
-}
-api-start-faster-mapr-yes() {
-  iterm-set-title --tab 'api'
-  gw-faster startApi -Pmapr-enabled=true -Psharding-enabled=true $@
+  iterm-set-title --tab 'api-start'
+  gw-normal startApi -Psharding-enabled=true -Pmapr-enabled=true $@
 }
 api-start-mapr-no() {
-  iterm-set-title --tab 'api'
-  gw-normal startApi -Pmapr-enabled=false -Psharding-enabled=true $@
+  iterm-set-title --tab 'api-start'
+  gw-normal startApi -Psharding-enabled=true -Pmapr-enabled=false $@
+}
+api-start-fast() {
+  iterm-set-title --tab 'api-start-fast'
+  gw-fast startApi -Pmapr-enabled=true $@
+}
+api-start-fast-mapr-yes() {
+  iterm-set-title --tab 'api-start-fast'
+  gw-fast startApi -Psharding-enabled=true -Pmapr-enabled=true $@
 }
 api-start-fast-mapr-no() {
-  iterm-set-title --tab 'api'
-  gw-fast startApi -Pmapr-enabled=false -Psharding-enabled=true $@
+  iterm-set-title --tab 'api-start-fast'
+  gw-fast startApi -Psharding-enabled=true -Pmapr-enabled=false $@
+}
+api-start-faster() {
+  iterm-set-title --tab 'api-start-faster'
+  gw-faster startApi -Psharding-enabled=true $@
+}
+api-start-faster-mapr-yes() {
+  iterm-set-title --tab 'api-start-faster'
+  gw-faster startApi -Psharding-enabled=true -Pmapr-enabled=true $@
 }
 api-start-faster-mapr-no() {
-  iterm-set-title --tab 'api'
-  gw-faster startApi -Pmapr-enabled=false -Psharding-enabled=true $@
+  iterm-set-title --tab 'api-start-faster'
+  gw-faster startApi -Psharding-enabled=true -Pmapr-enabled=false $@
 }
 #
 rtd-start() {
@@ -180,24 +212,31 @@ radar-task() {
   qeval cd "$HOME/Workspace/radar"
   gw-task $RADAR_OPTS $@
 }
-radar-tty() {
-  if [[ -n "$1" ]]; then
-    nc localhost 9999 <<< $@
-  else
-    nc localhost 9999
-  fi
+
+# Tomcat console interfaces for various web apps running locally.
+tty-console() {
+  local USAGE="Usage: tty-console -p port [-t title] [command]"
+  local port title tty_cmd
+  while [[ "$1" ]]; do case "$1" in
+    -p|--port )   port="$2"; : ${title:=tty:$port}; shift 2;;
+    -t|--title )  title="$2"; shift 2;;
+    *)            break;;
+  esac; done
+  tty_cmd="$@"
+  echo-glob port title tty_cmd
+
+  [[ ! "$port" =~ ^[[:digit:]]{3,5}$ ]] && echo-error "$USAGE" && return 1
+
+  # see https://superuser.com/a/410642/17666 for the echo/redirect magic
+  local c="nc localhost $port"
+  [[ -n "$tty_cmd" ]] && c="cat <(echo $tty_cmd) - | $c"
+  qeval $c
 }
-#
-vertigo-task() {
-  qeval cd "$HOME/Workspace/vertigo"
-  gw-task $VERTIGO_OPTS $@
-}
-radar-tty() {
-  if [[ -n "$1" ]]; then
-    nc localhost 9999 <<< $@
-  else
-    nc localhost 9999
-  fi
+tty-int()   { qeval tty-console -p 9092 "$@"; }
+tty-api()   { qeval tty-console -p 9074 "$@"; }
+tty-radar() { qeval tty-console -p 9999 "$@"; }
+tty-vert()  { 
+  qeval tty-console -p 9999 "$@" || qeval tty-console -p 9998 "$@"
 }
 
 ### ORA vm helpers
@@ -226,14 +265,19 @@ mapr-command() {
 }
 #
 mapr-login-password() { 
-  local USAGE="Usage: mapr-login-password [user] [password]; user defaults to 'maprdev', password to user"
-  [[ -z "$MAPR_USER" ]] && export MAPR_USER=$(whoami)
+  local USAGE="Usage: mapr-login-password [user] [password]; user defaults to $USER, password to \$MAPR_CRED"
+  [[ "$1" =~ -h|--help ]] && eecho "$USAGE" && return 0
+  : "${MAPR_USER:=$USER}"
   local user="${1:-$MAPR_USER}"
   local password="${2:-$MAPR_CRED}"
+  if [[ -z "$password" ]]; then
+    eprintf "mapr-login-password: %s\n%s\n" "Password not specified nor in \$MAPR_CRED." "$USAGE"
+    return 1
+  fi
   qeval maprlogin password -user $user <<< "$password"
 }
 #
-mapr-start() { vb-mapr-start "$@"; }
+mapr-start() { mapr-start "$@"; }
 mapr-cli-service-list() { mapr-command sudo maprcli service list "$@"; }
 mapr-shutdown() { mapr-command -u root "./mapr-shutdown.sh $@"; }
 mapr-ss() { mapr-command sudo ss -lptn4 | cat; }
@@ -265,6 +309,9 @@ mapr-warden-start() { mapr-command "sudo systemctl start mapr-warden $@"; }
 mapr-warden-stop() { mapr-command "sudo systemctl stop mapr-warden $@"; }
 mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden.log $@"; }
 
+
+alias .reload-bash-profile-acc='qeval . "~/.bash_profile"'
+alias .rlbpa='veval .reload-bash-profile-acc'
 
 .tick-bash-profile-acc "[END-FILE] (\$\$=[$$])"
 

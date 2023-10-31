@@ -36,6 +36,7 @@ echo-verbose()  {
   >&2 echo "$prefix$@"
 }
 echo-quiet()  { ((SH_QUIET)) && return 0; echo "$@"; }
+echo-error()  { >&2 echo "$@"; }
 echo-stderr() { >&2 echo "$@"; }
 decho() { echo-debug "$@"; }
 vecho() { echo-verbose "$@"; }

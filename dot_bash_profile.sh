@@ -65,15 +65,15 @@ export FIGNORE='DS_Store:Icon?'
 # Change directory to the given link's target, either the file's parent or the directory itself.
 cd-ln() {
 	local link="$1" target
-	[[ -z "$link" ]] && eecho "usage: cd-ln link_to_dir | link_to_file" && return 1
-	[[ ! -e "$link" ]] && eecho "cd-ln: $link: no such symlink" && return 1
-	[[ ! -L "$link" ]] && eecho "cd-ln: $link: not a symlink" && return 1
+	[[ -z "$link" ]] && echo-error "usage: cd-ln link_to_dir | link_to_file" && return 1
+	[[ ! -e "$link" ]] && echo-error "cd-ln: $link: no such symlink" && return 1
+	[[ ! -L "$link" ]] && echo-error "cd-ln: $link: not a symlink" && return 1
 	local target="$(readlink "$link")"
-	veval cd "$link"
+	qeval cd "$link"
 	if [[ -d "$target" ]]; then
-			veval cd "$target"
+			qeval cd "$target"
 	else
-			veval cd "$(dirname "$target")"
+			qeval cd "$(dirname "$target")"
 	fi
 }
 
@@ -102,7 +102,7 @@ alias pfind='qeval find -L -E . -path'
 alias rfind='qeval find -L -E . -regex'
 nfind() {
 	local usage="usage: nfind [path ...] glob_pattern [find_expr ...]"
-	[[ -z "$1" ]] && eecho "$usage" && return 1
+	[[ -z "$1" ]] && echo-error "$usage" && return 1
 	local paths=
 	while [[ -e "$1" ]]; do
 		paths="$paths $1"; shift
@@ -166,13 +166,13 @@ alias tl='qeval less --chop-long-lines +F'
 alias l1='qeval ls -1F'
 alias l1r='qeval l1 -r'
 #
-alias ll='ls -oghF'
+alias ll='qeval ls -oghF'
 alias llt='qeval ll -t'
 alias lltr='qeval ll -tr'
 alias lls='qeval ll -S'
 alias llsr='qeval ll -Sr'
 #
-alias la='ls -AlhF'
+alias la='qeval ls -AlhF'
 alias lat='qeval la -t'
 alias latr='qeval la -tr'
 alias las='qeval la -S'
@@ -203,6 +203,21 @@ lso() {
 	ls -ohF $@ \
 	| awk '{k=0;for(i=0;i<=8;i++)k+=((substr($1,i+2,1)~/[rwx]/)*2^(8-i));if(k)printf(" %0o ",k);print}' \
 	| sed -E -e "s:\\$HOME:\\~:g"
+}
+
+ncz() {
+  [[ -z "$1" ]] && echo-error "Usage: ncz [host] port" && return 1
+  local host= port=
+  if [[ -n "$2" ]]; then
+    host=$1
+    port=$2
+    shift 2
+  else
+    host=localhost
+    port=$1
+    shift 1
+  fi
+  qeval nc -z $host $port $@; echo-status "Active" "Inactive"
 }
 
 #
@@ -238,7 +253,7 @@ ps-grep() {
 	# ps_cmd="$ps_cmd | egrep -v -e '$$ .+ egrep -e USER'"
 	ps_cmd="$ps_cmd | egrep -v -e ' egrep '"
 	ps_cmd="$ps_cmd | head -n 15"
-	qeval $ps_cmd
+	qeval "$ps_cmd"
 }
 ps-java() {
 	qeval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +([[:digit:]]+ +){2}([^[:space:]]+ +){4}([^[:space:]]+) +).*( ([a-z]+\.)+[A-Z][^.]+.*)$/\1 - \5/p;'" \
@@ -247,8 +262,8 @@ ps-java() {
 	# qeval "ps-grep -l java | sed -E -n 's/^(USER.+)|([[:alnum:]]+ +([[:digit:]]+ +){2} +([[:digit:]]+ +){5} +.+)$/\2/; p;'" # + \d+ +\d+/p;' #' +\w+ +\w+ +\w+ +'
 }
 ps-java-pid-class() {
-	[[ -z "$1" ]] && eecho "Usage: ps-java-pid-class PID" && return 1
-	 ps -p "$1" | sed -E -n -e 's/.+ ([a-z]+\.)+([A-Z][A-Za-z]+).*/\2/p'
+	[[ -z "$1" ]] && echo-error "Usage: ps-java-pid-class PID" && return 1
+	 qeval "ps -p $1 | sed -E -n -e 's/.+ ([a-z]+\.)+([A-Z][A-Za-z]+).*/\2/p'"
 }
 #
 # Show active port info: command, pid, ports
@@ -260,19 +275,19 @@ ps-java-pid-class() {
 # -P    use port numbers, not names
 # -w    suppress warning messages
 ps-ports-1() {
-	qeval "lsof -b +c 16 -i TCP -n -P -w $@"
+	qeval lsof -b +c 16 -i TCP -n -P -w $@
 }
 ps-ports-2() {
 	ps-ports-1 $@ \
-	| qeval "egrep '^(java|idea) '"
+	| qeval egrep '^(java|idea) '
 }
 ps-ports-3() {
 	ps-ports-2 $@ \
-	| qeval "egrep '^COMMAND|TCP.+:[0-9]{2,5} '"
+	| qeval egrep '^COMMAND|TCP.+:[0-9]{2,5} '
 }
 ps-ports-4() {
 	ps-ports-3 $@ \
-	| qeval "egrep ' \((LISTEN|ESTABLISHED)\)$'"
+	| qeval egrep ' \((LISTEN|ESTABLISHED)\)$'
 }
 ps-ports-5() {
 	ps-ports-4 $@ \
@@ -300,12 +315,12 @@ rm-ln() {
 	while [[ "$1" =~ ^- ]]; do cmd="$cmd $1" && shift; done
 
 	local link="$1" && shift
-	[[ -z "$link" ]] && eecho "usage: rmln [rm opts] symlink" && return 1
-	[[ ! -L "$link" ]] && eecho "rmln: $link: no such symlink" && return 1
+	[[ -z "$link" ]] && echo-error "usage: rmln [rm opts] symlink" && return 1
+	[[ ! -L "$link" ]] && echo-error "rmln: $link: no such symlink" && return 1
 
 	local dest="$(readlink "$link")"
-	[[ ! -e "$dest" ]] && eecho "rmln: $link -> $dest: no such file or directory" && return 1
-	qeval "$cmd '$dest'"
+	[[ ! -e "$dest" ]] && echo-error "rmln: $link -> $dest: no such file or directory" && return 1
+	qeval $cmd '$dest'
 }
 
 #
@@ -325,7 +340,7 @@ alias term-trunc='qeval tput rmam'
 echo-color() {
 	local USAGE="Usage: echo-color [-n] black|red|green|brown|blue|purple|cyan|light-gray TEXT [...]"
 	local opt_no_crlf=; [[ "$1" == "-n" ]] && opt_no_crlf='-n' && shift 1
-	[[ -z "$2" ]] && eecho "$USAGE" && return 1
+	[[ -z "$2" ]] && echo-error "$USAGE" && return 1
 
 	local color="$(lower $1)"; shift 1
 	case "$color" in
@@ -338,7 +353,7 @@ echo-color() {
 		purple) code=35;;
 		cyan)   code=36;;
 		gray)   code=37;;
-		*) eecho "echo-color: invalid color: $color"; return 1;
+		*) echo-error "echo-color: invalid color: $color"; return 1;
 	esac
 	echo -e $opt_no_crlf "\e[${code}m$@\e[0m"
 }
@@ -348,7 +363,7 @@ echo-color() {
 #
 # Update mtime of folders with latest mtime of its contents
 touchd() {
-	[[ -z "$1" ]] && eecho "usage: touchd dir [...]" && return 1
+	[[ -z "$1" ]] && echo-error "usage: touchd dir [...]" && return 1
 	local SH_VERBOSE=$((SH_VERBOSE))
 	local count=0 arg
 	for arg in $@; do
@@ -356,7 +371,7 @@ touchd() {
 			
 			local dir="$arg"
 			local dir_tilde="${dir/$HOME/~}"
-			[[ ! -e "$dir" ]] && eecho "touchd: $dir_tilde: no such directory" && return 1
+			[[ ! -e "$dir" ]] && echo-error "touchd: $dir_tilde: no such directory" && return 1
 			[[ ! -d "$dir" ]] && vecho "touchd: $dir_tilde: not a directory" && continue
 
 			local newest="$(ls -A1t "$dir/" | head -n 1)"
@@ -395,17 +410,17 @@ touchd-R() {
 # glob/symlink helpers
 #
 glob-path-count() {
-		[[ -z "$1" ]] && eecho "usage: glob-path-count patt [...]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: glob-path-count patt [...]" && return 1
 		ls -1d $@ 2> /dev/null | wc -l
 }
 # Convenience version of [[ -e "file*" [&& ...] ]] since test won't take wildcards/globs.
 glob-path-exists() {
-		[[ -z "$1" ]] && eecho "usage: glob-path-exists patt" && return 1
+		[[ -z "$1" ]] && echo-error "usage: glob-path-exists patt" && return 1
 		ls -1d $1 >& /dev/null
 }
 # First matching path for given pattern
 glob-path-first() {
-		[[ -z "$1" ]] && eecho "usage: glob-path-first patt" && return 1
+		[[ -z "$1" ]] && echo-error "usage: glob-path-first patt" && return 1
 
 		local save_clicolor_force=${CLICOLOR_FORCE}
 		unset CLICOLOR_FORCE
@@ -430,7 +445,7 @@ ln-valid() {
 	while [[ "$1" =~ ^-.+ ]]; do case "$1" in
 		-q|--quiet)    opt_quiet=1; opt_verbose=; shift 1;;
 		-v|--verbose)  opt_verbose=1; opt_quiet=; shift 1;;
-		*) eecho "$USAGE" && return 1
+		*) echo-error "$USAGE" && return 1
 	esac; done
 	
 	local files="${@:-*}"
@@ -499,8 +514,8 @@ fwf-nice() {
 	local is_pipe=; [[ ! -t 0 ]] && is_pipe=1
 	
 	local fwf=; ((! is_pipe)) && fwf="$1" && shift
-	# [[ -z "$fwf" ]] && eecho "$USAGE" && return 1
-	((! is_pipe)) && [[ ! -f "$fwf" ]] && eecho "fwf-nice: $fwf: No such file" && return 1
+	# [[ -z "$fwf" ]] && echo-error "$USAGE" && return 1
+	((! is_pipe)) && [[ ! -f "$fwf" ]] && echo-error "fwf-nice: $fwf: No such file" && return 1
 	local c='print ' first=1
 	while true; do
 		local cr=0
@@ -641,7 +656,8 @@ fwf-nice() {
   .tick-bash-profile "... \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
 
 	alias bs='qeval brew services'
-	safe-source -q /usr/local/etc/bash_completion.d/brew && .tick-bash-profile '... loaded brew completion' || .tick-bash-profile '!!! failed to load brew completion'
+	
+  safe-source -q /usr/local/etc/bash_completion.d/brew && .tick-bash-profile '... loaded brew completion' || .tick-bash-profile '!!! failed to load brew completion'
 
 	local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
 	if [[ -e "$gnu_getopt_home" ]]; then
@@ -670,7 +686,7 @@ fwf-nice() {
 	# From https://superuser.com/a/344397/17666
 	# $1 = type; 0 - both [default], 1 - tab, 2 - window
 	iterm-set-title () {
-		[[ ! "$1" =~ -b|-t|-w ]] && eecho "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
+		[[ ! "$1" =~ -b|-t|-w ]] && echo-error "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
 		local mode=0
 		if [[ "$1" =~ -t ]]; then
       mode=1
@@ -695,55 +711,49 @@ fwf-nice() {
 
 	.tick-bash-profile "... using $(git --version)"
 
-	git-add() {
-		qeval git add --verbose $@
-	}
-
-	# usage: git-alias [--raw] [--num-items n] [pattern]
+	# usage: git-alias [--max-count n] [patt]
 	git-alias() {
-		local opt_patt= opt_numitems=999
-		while [[ -n "$1" ]]; do
-			case "$1" in
-				-n|--num-items)
-					shift; opt_numitems=$1;;
-				*)
-					opt_patt="$1";;
-			esac
-			shift
-		done
-		echo-debug "git-alias: opt_raw: $opt_raw; opt_numitems: $opt_numitems; opt_patt: $opt_patt"
-		git config --get-regexp "^alias\.${opt_patt}.*" \
-			| head -n $opt_numitems \
-			| while read line; do
-					echo "${line:0:((COLUMNS - 20))}"
-				done
-	}
+    local USAGE="usage: git-alias [[--max-count] n] [patt]"
+		local opt_patt='.+' opt_maxcount=999
+    local SH_QUIET=$SH_QUIET SH_VERBOSE=$SH_VERBOSE
+		while [[ -n "$1" ]]; do case "$1" in
+      -q | --quiet)     SH_QUIET=1; shift;;
+      -v | --verbose)   SH_VERBOSE=1; shift;;
+			-n | --max-count) shift 1; 
+                        if [[ -n "$1" ]]; then
+                          opt_maxcount=$1; 
+                          shift;
+                        else
+                          echo-error "usage: $USAGE"
+                          return 1;
+                        fi;;
+			*) break;;
+		esac; done
+    [[ "$1" =~ ^[0-9]$ ]] && opt_maxcount=$1 && shift
+    opt_patt="$@"
 
-	git-blame() { qeval git bl $@; }
-  alias gbl='git-blame'
-
-	git-branch-cp()  { qeval git brcp  $@; }
-	git-branch-mv()  { qeval git brmv  $@; }
-	git-branch-rm()  { qeval git brrm  $@; }
-	git-branch-del() { qeval git brdel $@; }
-  #
-	git-branch-set-upstream() {
-		qeval git branch --set-upstream-to "origin/$(git branch --show-current)" $@
-	}
-	git-branch-set-upstream-to() {
-		[[ -z "$1" ]] && g-branch-set-upstream && return
-		qeval git branch --set-upstream-to $@
+		git config --get-regexp "^alias\.${opt_patt}" \
+      | head -n $opt_maxcount \
+      | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
 	}
   #
-  echo-vars() {
-    while [[ "$1" ]]; do
-      var="$1"; shift
-      eval "val=\$$var"
-      echo "$var=$val"
-    done
+  alias gco='qeval git checkout'
+  alias gcod='qeval git checkout develop'
+  alias gcom='qeval git checkout master'
+  #
+  git-checkout-remote-branch() {
+    [[ -z "$1" ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
+    [[ ! "$1" =~ .+/.+ ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
+    local remote_branch="$1" && shift
+    local remote_name="$(substring_before_first $remote_branch '/')"
+    local branch_name="$(substring_after_first $remote_branch '/')"
+    echo-verbose "$(echo-glob remote_branch remote_name branch_name)"
+    qeval git checkout -b $branch_name $remote_name/$branch_name || return 1
+    qeval git branch --set-upstream-to $remote_name/$branch_name
   }
+  #
 	git-branch() {
-    local branch_level=1; while [[ "$1" =~ [123] ]]; do branch_level="$1" && shift 1; done
+    local branch_level=1; while [[ "$1" =~ [012] ]]; do branch_level="$1" && shift 1; done
     git branch --show-current 1>/dev/null || return 1
 
     c_br_remote="$(git config --get-color color.branch.remote)"
@@ -759,9 +769,9 @@ fwf-nice() {
     f_sha="%(if)%(HEAD)%(then)$c_br_current*%(else)$c_commit %(end)%(objectname:short)$c_reset"
     f_track="$c_red%(if)%(upstream:track)%(then)[%(upstream:track)]%(end)$c_reset"
     f_track_short="$c_red%(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)$c_reset"
-    f_date="$c_white%(align:14,left)%(authordate:format:%F %T)%(end)$c_reset"
-    f_date_relative="$c_white%(align:20,left)%(authordate:relative)%(end)$c_reset"
-    f_date_short="$c_white%(align:14,left)%(authordate:format:%D %H:%M)%(end)$c_reset"
+    f_date="$c_white%(align:14,left)%(committerdate:format:%F %T)%(end)$c_reset"
+    f_date_relative="$c_white%(align:20,left)%(committerdate:relative)%(end)$c_reset"
+    f_date_short="$c_white%(align:14,left)%(committerdate:format:%D %H:%M)%(end)$c_reset"
     f_authorname_20="%(align:20,left)%(authorname)%(end)"
     f_branch="%(if)%(HEAD)%(then)$c_br_current%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remote%(else)$c_reset%(end)%(end)%(refname:short)$c_reset"
     f_comment="%(contents:subject)"
@@ -769,58 +779,79 @@ fwf-nice() {
     f_branch_and_track_short="%(align:60,left)$f_branch%(if)%(upstream)%(then) $c_red%(align:2,left)[%(upstream:trackshort)]%(end)%(else)$c_reset%(end)%(end)"
 
     case "$branch_level" in
-      1)  veval git branch --list --ignore-case --sort='-authordate' \
-            --format="\"$f_sha $f_date_relative $f_branch $f_track_short\"" $@
+      0)  veval git branch --list --ignore-case --sort='-committerdate' \
+            --format="\"$f_sha $f_date_relative $f_branch $f_track_short\"" \
+            $@ | less
           ;;
-      2)  veval git branch --list --ignore-case --sort='-authordate' --column=never \
+      1)  veval git branch --list --ignore-case --sort='-committerdate' --column=never \
             --format="\"$f_sha  $f_date_short  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment\"" $@ \
-            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | less
           ;;
-      3)  veval git branch --list --ignore-case --sort='-authordate' --column=never \
+      2)  veval git branch --list --ignore-case --sort='-committerdate' --column=never \
             --format="\"$f_sha  $f_date  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment $f_track \"" $@ \
-            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }'
+            | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
+            | less
           ;;
-      *)  eecho "git-branch: unexpected level: $branch_level"
+      *)  echo-error "git-branch: unexpected level: $branch_level"
           return 1
           ;;
     esac
 	}
-  alias gbr='git-branch 1'
-  alias gbrr='git-branch 2'
-  alias gbrrr='git-branch 3'
+  alias gbr='qeval git-branch'
+  alias gbra='qeval git-branch 1'
+  alias gbran='qeval git-branch 2' gbranc='gbran' gbranch='gbran'
+  #
+  alias gbrrm='qeval git brrm'
+  alias gbrmv='qeval git brmv'
+  alias gbrcp='qeval git brcp'
+  #
+  git-branch-set-upstream() {
+    qeval git branch --set-upstream-to "origin/$(git branch --show-current)" $@
+  }
+  git-branch-set-upstream-to() {
+    [[ -z "$1" ]] && g-branch-set-upstream && return
+    qeval git branch --set-upstream-to $@
+  }
+  alias gbsu='qeval git-branch-set-upstream'
+  alias gbsuto='qeval git-branch-set-upstream-to'
   #
   git-branches-with() {
-    local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE)) SH_DEBUG=$((SH_DEBUG))
+    local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE))
     local log_opts=
     while [[ "$1" ]]; do case "$1" in
-      -q|--quiet)   SH_QUIET=1 SH_VERBOSE=0 SH_DEBUG=0; shift 1;;
-      -v|--verbose) SH_QUIET=0 SH_VERBOSE=1 SH_DEBUG=0; shift 1;;
-      -d|--debug)   SH_QUIET=0 SH_VERBOSE=1 SH_DEBUG=1; shift 1;;
+      -q|--quiet)   SH_QUIET=1 SH_VERBOSE=0; shift 1;;
+      -v|--verbose) SH_QUIET=0 SH_VERBOSE=1; shift 1;;
       -n|--max-count) log_opts="$log_opts $1 $2"; shift 2;;
       -{1,2,3,4,5,6,7,8,9}*) log_opts="$log_opts -n $1"; shift 1;;
       *) break;;
     esac; done
-    [[ -z "$1" ]] && eecho "usage: git-branches-with [-q|-v|-d] [-n count] file_glob" && return 1
+    [[ -z "$1" ]] && echo-error "usage: git-branches-with [-q|-v|-d] [-n count] file_glob" && return 1
     local file_glob="$@"
     veval git -P log --all -n 10 --date="iso-strict" --format=\"'%h %cd %cN'\" --color=never $log_opts -- $file_glob \
       | while read commit_sha commit_dt committer; do
           echo-verbose "$commit_sha | $commit_dt | $committer"
-          veval git -P branch --all --list --contains=$commit_sha --format="\"%(authordate:format:%F %H:%M) | %(refname:short)\""
+          veval git -P branch --all --list --contains=$commit_sha --format="\"%(committerdate:format:%F %H:%M) | %(refname:short)\""
         done \
       | sort -r -s \
       | uniq
   }
-
+  alias gbw='qeval git-branches-with'
+  #
+  alias gcod='qeval git cod'
+  alias gcom='qeval git com'
+  #
   git-commit-message() {
     local opts=
     while [[ "$1" =~ ^--?[a-z] ]]; do
       opts="$opts $1"
       shift
     done
-    [[ -z "$1" ]] && eecho "usage: git-commit-message 'message'" && return 1
-    qeval git commit --message "$@" || return 1
+    [[ -z "$1" ]] && echo-error "usage: git-commit-message 'message'" && return 1
+    qeval git commit --message \"$@\" || return 1
     qeval git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
   }
+  alias gcm='qeval git-commit-message'
 
 # LOG/PRETTY FORMAT FIELDS
 # %h  - abbrev hash
@@ -847,9 +878,9 @@ fwf-nice() {
     f_author_name_mailmap="${c_reset}%<(18)%aN"
     f_author_name_mailmap_long="${c_reset}%<(22)%aN"
     f_author_name="${c_reset}%<(20)%an"
-    f_author_date_rel="${c_white}%<(12)%ar"
-    f_author_date_short="${c_white}%<(8)%ad"
-    f_author_date="${c_white}%ad"
+    f_commit_date_rel="${c_white}%<(12)%cr"
+    f_commit_date_short="${c_white}%<(8)%cd"
+    f_commit_date="${c_white}%cd"
     f_tags="${c_tag}%d"
     f_tags_short="${c_tag}%D"
     f_subject_line="${c_reset}%s"
@@ -859,7 +890,7 @@ fwf-nice() {
     case "$log_level" in
       0)  hash_len=6
           veval git log -20 --abbrev=$hash_len --decorate=short --date='format:%D' \
-            --format="\"$f_hash  $f_author_name_mailmap $f_author_date_short $f_tags_short $f_subject_line$c_reset\"" $@ \
+            --format="\"$f_hash  $f_author_name_mailmap $f_commit_date_short $f_tags_short $f_subject_line$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
             | sed -E \
               -e 's/origin/$O/g' \
@@ -869,7 +900,7 @@ fwf-nice() {
               # -e "s/$(git config --get user.name)/\$ME/g" \
             ;;
       1)  veval git log -20 --abbrev=$hash_len --date=human --use-mailmap \
-            --format="\"$f_hash  $f_author_name_mailmap_long $f_author_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
+            --format="\"$f_hash  $f_author_name_mailmap_long $f_commit_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
             | sed -E \
               -e 's/origin/$O/g' \
@@ -878,7 +909,7 @@ fwf-nice() {
             | less
             ;;
       2) veval git log -20 --abbrev=$hash_len --date=human --use-mailmap \
-            --format="\"$f_hash  $f_author_name_mailmap_long  $f_author_date_short $f_author_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
+            --format="\"$f_hash  $f_author_name_mailmap_long  $f_commit_date_short $f_commit_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
             | sed -E \
               -e 's/origin/$O/g' \
@@ -887,7 +918,7 @@ fwf-nice() {
             | less
           ;;
       3) veval git log -20 --abbrev=$hash_len --date=human --no-use-mailmap --stat \
-            --format="\"$f_hash  $f_author_name_mailmap_long  $f_author_date  $f_author_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
+            --format="\"$f_hash  $f_author_name_mailmap_long  $f_commit_date  $f_commit_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
             | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
             | sed -E \
               -e 's/origin/$O/g' \
@@ -895,16 +926,21 @@ fwf-nice() {
               -e 's/ -> /->/g' \
             | less
           ;;
-      *)  eecho "git-log: unexpected level: $log_level"
+      *)  echo-error "git-log: unexpected level: $log_level"
           return 1
           ;;
     esac
   }
-  alias glo='git-log 0'
-  alias gloo='git-log 1'
-  alias glooo='git-log 2'
-  alias gloooo='git-log 3'
+  alias glo='qeval git-log'
+  alias glog='qeval git-log 1'
+  alias glogg='qeval git-log 2'
+  alias gloggg='qeval git-log 3'
 
+  git-log-me() {
+    git-log $@ -999 | grep "'$(git config --get user.name)'"
+  }
+  alias glme='qeval git-log-me'
+  #
 	# cd into each given directory and perform a git pull --ff-only
 	# usage: git-pulld [dir ...]
 	git-pulld() {
@@ -914,18 +950,24 @@ fwf-nice() {
 		local f1=1
 		for d in $dirs; do
 			((f1)) && f1= || printf '\n'
-			[[ ! -e "$d" ]] && eecho "g-pulld: folder does not exist; aborting" && return 1
-			[[ ! -e "$d/.git" ]] && eecho "g-pulld: folder is not a git repo; bypassing $d" && continue
+			[[ ! -e "$d" ]] && echo-error "g-pulld: folder does not exist; aborting" && return 1
+			[[ ! -e "$d/.git" ]] && echo-error "g-pulld: folder is not a git repo; bypassing $d" && continue
 			cd "$d"
 			printf '== %s %s\n' "$d" "$(git branch --show-current)"
 			qeval git pull --ff-only
 			cd ..
 		done
 	}
-
+  #
+  alias gpff='qeval git pff'
+  #
+  alias grdev='qeval git rebase develop'
+  alias grmas='qeval git rebase master'
+  alias grab='qeval git rebase --abort'
+  #
   git-status() {
     local status_level=1; [[ -n "$1" ]] && status_level="$1" && shift 1
-    [[ ! "$status_level" =~ [0123] ]] && eecho "usage: g-status [1|2|3]" && return 1
+    [[ ! "$status_level" =~ [0123] ]] && echo-error "usage: g-status [1|2|3]" && return 1
     git branch --show-current 1>/dev/null || return 1
 
     c_remote_branch="$(git config --get-color color.status.remotebranch)"
@@ -952,20 +994,20 @@ fwf-nice() {
           | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;" \
           | sed -E -e "s/(Your stash.+has [[:digit:]]+ entr(ies|y))/${c_stash}\\1${c_reset}/;"
           ;;
-      *)  eecho "git-status: unexpected level: $status_level"
+      *)  echo-error "git-status: unexpected level: $status_level"
           return 1
           ;;
     esac
   }
-  alias gst='git-status 0'
-  alias gstt='git-status 1'
-  alias gsttt='git-status 2'
-  alias gstttt='git-status 3'
+  alias gst='qeval git-status'
+  alias gsta='qeval git-status 1'
+  alias gstat='qeval git-status 2'
+  alias gstatu='qeval git-status 3' gstatus='gstatu'
 
 	# update local mtime based on git log
 	# from: https://stackoverflow.com/a/2038768/160955
 	git-touch() {
-		[[ -z "$1" ]] && eecho "usage: git-touch file [...]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: git-touch file [...]" && return 1
 		while [[ -n "$1" ]]; do
 			local f="$1"; shift
 			local rev="$(git rev-list -n 1 "HEAD" "$f")"
@@ -992,7 +1034,7 @@ fwf-nice() {
 		# Usage: gf-feature-start featureName [mvn_opts] [gitflow_opts]
 		gf-feature-start() {
 			local gitbr="$(git branch --show-current 2> /dev/null)"
-			[[ -z "$gitbr" ]] && eecho "gf-feature-start: not in a git repository" && return 1
+			[[ -z "$gitbr" ]] && echo-error "gf-feature-start: not in a git repository" && return 1
 			local featureName="${1#*feature/}"; shift  # everything after "feature/", else entire string
 			local mvn_opts="$1"; shift
 			local gitflow_opts="$1"; shift
@@ -1002,7 +1044,7 @@ fwf-nice() {
 		# Usage (from feature branch): gf-feature-finish -m [mvn_opts] -g [gitflow_opts]
 		gf-feature-finish() {
 			local gitbr="$(git branch --show-current 2> /dev/null)"
-			[[ -z "$gitbr" ]] && eecho "gf-feature-finish: not in a git repository" && return 1
+			[[ -z "$gitbr" ]] && echo-error "gf-feature-finish: not in a git repository" && return 1
 			local featureName="${gitbr#*feature/}"
 			local mvn_opts="$1"; shift
 			local gitflow_opts="$1"; shift
@@ -1192,11 +1234,14 @@ fi
       -p|--password)        db_password="$2"; shift 2;;
       *) break;;
     esac; done
-    veval schemaspy \
+    qeval schemaspy \
       -t "$db_type" \
       -db "$db_name" -host "$db_host" -port "$db_port" \
       -u "$db_user" -p "$db_password" \
       $@
+  }
+  schemaspy-pg-core() {
+    schemaspy-pg -I 'adw.+'
   }
 }
 ((! SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy
@@ -1214,8 +1259,12 @@ fi
 	export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
 	export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
 
-	alias vb='qeval VBoxManage'
-	alias vb-ls='qeval VBoxManage list'
+	vb() { 
+    qeval VBoxManage $@
+  }
+  vb-ls() { 
+    vb list $@
+  }
 	#
 	vb-status() {
 		printf '\n'
@@ -1231,7 +1280,7 @@ fi
 
 	# Lookup full vm name given a pattern; if not found, return pattern with error status.
 	vb-vm-name() {
-		[[ -z "$1" ]] && eecho "usage: vb-vm-name patt" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-vm-name patt" && return 1
 		local patt="$1" && shift
 		local save_clicolor_force=${CLICOLOR_FORCE}
 		unset CLICOLOR_FORCE
@@ -1246,34 +1295,34 @@ fi
 	}
 
 	vb-start() {
-		[[ -z "$1" ]] && eecho "usage: vb-start vm_name [startvm options]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-start vm_name [startvm options]" && return 1
 		local vm_name="$1" && shift
 		qeval VBoxManage startvm \"$vm_name\" --type headless $@
 	}
 	vb-controlvm() {
-		[[ -z "$2" ]] && eecho "usage: vb-controlvm vm_name_patt cmd [controlvm cmd options]" && return 1
+		[[ -z "$2" ]] && echo-error "usage: vb-controlvm vm_name_patt cmd [controlvm cmd options]" && return 1
 		local vm_name_patt="$1" && shift
 		local cmd="$1" && shift
 		qeval VBoxManage controlvm \"$(vb-vm-name $vm_name_patt)\" $cmd $@
 	}
 	vb-reboot() {
-		[[ -z "$1" ]] && eecho "usage: vb-reboot vm_name" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-reboot vm_name" && return 1
 		local vm_name_patt="$1" && shift
 		vb-controlvm "$(vb-vm-name $vm_name_patt)" reboot $@
 	}
 	vb-shutdown() {
-		[[ -z "$1" ]] && eecho "usage: vb-shutdown vm_name_patt [--force]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-shutdown vm_name_patt [--force]" && return 1
 		local vm_name_patt="$1" && shift
 		vb-controlvm "$(vb-vm-name $vm_name_patt)" shutdown $@
 	}
 	vb-poweroff() {
-		[[ -z "$1" ]] && eecho "usage: vb-poweroff vm_name_patt [--type=gui|headless|..., other startvm options]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-poweroff vm_name_patt [--type=gui|headless|..., other startvm options]" && return 1
 		local vm_name_patt="$1" && shift
 		vb-controlvm "$(vb-vm-name $vm_name_patt)" poweroff $@
 	}
 
 	vb-tail() {
-		[[ -z "$1" ]] && eecho "usage: vb-tail vm_name_patt [-f or other tail options]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-tail vm_name_patt [-f or other tail options]" && return 1
 		local vm_name_patt="$1" && shift
 		qeval tail $@ '"$VBOX_VMS_HOME/$(vb-vm-name $vm_name_patt)/Logs/VBox.log"'
 	}
@@ -1360,13 +1409,13 @@ gw-task() {
 	#   esac
 	# done
 	# qeval gw $wrapper_opts $task_opts
-	qeval gw $@
+	qeval ./gradlew $@
 }
 # gw-task() {
 #   local USAGE='Usage: gw-task [-w wrapper_option... --] task [args...]'
 #   local wrapper_opts=
 #   [[ "$1" == "-w" ]] && wrapper_opts="$2" && shift 2
-#   qeval gw $wrapper_opts $@
+#   qeval ./gradlew $wrapper_opts $@
 # }
 
 #
@@ -1439,7 +1488,7 @@ gw-task() {
 
 
 alias .reload-shell='qeval exec $SHELL -l'
-alias .reload-bash-profile='eval-verbose . "~/.bash_profile"'
-alias .rlbp='eval-verbose .reload-bash-profile'
+alias .reload-bash-profile='qeval . "~/.bash_profile"'
+alias .rlbp='veval .reload-bash-profile'
 
 .tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH])"

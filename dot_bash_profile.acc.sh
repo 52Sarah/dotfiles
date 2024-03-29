@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-# TICK_x variables control its behavior; all default to false/0/off.
-# export TICK_ENABLED= TICK_STDERR= TICK_STDOUT=
-# export TICK__INDENT=
+# _TICK_x variables control its behavior; all default to false/0/off.
+# export _TICK_ON= _TICK_STDERR= _TICK_STDOUT=
+# export _TICK_INDENT=
 . ~/.tick.sh
-.tick-bash-profile-acc() { .tick -s '.bash_profile.acc' "$@"; }
+.tick-bash-profile-acc() { .tick -s '.bash_profile.acc' $@; }
 
 .tick-bash-profile-acc "[START-FILE] (\$\$=[$$])"
 
@@ -16,157 +16,207 @@ export JAVA_V8='8.0.202-zulu'
 export JAVA_V11='11.0.18-zulu'
 
 #
-### Virtual Box start/stop/log
+### cd/directory helpers
 #
-.setup-acc-vb-vm-aliases() {
-  [[ -z "$2" ]] && eecho "usage: .setup-acc-vb-vm-aliases abbr vm_name" && return 1
-  local abbr="$1" vm_name="$2"; shift 2
-  alias vb-$abbr-start="vb-start \"$vm_name\""
-  alias vb-$abbr-reboot="vb-reboot \"$vm_name\""
-  alias vb-$abbr-shutdown="vb-shutdown \"$vm_name\""
-  alias vb-$abbr-poweroff="vb-poweroff \"$vm_name\""
-  alias vb-$abbr-log="vb-log \"$vm_name\""
+export WORKSPACE_DIR="$HOME/Workspace"
+cd-workspace() { 
+  [[ -z "$1" ]] && qeval cd "$WORKSPACE_DIR"
+  local dir_prefix="$1"; shift 1
+  ends_with "$dir_prefix" "\*" || dir_prefix="${dir_prefix}*"
+  qeval cd "$WORKSPACE_DIR/$dir_prefix"
+}
+cd-profile() { 
+  [[ "$ITERM_PROFILE" =~ ^$|^Default$ ]] && cd-workspace && return 1
+  eval-unquiet cd "$WORKSPACE_DIR/$ITERM_PROFILE"
+}
+alias cdw='cd-workspace'
+alias cdp='cd-profile'
+
+
+# emulate coreutils' timeout command
+timeout() {
+  _debug && echo-stderr "START timeout: \$@=$@"
+  local USAGE="Usage: timeout [-c ps_cmd] seconds command..."
+  local ps_cmd
+  [[ "$1" =~ ^-c|--cmd|--command$ ]] && ps_cmd="$2" && shift 2
+  [[ -z "$2" ]] && echo-stderr "$USAGE" && return 1
+  local seconds="$1"; shift 1
+  local cmd="$@"
+  : "${ps_cmd:=$cmd}"
+  _debug && echo-var ps_cmd seconds cmd
+  if [[ ! "$seconds" =~ ^[0-9.]+$ ]]; then
+    echo-stderr "timeout: invalid seconds -- $seconds"
+    return 1
+  fi
+  ( 
+    eval "$cmd" &
+    child=$(ps | egrep "[0-9]{2} $ps_cmd" | awk '{print $1;}')
+    _debug && echo-var child
+    trap -- "" SIGTERM 
+    (       
+      sleep $seconds
+      kill $child 2>/dev/null
+      _debug && echo "after sleep $seconds/kill $child:" && ps
+    ) &
+    wait $child 2>/dev/null
+    _debug && echo "after wait $child:" && ps
+  )
 }
 
-.setup-acc-vb-vm-aliases ora "${VBOX_ORA_NAME:=Oracle19c_19_18}"
-.setup-acc-vb-vm-aliases mapr "${VBOX_MAPR_NAME:=MapR-Sandbox-6.1.0-Secure}"
+
+#
+### Virtual Box start/stop/log
+#
+.setup-vbox-acc-vm-aliases() {
+
+  : "${VBOX_ORA_NAME:=Oracle19c}"
+  alias vb-ora-start="qeval vb-start $VBOX_ORA_NAME"
+  alias vb-ora-on="qeval vb-ora-start"
+  alias vb-ora-up="qeval vb-ora-start"
+  vb-ora-poweroff() {
+    qecho "START vb-ora-poweroff $@"
+    eval-echo "vb-poweroff $VBOX_ORA_NAME $@"
+    qecho "END vb-ora-poweroff $@"
+  }
+  alias vb-ora-stop="qeval vb-ora-poweroff"
+  alias vb-ora-down="qeval vb-ora-poweroff"
+  alias vb-ora-off="qeval vb-ora-poweroff"
+  alias vb-ora-less="qeval vb-less $VBOX_ORA_NAME"
+  alias vb-ora-tail="qeval vb-tail $VBOX_ORA_NAME"
+  vb-ora-reboot() {
+    qecho "START vb-ora-reboot $@"
+    qeval vb-ora-stop $@
+    qeval vb-ora-start $@
+    qecho "END vb-ora-reboot $@"
+  }
+  alias vb-ora-bounce="vb-ora-reboot"
+  alias vb-ora-restart="vb-ora-reboot"
+
+  : "${VBOX_MAPR_NAME:=MapR}"
+  alias vb-mapr-start="qeval vb-start $VBOX_MAPR_NAME"
+  alias vb-mapr-on="qeval vb-mapr-start"
+  alias vb-mapr-up="qeval vb-mapr-start"
+  alias vb-mapr-poweroff="qeval mapr-shutdown"
+  alias vb-mapr-stop="qeval vb-mapr-poweroff"
+  alias vb-mapr-off="qeval vb-mapr-poweroff"
+  alias vb-mapr-down="qeval vb-mapr-poweroff"
+  
+  alias vb-mapr-less="qeval vb-less $VBOX_MAPR_NAME"
+  alias vb-mapr-tail="qeval vb-tail $VBOX_MAPR_NAME"
+  vb-mapr-reboot() {
+    qecho "START vb-mapr-reboot $@"
+    qeval vb-mapr-stop
+    qeval vb-mapr-start
+    qecho "END vb-mapr-reboot $@"
+  }
+  alias vb-mapr-bounce="vb-mapr-reboot"
+  alias vb-mapr-restart="vb-mapr-reboot"
+}
+! ((_SKIP_SETUP_VBOX)) && .setup-vbox-acc-vm-aliases
+
 
 #
 ### GRADLE helpers
 #
+gw-slower() {
+  gw --info  --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
+}
 gw-slow() {
-  gw-task --info --no-build-cache --no-configuration-cache --no-configure-on-demand $@
+  gw --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
 }
 gw-normal() {
-  gw-task --build-cache $@
+  gw --build-cache --no-configuration-cache --no-configure-on-demand  $@
 }
 gw-fast() {
-  gw-normal --no-rebuild --configuration-cache --configure-on-demand $@
+  gw --build-cache --configuration-cache --configure-on-demand  $@
 }
 gw-faster() {
-  gw-fast  --offline -x war -x explodeWar $@
+  gw --offline --no-rebuild  --build-cache --configuration-cache --configure-on-demand  $@
+}
+#
+bin-clean-start() { 
+  gw_alias=bin-clean-start gw-slow :server:clean :server:start2  $@
+}
+bin-start() {
+  gw_alias=bin-start gw-normal :server:start2  $@
+}
+bin-start-fastest() {
+  gw_alias=bin-start-fastest gw-fastest :server:start2  $@
+}
+#
+eng-start() {
+  gw_alias=emg-start gw-normal :runEngine  -x:validateDb -x:listDb  $@
+}
+eng-start-fastest() {
+  gw_alias=eng-start-fastest gw-faster :runEngine  -x:validateDb -x:listDb  -x:compileJava  -x:node  -x:war -x:explodeWar  $@
 }
 #
 int-clean() { 
-  iterm-set-title --tab 'int-clean'
-  gw-slow clean $@
+  gw_alias=int-clean gw-slow :clean  $@
 }
 int-clean-start() { 
-  iterm-set-title --tab 'int-clean-start'
-  gw-normal clean start $@
+  gw_alias=int-clean-start gw-slow :clean :start  $@
 }
-int-clean-start-mapr-no() { 
-  iterm-set-title --tab 'int-clean-start'
-  gw-normal clean start -Pmapr-enabled=false $@
-}
-int-clean-start-slow() { 
-  iterm-set-title --tab 'int-clean-start-slow'
-  gw-slow clean start $@
-}
-int-clean-start-slow-mapr-no() { 
-  iterm-set-title --tab 'int-clean-start-slow'
-  gw-slow clean start -Pmapr-enabled=false $@
-}
-int-start-mapr-yes() {
-  iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=true $@
-}
-int-start-mapr-no() {
-  iterm-set-title --tab 'int-start'
-  gw-normal start -Pmapr-enabled=false $@
+#
+int-start-slower() {
+  gw_alias=int-start-slower gw-slower :start  $@
 }
 int-start-slow() {
-  iterm-set-title --tab 'int-start-slow'
-  gw-slow start $@
+  gw_alias=int-start-slow gw-slow :start  $@
 }
-int-start-slow-mapr-yes() {
-  iterm-set-title --tab 'int-start-slow'
-  gw-slow start -Pmapr-enabled=true $@
+#
+int-start() {
+  gw_alias=int-start gw-normal :start  -x:validateDb -x:listDb  $@
 }
-int-start-slow-mapr-no() {
-  iterm-set-title --tab 'int-start-slow'
-  gw-slow start -Pmapr-enabled=false $@
-}
+#
 int-start-fast() {
-  iterm-set-title --tab 'int-start-fast'
-  gw-fast start $@
+  gw_alias=int-start-fast gw-fast :start  -x:validateDb -x:listDb  -x:compileJava  -x:node  $@
 }
-int-start-fast-mapr-yes() {
-  iterm-set-title --tab 'int-start-fast'
-  gw-fast start -Pmapr-enabled=true $@
+int-start-faster-nojava() {
+  gw_alias=int-start-faster-nojava gw-faster :start  -x:validateDb -x:listDb  -x:compileJava  $@
 }
-int-start-fast-mapr-no() {
-  iterm-set-title --tab 'int-start-fast'
-  gw-fast start -Pmapr-enabled=false $@
+int-start-faster-nonode() {
+  gw_alias=int-start-faster-nonode gw-faster :start  -x:validateDb -x:listDb  -x:node  $@
 }
+int-start-fastest() {
+  gw_alias=int-start-fastest gw-fastest :start  $@
+}
+#
 int-db-migrate() {
-  iterm-set-title --tab 'int-db-migrate'
-  gw-normal dbTaskInfoCore dbTaskMigrateCore $@
+  gw-normal :dbTaskInfoCore :dbTaskMigrateCore  $@
 }
 #
 # For database unit test container
 #
 int-ora-prep-db() {
-  iterm-set-title --tab 'int-ora-prep-db'
-  gw-normal oraclePrepareDatabase $@
+  gw-normal :oraclePrepareDatabase  $@
 }
 int-ora-start() {
-  iterm-set-title --tab 'int-ora-start'
-  gw-fast oracleStart $@
+  gw-fast :oracleStart  $@
 }
 int-ora-stop() {
-  iterm-set-title --tab 'int-ora-stop'
-  gw-normal oracleStop $@
+  gw-normal :oracleStop  $@
+}
+#
+tty-int-reset-icnow() {
+  tty-int reset 44444 start
 }
 #
 api-start() {
-  iterm-set-title --tab 'api-start'
-  gw-normal startApi -Psharding-enabled=true $@
-}
-api-start-mapr-yes() {
-  iterm-set-title --tab 'api-start'
-  gw-normal startApi -Psharding-enabled=true -Pmapr-enabled=true $@
-}
-api-start-mapr-no() {
-  iterm-set-title --tab 'api-start'
-  gw-normal startApi -Psharding-enabled=true -Pmapr-enabled=false $@
+  gw_alias=api-start gw-normal :startApi $@ -Pmapr-enabled=false
 }
 api-start-fast() {
-  iterm-set-title --tab 'api-start-fast'
-  gw-fast startApi -Pmapr-enabled=true $@
-}
-api-start-fast-mapr-yes() {
-  iterm-set-title --tab 'api-start-fast'
-  gw-fast startApi -Psharding-enabled=true -Pmapr-enabled=true $@
-}
-api-start-fast-mapr-no() {
-  iterm-set-title --tab 'api-start-fast'
-  gw-fast startApi -Psharding-enabled=true -Pmapr-enabled=false $@
-}
-api-start-faster() {
-  iterm-set-title --tab 'api-start-faster'
-  gw-faster startApi -Psharding-enabled=true $@
-}
-api-start-faster-mapr-yes() {
-  iterm-set-title --tab 'api-start-faster'
-  gw-faster startApi -Psharding-enabled=true -Pmapr-enabled=true $@
-}
-api-start-faster-mapr-no() {
-  iterm-set-title --tab 'api-start-faster'
-  gw-faster startApi -Psharding-enabled=true -Pmapr-enabled=false $@
+  gw_alias=api-start-fast gw-fast :startApi $@ -Pmapr-enabled=false
 }
 #
 rtd-start() {
-  iterm-set-title --tab 'rtd'
-  gw-normal startRtd $@
+  gw_alias=rtd-start gw-normal :startRtd $@ -Pmapr-enabled=false
 }
 rtd-start-fast() {
-  iterm-set-title --tab 'rtd'
-  gw-fast startRtd $@
+  gw_alias=rtd-start-fast gw-fast :startRtd $@ -Pmapr-enabled=false
 }
-rtd-start-faster() {
-  iterm-set-title --tab 'rtd'
-  gw-faster startRtd $@
+rtd-start-fastest() {
+  gw_alias=rtd-start-fastest gw-fastest :startRtd $@ -Pmapr-enabled=false
 }
 #
 flink-start() {
@@ -183,20 +233,16 @@ minion-task() {
   gw-task $MINION_OPTS $@
 }
 minion-queue-writer-start() {
-  iterm-set-title --tab 'queuewriter'
-  gw-normal bootRun -Pprofiles=queuewriter $@
+  gw_alias=minion-queue-writer-start gw-normal :bootRun -Pprofiles=queuewriter $@
 }
 minion-maprproxy-start() {
-  iterm-set-title --tab 'maprproxy'
-  gw-normal bootRun -Pprofiles=maprproxy $@
+  gw_alias=minion-maprproxy-start gw-normal :bootRun -Pprofiles=maprproxy $@
 }
 minion-velociraptor-direct-start() {
-  iterm-set-title --tab 'velociraptor-direct'
-  gw-normal bootRun -Pprofiles=velociraptor-direct $@
+  gw_alias=minion-velociraptor-direct-start gw-normal :bootRun -Pprofiles=velociraptor-direct $@
 }
 minion-mv-start() {
-  iterm-set-title --tab 'maprproxy,velociraptor-direct'
-  gw-normal bootRun -Pprofiles=maprproxy,velociraptor-direct $@
+  gw_alias=minion-mv-start gw-normal :bootRun -Pprofiles=maprproxy,velociraptor-direct $@
 }
 #
 minion-app-up() {
@@ -214,30 +260,71 @@ radar-task() {
 }
 
 # Tomcat console interfaces for various web apps running locally.
+# If command is sent directly, kill the terminal process immediately after,
 tty-console() {
-  local USAGE="Usage: tty-console -p port [-t title] [command]"
-  local port title tty_cmd
-  while [[ "$1" ]]; do case "$1" in
-    -p|--port )   port="$2"; : ${title:=tty:$port}; shift 2;;
-    -t|--title )  title="$2"; shift 2;;
-    *)            break;;
+  local USAGE="usage: tty-console -p port [-t timeout] [command]"
+  local port timeout="1.5" tty_cmd
+  while [[ -n "$1" ]]; do case "$1" in
+    -p|--port )     port="$2"; shift 2;;
+    -t|--timeout )  timeout="$2"; shift 2;;
+    *)              break;;
   esac; done
   tty_cmd="$@"
-  echo-glob port title tty_cmd
-
-  [[ ! "$port" =~ ^[[:digit:]]{3,5}$ ]] && echo-error "$USAGE" && return 1
+  _debug && echo-var port timeout tty_cmd
+  if [[ ! "$port" =~ ^[[:digit:]]{3,5}$ ]]; then
+    echo-error "tty-console: missing or invalid port -- $port"
+    echo-error "$USAGE"
+    return 1
+  fi
 
   # see https://superuser.com/a/410642/17666 for the echo/redirect magic
-  local c="nc localhost $port"
-  [[ -n "$tty_cmd" ]] && c="cat <(echo $tty_cmd) - | $c"
-  qeval $c
+  local c="nc localhost $port" cfull
+  if [[ -n "$tty_cmd" && -n "$timeout" ]]; then
+    # local cfull="timeout -c '$c' $timeout 'cat <(echo $tty_cmd) - | $c'"
+    local con_tmp="/var/tmp/con.tmp"
+    echo "$tty_cmd" > $con_tmp
+    echo "quit" >> $con_tmp
+    local cfull="$c < $con_tmp"
+    _debug && echo-var c cfull
+  fi
+  echo-verbose ">>>"
+  eval-debug "${cfull:-$c}"
+  echo-verbose "<<<"
 }
-tty-int()   { qeval tty-console -p 9092 "$@"; }
-tty-api()   { qeval tty-console -p 9074 "$@"; }
-tty-radar() { qeval tty-console -p 9999 "$@"; }
-tty-vert()  { 
-  qeval tty-console -p 9999 "$@" || qeval tty-console -p 9998 "$@"
+#
+tty-int()    { qeval tty-console -p 9092 $@; }
+tty-api()    { qeval tty-console -p 9074 $@; }
+tty-engine() { qeval tty-console -p 9090 $@; }
+tty-rtd()    { qeval tty-console -p 9094 $@; }
+tty-binder() { qeval tty-console -p 9096 $@; }
+tty-radar()  { qeval tty-console -p 9999 $@; }
+tty-vert() { 
+  qeval tty-console -p 9999 $@ || qeval tty-console -p 9998 $@
 }
+#
+tty-int-reset-icnow() { qeval tty-int reset 44444 start; }
+tty-int-cache-status() { qeval tty-int cachestatus; }
+tty-int-cache-reset() { 
+  [[ -z "$@" ]] && echo-error "usage: tty-int-cache-reset CACHE_NAME" && return 1
+  qeval tty-int resetcache $@
+}
+tty-int-cache-reset-flex() { 
+  qeval tty-int resetcache FlexValue
+  qeval tty-int resetcache FLEX_VALUE2
+}
+tty-int-cache-reset-properties() { 
+  qeval tty-int resetcache Property
+  qeval tty-int resetcache PROPERTY_VALUE
+  qeval tty-int resetcache Hierarchy.properties
+}
+tty-int-cache-reset-rules() { 
+  qeval tty-int resetcache Rule
+  qeval tty-int resetcache RuleType
+  qeval tty-int resetcache RuleSet
+  qeval tty-int resetcache RulesInRuleSet
+}
+#
+
 
 ### ORA vm helpers
 ora-ssh() { qeval ssh oracle@db01.vm $@; }
@@ -257,7 +344,7 @@ mapr-command() {
   [[ -z "$MAPR_USER" ]] && eecho "$USAGE" && return 1
   if type -t systemctl &>/dev/null; then
     [[ -z "$1" ]] && eecho "$USAGE" && return 1
-    ((SH_QUIET)) || echo ">\$ $@"
+    ! _quiet || echo ">\$ $@"
     $@
   else
     qeval "ssh ${MAPR_USER}@maprdemo $@"
@@ -277,11 +364,11 @@ mapr-login-password() {
   qeval maprlogin password -user $user <<< "$password"
 }
 #
-mapr-start() { mapr-start "$@"; }
-mapr-cli-service-list() { mapr-command sudo maprcli service list "$@"; }
-mapr-shutdown() { mapr-command -u root "./mapr-shutdown.sh $@"; }
-mapr-ss() { mapr-command sudo ss -lptn4 | cat; }
-mapr-netstat() { mapr-command sudo netstat -4 --numeric-ports -l -e -p; }
+mapr-start() { qeval vb-mapr-start $@; }
+mapr-cli-service-list() { qeval mapr-command sudo maprcli service list $@; }
+mapr-shutdown() { qeval mapr-command -u root "./mapr-shutdown.sh $@"; }
+mapr-ss() { qeval mapr-command sudo ss -lptn4 | less; }
+mapr-netstat() { qeval mapr-command sudo netstat -4 --numeric-ports -l -e -p; }
 
 # systemctl (GNU/Linux)
 #   --type=service | socket|busname|target|snapshot|device|mount|automount|swap|timer|path|slice|scope
@@ -310,8 +397,21 @@ mapr-warden-stop() { mapr-command "sudo systemctl stop mapr-warden $@"; }
 mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden.log $@"; }
 
 
-alias .reload-bash-profile-acc='qeval . "~/.bash_profile"'
-alias .rlbpa='veval .reload-bash-profile-acc'
+# apache-drill
+#
+.setup-drill() {
+  : "${DRILL_HOME:=/opt/drill}"
+  if [[ -d "$DRILL_HOME/bin" && -d "$DRILL_HOME/conf" ]]; then
+    .tick-bash-profile-acc "Using DRILL_HOME=$DRILL_HOME"
+    export DRILL_HOME
+  else
+    .tick-bash-profile-acc "Not using invalid DRILL_HOME=$DRILL_HOME"
+    export DRILL_HOME=
+  fi
+}
+! ((_SKIP_SETUP_DRILL)) && .setup-drill
 
-.tick-bash-profile-acc "[END-FILE] (\$\$=[$$])"
+alias .reload-bash-profile-acc='eval-quiet . "~/.bash_profile.acc"'
+alias .rlbpa='eval-quiet .reload-bash-profile-acc'
 
+.tick-bash-profile-acc "[END-FILE] \(\$\$=[$$]\)"

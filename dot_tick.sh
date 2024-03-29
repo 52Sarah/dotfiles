@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # If .tick-enabled() is true, .tick logs to ~/.tick.log.
-# Then it also echoes to stdout/stderr if TICK_STDOUT/TICK_STDERR is set.
+# Then it also echoes to stdout/stderr if _TICK_STDOUT/_TICK_STDERR is set.
 # Optional .tick options:
 #   --scriptname  used with '.tick' to determine whether this script's ticks should fire
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
@@ -16,9 +16,9 @@
     local v="TICK_${scriptv}_ENABLED"
     [[ -n "$(eval echo "\${!v}")" || -e ~/.tick${scriptf}.enabled ]] && return 0
   fi
-  [[ -n "$TICK_DISABLED" || -e ~/.tick.disabled ]] && return 1
-  [[ -n "$TICK_ENABLED" || -e ~/.tick.enabled ]] && return 0
-  [[ -n "$TICK_STDOUT" || -n "$TICK_STDERR" ]] && return 0
+  [[ -n "$_TICK_OFF" || -e ~/.tick.disabled ]] && return 1
+  [[ -n "$_TICK_ON" || -e ~/.tick.enabled ]] && return 0
+  [[ -n "$_TICK_STDOUT" || -n "$_TICK_STDERR" ]] && return 0
   return 1
 }
 
@@ -34,7 +34,7 @@
 
   local msg=
   if ((opt_eval)); then
-    msg="$(eval "$@")"
+    msg="$(eval $@)"
   elif ((opt_vars)); then
     for var in $@; do msg="$msg $var=${!var}"; done
   else
@@ -47,22 +47,22 @@
     delta=$((epoch_ms - TICK__LAST_MS))
     ((delta >= 10000)) && delta=0
   fi
-  if ((! delta)); then
-    TICK__INDENT=0
+  if ! ((delta)); then
+    _TICK_INDENT=0
     printf "\n" >> ~/.tick.log
   fi
   export TICK__LAST_MS=$epoch_ms
 
   # unindent for [finish]
-  ((TICK__INDENT >= 2)) && [[ "$msg" =~ ^\[(finish|end|FINISH-FILE|END-FILE)\] ]] && ((TICK__INDENT -= 2))
+  ((_TICK_INDENT >= 2)) && [[ "$msg" =~ ^\[(finish|end|FINISH-FILE|END-FILE)\] ]] && ((_TICK_INDENT -= 2))
 
-  local tick_line="$(printf "%s +%4d %-13s %${TICK__INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
+  local tick_line="$(printf "%s +%4d %-13s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
   echo "$tick_line" >> ~/.tick.log
-  ((TICK_STDOUT)) &&  echo "$tick_line"
-  ((TICK_STDERR)) && >&2 echo "$tick_line"
+  ((_TICK_STDOUT)) &&  echo "$tick_line"
+  ((_TICK_STDERR)) && >&2 echo "$tick_line"
 
   # indent for [start]
-  [[ "$msg" =~ ^\[(start|START-FILE)\] ]] && ((TICK__INDENT += 2))
+  [[ "$msg" =~ ^\[(start|START-FILE)\] ]] && ((_TICK_INDENT += 2))
 
   return 0
 }

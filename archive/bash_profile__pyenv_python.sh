@@ -19,7 +19,7 @@
     # manually rehash from install location; -v for extra output
     pyenv-rehash-ln() {
       local opt_verbose=; [[ "$1" =~ -v ]] && opt_verbose='v' && shift
-      ((SH_VERBOSE)) && opt_verbose='v'
+      ((_ECHO_V)) && opt_verbose='v'
 
       local py_bin="$(brew --prefix)/Cellar/python@3.9/$(pyenv version-name)/bin"
       local py_shims="$PYENV_ROOT/shims"

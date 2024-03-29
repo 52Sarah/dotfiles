@@ -41,6 +41,12 @@
     config:ext:xml,yaml,yml
 --type-set
     data:ext:csv,json,sql
+--type-set
+    log:ext:log
+--type-set
+    style:ext:css,js,less,sass,ts
+--type-set
+    styled:ext:htm,html,js,jsp
 
 --type-del=actionscript
 --type-del=ada

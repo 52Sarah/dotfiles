@@ -14,7 +14,7 @@ export BASH_SILENCE_DEPRECATION_WARNING=1
 #? type -t .tick >&/dev/null || . ~/.tick
 #? .tick-bash-profile() { .tick -s ".bash_profile" "$@"; }
 #? .tick_bp() { .tick-bash-profile "$@"; }
-#? export TICK_STDERR= TICK_STDOUT= TICK_INDENT= TICK_LAST_MS=
+#? export _TICK_STDERR= _TICK_STDOUT= TICK_INDENT= TICK_LAST_MS=
 #? export SH_LOGIN_PYENV_REASH=0
 
 # If debugging is not enabled, overwrite .tick-bp with a no-op.
@@ -124,7 +124,7 @@ cdln() {
 #
 # Make specified, or all in PWD, shell scripts executable.
 chx() {
-  local opt_verbose=$((SH_VERBOSE))
+  local opt_verbose=$((_ECHO_V))
   [[ "$1" =~ ^(-v|--verbose)$ ]] && shift && opt_verbose=1
   
   local files=($@)
@@ -165,10 +165,10 @@ alias psg='ps-grep'
 # Updated mtime of folders with latest mtime of its contents.
 touchd() {
   [[ -z "$1" ]] && eecho "usage: touchd dir [...]" && return 1
-  local SH_VERBOSE="$((SH_VERBOSE))"
+  local _ECHO_V="$((_ECHO_V))"
   local count=0 arg
   for arg in $@; do
-      [[ "$arg" =~ ^(-v|--verbose)$ ]] && SH_VERBOSE=1 && continue
+      [[ "$arg" =~ ^(-v|--verbose)$ ]] && _ECHO_V=1 && continue
       
       local dir="$arg"
       local dir_tilde="${dir/$HOME/~}"
@@ -196,7 +196,7 @@ touchd-R() {
   local dirs=($@)
   [[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
   for dir in "${dirs[@]}"; do
-      [[ "$dir" =~ ^(-v|--verbose)$ ]] && [[ -n "$SH_VERBOSE" ]] && continue
+      [[ "$dir" =~ ^(-v|--verbose)$ ]] && [[ -n "$_ECHO_V" ]] && continue
       find "$dir" -depth ! -type f -print |\
       while read -r subdir; do
           touchd "$subdir"
@@ -447,9 +447,9 @@ fwf(){ fwf-nice $@; }
       local commit_sec="$(git show --pretty=format:%at --abbrev-commit "$rev" | head -n 1)"
       local commit_ts="$(date -r $commit_sec '+%Y%m%d%H%M.%S')"
       # IFS=`printf '\t\n\t'`
-      ((!SH_QUIET)) && printf 'before: ' && ls -oghF "$f" | tilde-compress
+      ((!_ECHO_UNLESS_Q)) && printf 'before: ' && ls -oghF "$f" | tilde-compress
       eval-quiet touch -h -t "$commit_ts" "$f"
-      ((!SH_QUIET)) && printf 'after:  ' && ls -oghF "$f" | tilde-compress
+      ((!_ECHO_UNLESS_Q)) && printf 'after:  ' && ls -oghF "$f" | tilde-compress
     done      
   }
 

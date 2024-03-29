@@ -15,29 +15,29 @@ docker.compose.overrides() {
 
   local dc_options="-f docker-compose.yaml"
   while [[ "$1" ]] && local opt="$1" && shift; do
-    ((SH_VERBOSE)) && echo "opt: '$opt'"
+    ((_VERBOSE)) && echo "opt: '$opt'"
 
     if [[ "$opt" =~ ^(-a|--all)$ ]]; then
       for f in docker-compose.override.*.yaml; do
         dc_options="$dc_options -f "$f""
       done
-      ((SH_VERBOSE)) && echo "dc_options: [$dc_options]"
+      ((_VERBOSE)) && echo "dc_options: [$dc_options]"
     elif [[ "$opt" = '-v' ]]; then
-      SH_VERBOSE=1 SH_QUIET=
+      _VERBOSE=1 _QUIET=
     elif [[ "$opt" =~ ^(-q|--quiet)$ ]]; then
-      SH_QUIET=1 SH_VERBOSE=
+      _QUIET=1 _VERBOSE=
     elif [[ "$opt" =~ ^(-vv|--verbose)$ ]]; then
-      SH_VERBOSE=1 SH_QUIET=
+      _VERBOSE=1 _QUIET=
       dc_options="$dc_options --verbose"
     elif [[ -s "$opt" ]]; then
       dc_options="$dc_options -f "$opt""
-      ((SH_VERBOSE)) && echo "dc_options: [$dc_options]"
+      ((_VERBOSE)) && echo "dc_options: [$dc_options]"
     elif [[ -s "docker-compose.override.$opt.yaml" ]]; then
       dc_options="$dc_options -f 'docker-compose.override.$opt.yaml'"
-      ((SH_VERBOSE)) && echo "dc_options: [$dc_options]"
+      ((_VERBOSE)) && echo "dc_options: [$dc_options]"
     else
       local cmd="$opt"
-      ((SH_VERBOSE)) && echo "cmd: '$cmd'"
+      ((_VERBOSE)) && echo "cmd: '$cmd'"
       break
     fi
 
@@ -46,12 +46,12 @@ docker.compose.overrides() {
   local cmd_options= #"--log-level WARN"
   while [[ "$1" ]]; do
     cmd_options="$cmd_options "$1""
-    ((SH_VERBOSE)) && printf "cmd_opt: '%s'; cmd_options: [%s]" "$1" "cmd_options"
+    ((_VERBOSE)) && printf "cmd_opt: '%s'; cmd_options: [%s]" "$1" "cmd_options"
     shift
   done
 
-  ((SH_QUIET)) || printf ">>> docker-compose  %s  %s  %s\n\n" "$dc_options" "$cmd" "$cmd_options"
+  ! _quiet_on || printf ">>> docker-compose  %s  %s  %s\n\n" "$dc_options" "$cmd" "$cmd_options"
   docker-compose $dc_options $cmd $cmd_options
 }
 
-docker.compose.overrides "$@"
+docker.compose.overrides $@

@@ -14,15 +14,19 @@
 	"folders":
 	[
 		{
-			"path": "."
+      "name": "DOTFILES",
+			"path": ".",
+      "folder_exclude_patterns": [
+        "old",
+        "dot_git_hooks",
+        "dot_subversion",
+        "pyenv_shims",
+      ],
 		},
     {
       "name": "~",
       "path": "~",
-      "folder_include_patterns": [
-        ".*",
-        ".*/*"
-      ],
+      "folder_include_patterns": [".*", ".*/*"],
       "folder_exclude_patterns": [
         ".android",
         ".bash_sessions",
@@ -35,20 +39,22 @@
       ],
       "file_include_patterns": [
         ".*/*",
-        ".bashrc*",
-        ".bash_profile*",
+        ".alias",
         ".bash_login*",
-        ".profile*",
         ".secrets",
       ],
     },
+
     {
       "name": "~/Workspace/dotfiles",
       "path": "~/Workspace/dotfiles",
+      "folder_exclude_patterns": [],
     },
+
     {
       "name": "~/ttpp/bin",
       "path": "~/ttpp/bin",
+      "folder_exclude_patterns": ["old"],
     },
 	]
 }

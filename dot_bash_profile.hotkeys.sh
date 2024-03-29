@@ -22,10 +22,10 @@ hotkeys-export() {
     eecho '       Default out_file is hotkeys-YYYYMMDD.sh'
     return 1
   }
-  local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE))
+  local _QUIET=$! _quiet_on _VERBOSE=$((_VERBOSE))
   while [[ "$1" ]]; do case "$1" in
-    --quiet|-q)   SH_QUIET=$1; shift;;
-    --verbose|-v) SH_VERBOSE=$1; shift;;
+    --quiet|-q)   _QUIET=$1; shift;;
+    --verbose|-v) _VERBOSE=$1; shift;;
     -*) print-usage "invalid option: $1";;
     *) break;;
   esac; done
@@ -33,7 +33,7 @@ hotkeys-export() {
   local out_file="$1"; [[ -z "$out_file" ]] && out_file="mac-hotkeys-$(date +'%F').sh"
 
   echo '#!/usr/bin/env bash' > "$out_file"
-  echo-quiet "$EVAL_ECHO_PREFIX defaults find NSUserKeyEquivalents"
+  echo_unquiet "$EVAL_ECHO_PREFIX defaults find NSUserKeyEquivalents"
   defaults find NSUserKeyEquivalents | \
   sed \
   -e "s/Found [0-9]* keys in domain '\\([^']*\\)':/defaults write \\1 NSUserKeyEquivalents '/" \
@@ -44,7 +44,7 @@ hotkeys-export() {
   # Skip if out_file is /dev/stdout or a pipe.
   if [[ -f "$out_file" ]]; then
     eval-quiet chmod +x "$out_file"
-    echo-quiet "Wrote $(egrep -E -c '=.+;$' "$out_file") key mappings to $out_file"
+    echo_unquiet "Wrote $(egrep -E -c '=.+;$' "$out_file") key mappings to $out_file"
   fi
 }
 
@@ -56,10 +56,10 @@ hotkeys-list() {
     eecho 'usage: hotkeys-export [-v|-q|-r]'
     return 1
   }
-  local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE)) opt_raw=
+  local _QUIET=$! _quiet_on _VERBOSE=$((_VERBOSE)) opt_raw=
   while [[ "$1" ]]; do case "$1" in
-    --quiet|-q)   SH_QUIET=$1; shift;;
-    --verbose|-v) SH_VERBOSE=$1; shift;;
+    --quiet|-q)   _QUIET=$1; shift;;
+    --verbose|-v) _VERBOSE=$1; shift;;
     --raw|-r)     opt_raw=1; shift;;
     -*) print-usage "invalid option: $1";;
     *) break;;
@@ -91,7 +91,7 @@ hotkeys-list() {
 # # usage: hotkeys-define [-v|-q] [domain...]
 # hotkeys-define() {
 #   vprintf 'hotkeys-define: start: "%s"\n' "$*"
-#   parse-verbose-quiet "$@" || shift $?
+#   parse-verbose-quiet $@ || shift $?
 
 #   local target_domains="${@:-$_hotkeys_domains}"
 
@@ -101,12 +101,12 @@ hotkeys-list() {
 #     full_domain="$(hotkeys-domain "$d")"
 #     if _write_one_domain "$full_domain"; then
 #       ((d_count++))
-#       ((!SH_QUIET)) && hotkeys-list "$full_domain"
+#       ((!_QUIET)) && hotkeys-list "$full_domain"
 #     fi
 #   done
 
-#   ((! d_count)) && eecho "hotkeys-define: error: all $d_total_domains hotkey domains failed" && return 1
-#   local sw_verbose= && ((SH_VERBOSE)) && sw_verbose='-v'
+#   ! ((d_count)) && eecho "hotkeys-define: error: all $d_total_domains hotkey domains failed" && return 1
+#   local sw_verbose= && ((_VERBOSE)) && sw_verbose='-v'
 #   killall $sw_verbose cfprefsd
 
 #   ((d_count < d_total)) && eecho "hotkeys-define: error: only defined hotkeys for $d_count/$d_total domains" && return 1

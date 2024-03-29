@@ -8,4 +8,4 @@ if [[ "$program" == "pip" && -n "$PYENV_ROOT" && -e "$PYENV_ROOT/shims/pip3" ]];
   program="pip3"
 fi
 
-exec "/usr/local/opt/pyenv/bin/pyenv" exec "$program" "$@"
+exec "/usr/local/opt/pyenv/bin/pyenv" exec "$program" $@

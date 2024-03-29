@@ -10,25 +10,25 @@
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
 type -t .tick >&/dev/null || . ~/.tick
 .tick-bashrc() { .tick -s .bashrc $@; }
-# export TICK_STDERR= TICK_STDOUT= TICK_INDENT=
+# export _TICK_STDERR= _TICK_STDOUT= TICK_INDENT=
 
 .tick-bashrc -e 'printf "[START-FILE ] ~/.bashrc \$\$=$$ \$PPID=$PPID, \$SHLVL=$SHLVL, \$-=$- fns=%d\n" $(declare -F | wc -l)'
 
 # Welcome to Todd's ugly system of semi-global shell variables. These hopefully
 # facilitate increased verbosity when troubleshooting without changing the scriopt.
-# The hits include SH_QUIET, SH_VERBOSE, SH_WHATIF (if set then weval only echoes).
+# The hits include _ECHO_UNLESS_Q, _ECHO_V, SH_WHATIF (if set then weval only echoes).
 .bashrc-wrapper() {
   
   ### echo helpers
-  #   v* = never print unless SH_VERBOSE is set
-  #   q* = always print unless SH_QUIET is set
+  #   v* = never print unless _ECHO_V is set
+  #   q* = always print unless _ECHO_UNLESS_Q is set
   #   e* = always print but also to stderr
-  echo-verbose()  { ((SH_VERBOSE)) || return 0; echo "$@"; }
-  echo-quiet()    { ((SH_QUIET)) && return 0; echo "$@"; }
+  echo-verbose()  { ((_ECHO_V)) || return 0; echo "$@"; }
+  echo_unquiet()    { ((_ECHO_UNLESS_Q)) && return 0; echo "$@"; }
   echo-stderr()   { >&2 echo "$@"; }
   echo-error()    { echo-stderr "$@"; }
   vecho(){ echo-verbose "$@"; }
-  qecho(){ echo-quiet "$@"; }
+  qecho(){ echo_unquiet "$@"; }
   eecho(){ echo-stderr "$@"; }
   #
   # List all variables matching $1 (globbing *, etc.) and their values.
@@ -51,8 +51,8 @@ type -t .tick >&/dev/null || . ~/.tick
   
   ### printf helpers
   #
-  printf-verbose()  { ((SH_VERBOSE)) || return 0; printf "$@"; }
-  printf-quiet()    { ((SH_QUIET)) && return 0; printf "$@"; }
+  printf-verbose()  { ((_ECHO_V)) || return 0; printf "$@"; }
+  printf-quiet()    { ((_ECHO_UNLESS_Q)) && return 0; printf "$@"; }
   printf-stderr()   { >&2 printf "$@"; }
   printf-error()    { printf-stderr "$@"; }
   vprintf(){ printf-verbose "$@"; }
@@ -65,10 +65,10 @@ type -t .tick >&/dev/null || . ~/.tick
   [[ -z "$EVAL_ECHO_PREFIX" ]] && export EVAL_ECHO_PREFIX='$'  # don't override if previously set
   eval-echo()     { >&2 echo "$EVAL_ECHO_PREFIX" "$@"; eval "$@"; }
   eval-verbose()  { >&2 echo-verbose "$EVAL_ECHO_PREFIX" "$@"; eval "$@"; }
-  eval-quiet()    { >&2 echo-quiet "$EVAL_ECHO_PREFIX" "$@"; eval "$@"; }
+  eval-quiet()    { >&2 echo_unquiet "$EVAL_ECHO_PREFIX" "$@"; eval "$@"; }
   eval-stderr()   { >&2 echo-stderr "$EVAL_ECHO_PREFIX" "$@"; eval "$@"; }
   veval(){ eval-verbose "$@"; }
-  qeval(){ eval-quiet "$@"; }
+  qeval(){ echo-stderr "START qeval"; eval-quiet "$@"; }
   eeval(){ eval-stderr "$@"; }
   #
   # Always ECHO the given expression; but do not EVAL if SH_WHATIF is set.

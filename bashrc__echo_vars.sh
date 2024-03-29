@@ -21,7 +21,7 @@ echo_vars() {
         ECHO_VARS_ENV_PREFIX="$2" && shift 2
     fi
     if [[ -n "$ECHO_VARS_ENV_PREFIX" ]]; then
-        for var in  ECHO_VARS_TITLE ECHO_VARS_PREFIX ECHO_VARS_QUOTE ECHO_VARS_WIDTH ECHO_VARS_HOME ECHO_VARS_NOBLANKS; do
+        for var in ECHO_VARS_TITLE ECHO_VARS_PREFIX ECHO_VARS_QUOTE ECHO_VARS_WIDTH ECHO_VARS_HOME ECHO_VARS_NOBLANKS; do
             # Excellent or horriblw bash scripting...basically doing this, for each ECHO_VARS_ variable (assuming prefix V):
             # if [[ -n "$VECHO_VARS_TITLE" ]]; then ECHO_VARS_TITLE="$VECHO_VARS_TITLE"; fi
             if [[ -n $(eval echo "\$$ECHO_VARS_ENV_PREFIX$var") ]]; then
@@ -47,7 +47,7 @@ echo_vars() {
             -h|--home )     ECHO_VARS_SUB_HOME=1  ;;
             -n|--noblanks ) ECHO_VARS_NOBLANKS=1  ;;
             -f|--files )    ECHO_VARS_FILES=1  ;;
-            -v|--verbose )  SH_VERBOSE=1  ;;
+            -v|--verbose )  _VERBOSE=1  ;;
             -- )            break  ;;
             * )             eecho "Unexpected switch: '$1'" && return 1  ;;
         esac
@@ -66,7 +66,7 @@ echo_vars() {
     # decho "  ECHO_VARS_NOBLANKS = $ECHO_VARS_NOBLANKS"
 
     [[ -n "$ECHO_VARS_TITLE" ]] && echo "$ECHO_VARS_TITLE"
-    for var in "$@"; do
+    for var in $@; do
         #local var="$(echo "$var" | xargs)"
 
         local var_typeof=$(eval "typeof $var")
@@ -130,7 +130,7 @@ echo_vars() {
             ## decho "echo_vars: val_cmd: '$val_cmd'"
 
             local val="$(eval "$val_cmd")"
-            [[ -n "$SH_DEBUG" ]] && printf "echo_vars: k: '%s', val: '%s'\\n" "$k" "$val"
+            [[ -n "$_DEBUG" ]] && printf "echo_vars: k: '%s', val: '%s'\\n" "$k" "$val"
 
             # note if this is an existing filename
             if [[ -n "$ECHO_VARS_FILES" && -e "$val" ]]; then
@@ -149,7 +149,7 @@ echo_vars() {
 
     done
 }
-iecho_vars() { [[ -z "$SH_QUIET" ]] && echo_vars -e I "$@"; return 0; }
-eecho_vars() { >&2 echo_vars -e E "$@"; }
-vecho_vars() { ([[ -n "$SH_VERBOSE"||-n "$SH_DEBUG" ]]) && echo_vars -e V "$@"; return 0; }
-decho_vars() { [[ -n "$SH_DEBUG" ]] && echo_vars -e D "$@"; return 0; }
+iecho_vars() { [[ -z "$_QUIET" ]] && echo_vars -e I $@; return 0; }
+eecho_vars() { >&2 echo_vars -e E $@; }
+vecho_vars() { ([[ -n "$_VERBOSE"||-n "$_DEBUG" ]]) && echo_vars -e V $@; return 0; }
+decho_vars() { [[ -n "$_DEBUG" ]] && echo_vars -e D $@; return 0; }

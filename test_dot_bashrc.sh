@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 
-export TICK_ENABLED=1 TICK_STDERR=1
+export _TICK_ON=1 _TICK_STDERR=1
 
 nfails=0
 
 test-echo-printf-verbose() {
   local cmd="$1"; shift
-  for SH_VERBOSE in '' 0 1; do
+  for _VERBOSE in '' 0 1; do
     local out="$($cmd 'foo')"
     local pass=FAIL
-    ((SH_VERBOSE)) && [[ "$out" = 'foo' ]] && pass=pass
-    ((! SH_VERBOSE)) && [[ -z "$out" ]] && pass=pass
-    printf "%-5s: %s([%s],'foo'): '%s'\n" "$pass" "$cmd" "$SH_VERBOSE" "$out"
+    ((_VERBOSE)) && [[ "$out" = 'foo' ]] && pass=pass
+    ! ((_VERBOSE)) && [[ -z "$out" ]] && pass=pass
+    printf "%-5s: %s([%s],'foo'): '%s'\n" "$pass" "$cmd" "$_VERBOSE" "$out"
     [[ "$pass" == "FAIL" ]] && ((nfails++))
   done
 }
@@ -20,20 +20,20 @@ test-echo-printf-verbose printf-verbose
 echo '----'
 
 test-echo-printf-quiet() {
-  for SH_QUIET in '' 0 1; do
-    local actual="$(echo-quiet 'foo')"
+  for _QUIET in '' 0 1; do
+    local actual="$(echo_unquiet 'foo')"
     local pass=FAIL
-    ((SH_QUIET)) && [[ -z "$actual" ]] && pass=pass
-    ((! SH_QUIET)) && [[ "$actual" = 'foo' ]] && pass=pass
-    printf "%-5s: echo-quiet([%s],'foo'): '%s'\n" "$pass" "$SH_QUIET" "$actual"
+    ! _quiet_on && [[ -z "$actual" ]] && pass=pass
+    ! ! _quiet_on && [[ "$actual" = 'foo' ]] && pass=pass
+    printf "%-5s: echo_unquiet([%s],'foo'): '%s'\n" "$pass" "$_QUIET" "$actual"
     [[ "$pass" == "FAIL" ]] && ((nfails++))
   done
 }
-test-echo-printf-quiet echo-quiet
+test-echo-printf-quiet echo_unquiet
 test-echo-printf-quiet printf-quiet
 echo '----'
 
-# echo-error()    { >&2 echo "$@"; }
+# echo-error()    { >&2 echo $@; }
 
 
 test-echo-glob() {
@@ -54,7 +54,7 @@ test-echo-glob() {
 test-echo-glob
 
 
-# printf-error()    { >&2 printf "$@"; }
+# printf-error()    { >&2 printf $@; }
 
 test-substrings() {
   local fn_name="$1" input="$2" expected="$3"; shift 3
@@ -92,18 +92,18 @@ printf "========\nnfails: %d\n" $nfails
 # #
 # # Conditionally echo the expression to stderr before executing it, using similar logic as echo-* and printf-*.
 # : ${EVAL_ECHO_PREFIX:=\>$}
-# eval-echo()     { >&2 echo "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
-# eval-verbose()  { >&2 echo-verbose "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
-# eval-quiet()    { >&2 echo-quiet "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
-# eval-error()    { >&2 echo-error "$EVAL_ECHO_PREFIX $@"; eval "$@"; }
+# eval-echo()     { >&2 echo "$EVAL_ECHO_PREFIX $@"; eval $@; }
+# eval-verbose()  { >&2 echo-verbose "$EVAL_ECHO_PREFIX $@"; eval $@; }
+# eval-quiet()    { >&2 echo_unquiet "$EVAL_ECHO_PREFIX $@"; eval $@; }
+# eval-error()    { >&2 echo-error "$EVAL_ECHO_PREFIX $@"; eval $@; }
 # #
 # alias veval='eval-verbose'
 # alias qeval='eval-quiet'
 # alias eeval='eval-error'
 # #
-# # Always ECHO the given expression; but do not EVAL if SH_WHATIF is set.
+# # Always ECHO the given expression; but do not EVAL if _WHATIF is set.
 # : ${EVAL_WHATIF_PREFIX:=#$}
-# eval-whatif()   { ((SH_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" $@ || eval-echo "$@"; }
+# eval-whatif()   { ((_WHATIF)) && echo "$EVAL_WHATIF_PREFIX" $@ || eval-echo $@; }
 # alias weval='eval-whatif'
 
 
@@ -218,15 +218,14 @@ printf "========\nnfails: %d\n" $nfails
 # #
 # # List path variables' elements, 1 per line.
 # path-list() {
-#   ((! $#)) && echo-error 'usage: path-list PATHVAR [...]' && return 1
+#   ! (($#)) && echo-error 'usage: path-list PATHVAR [...]' && return 1
 #   local var=${1:-PATH}
 #   split-lines ':' <<< "${!var}"
 # }
 # alias path-echo='qeval path-list'
-# alias pecho='qeval path-list'
 
 
-# # The following functions operate on stdin OR "$@"; [[ -t 0 ]] is true if stdin is a terminal
+# # The following functions operate on stdin OR $@; [[ -t 0 ]] is true if stdin is a terminal
 # # from: https://stackoverflow.com/a/30520299
 # #
 # trim() {
@@ -274,16 +273,16 @@ printf "========\nnfails: %d\n" $nfails
 # }
 
 
-# # Source given file(s). If a file does not exist, echo-quiet a warning and ignore.
+# # Source given file(s). If a file does not exist, echo_unquiet a warning and ignore.
 # # Usage: safe-source [--quiet] file [...]
 # safe-source() {
-#   local SH_QUIET=$SH_QUIET
-#   [[ "$1" =~ ^(-q|--quiet)$ ]] && SH_QUIET=1 && shift
+#   local _QUIET=$_QUIET
+#   [[ "$1" =~ ^(-q|--quiet)$ ]] && _QUIET=1 && shift
 #   [[ -z "$1" ]] && echo-error "usage: safe-source [--quiet] file [...]" && return 1
 #   while [[ -n "$1" ]]; do
 #     local script_path="$1"; shift
 #     if [[ ! -e "$script_path" ]]; then
-#       ((! SH_QUIET)) && echo-error "safe-source: $script_path: No such file"
+#       ! ! _quiet_on && echo-error "safe-source: $script_path: No such file"
 #     else
 #       eval-quiet . "$script_path"
 #     fi
@@ -316,11 +315,11 @@ printf "========\nnfails: %d\n" $nfails
 # ####
 # #
 
-# # error, info, verbose and debug levels; uses SH_ vars which can be set pre-execution or generally via -q, -v and -d
-# echo-info() { ((SH_QUIET)) || echo "$@"; return 0; }
-# echo-verbose() { ((SH_VERBOSE || SH_DEBUG)) && echo "$@"; return 0; }
-# echo-debug() { ((SH_DEBUG)) && echo "$@"; return 0; }
-# echo-error() { >&2 echo "$@"; return 0; }  # to error
+# # error, info, verbose and debug levels; uses _ vars which can be set pre-execution or generally via -q, -v and -d
+# echo-info() { ! _quiet_on || echo $@; return 0; }
+# echo-verbose() { ((_VERBOSE || _DEBUG)) && echo $@; return 0; }
+# echo-debug() { ((_DEBUG)) && echo $@; return 0; }
+# echo-error() { >&2 echo $@; return 0; }  # to error
 # alias iecho=echo-info vecho=echo-verbose decho=echo-debug eecho=echo-error
 
 # echo-eval()  {
@@ -329,15 +328,15 @@ printf "========\nnfails: %d\n" $nfails
 #   $echo_level '>$ '$*
 #   eval $*
 # }
-# eecho-eval() { echo-eval --echo eecho "$@"; }
-# iecho-eval() { echo-eval --echo iecho "$@"; }
-# vecho-eval() { echo-eval --echo vecho "$@"; }
-# decho-eval() { echo-eval --echo decho "$@"; }
+# eecho-eval() { echo-eval --echo eecho $@; }
+# iecho-eval() { echo-eval --echo iecho $@; }
+# vecho-eval() { echo-eval --echo vecho $@; }
+# decho-eval() { echo-eval --echo decho $@; }
 
-# # "What-if" echo: if SH_WHATIF env var is set, simply echo the given command; else ieval it.
+# # "What-if" echo: if _WHATIF env var is set, simply echo the given command; else ieval it.
 # wecho-eval() {
 #     local cmd="$*"
-#     [[ -n "$SH_WHATIF" && ! "${SH_WHATIF,,}" =~ 0|false ]] && echo "# WHATIF> $cmd" && return 0
+#     [[ -n "$_WHATIF" && ! "${_WHATIF,,}" =~ 0|false ]] && echo "# WHATIF> $cmd" && return 0
 #     iecho-eval "$cmd"
 # } && \
 # alias wecho='wecho-eval'
@@ -374,9 +373,9 @@ printf "========\nnfails: %d\n" $nfails
 # join-array() {
 #     local delim="$1" && shift
 #     local i_first=1
-#     [[ -n "$SH_DEBUG" ]] && echo_vars delim i_first $@
-#     for i in "$@"; do
-#         [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
+#     [[ -n "$_DEBUG" ]] && echo_vars delim i_first $@
+#     for i in $@; do
+#         [[ -n "$_VERBOSE" ]] && eecho "i=$i"
 #         [[ -n "$i_first" ]] && printf "%s" "$i" && unset i_first || printf "%s%s" "$delim" "$i"
 #     done
 #     printf '\n'
@@ -384,10 +383,10 @@ printf "========\nnfails: %d\n" $nfails
 
 # uniq-array() {
 #     local i_first=1
-#     [[ -n "$SH_DEBUG" ]] && eecho_vars delim i_first $@
+#     [[ -n "$_DEBUG" ]] && eecho_vars delim i_first $@
 #     local buff=
-#     for i in "$@"; do
-#         [[ -n "$SH_VERBOSE" ]] && eecho "i=$i"
+#     for i in $@; do
+#         [[ -n "$_VERBOSE" ]] && eecho "i=$i"
 #         if (( i_first )); then
 #             buff="$i"
 #             unset i_first

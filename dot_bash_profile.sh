@@ -10,12 +10,12 @@
 export BASH_SILENCE_DEPRECATION_WARNING=1
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-# TICK_x variables control its behavior; all default to false/0/off.
-# export TICK_DISABLED= TICK_ENABLED=
-# export TICK_STDERR= TICK_STDOUT=
-export TICK__INDENT=
+# _TICK_x variables control its behavior; all default to false/0/off.
+# export _TICK_OFF= _TICK_ON=
+# export _TICK_STDERR= _TICK_STDOUT=
+export _TICK_INDENT=
 type -t .tick >&/dev/null || . ~/.tick.sh
-.tick-bash-profile() { .tick -s '.bash_profile' "$@"; }
+.tick-bash-profile() { .tick -s '.bash_profile' $@; }
 
 .tick-bash-profile "[START-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
 
@@ -64,7 +64,7 @@ export FIGNORE='DS_Store:Icon?'
 #
 # Change directory to the given link's target, either the file's parent or the directory itself.
 cd-ln() {
-	local link="$1" target
+	local link="$1"; shift 1
 	[[ -z "$link" ]] && echo-error "usage: cd-ln link_to_dir | link_to_file" && return 1
 	[[ ! -e "$link" ]] && echo-error "cd-ln: $link: no such symlink" && return 1
 	[[ ! -L "$link" ]] && echo-error "cd-ln: $link: not a symlink" && return 1
@@ -82,14 +82,14 @@ cd-ln() {
 #
 # Make specified, or all in PWD, shell scripts executable.
 chx() {
-	local opt_verbose=$((SH_VERBOSE))
-	[[ "$1" =~ ^(-v|--verbose)$ ]] && shift && opt_verbose=1
+	local _VERBOSE=$((_VERBOSE))
+	[[ "$1" =~ ^(-v|--verbose)$ ]] && shift && _VERBOSE=1
 	
 	local files=($@)
-	[[ ! "$1" ]] && files=(*.sh) && opt_verbose=1
+	[[ ! "$1" ]] && files=(*.sh) && _VERBOSE=1
 
-	((opt_verbose)) && opt_verbose="-vv" || opt_verbose=
-	qeval chmod $opt_verbose +x "${files[@]}"
+	((_VERBOSE)) && _VERBOSE="-vv" || _VERBOSE=
+	qeval chmod $_VERBOSE +x "${files[@]}"
 }
 
 #
@@ -128,7 +128,7 @@ history-grep() {
 	
 	local c="HISTTIMEFORMAT='$htf' history"
 	((opt_unique)) 
-	[[ -n "$@" ]] && c="c | egrep $@"
+	[[ -n $@ ]] && c="c | egrep $@"
 	((opt_num_lines > 0)) && c="$c $opt_num_lines"
 	qeval "$c | less"
 }
@@ -140,7 +140,7 @@ alias hg='qeval history-grep'
 alias l='less'
 #
 # Lines will NOT wrap, but CTRL-C, arrow keys can scroll left and right. Press 'F' to resume "tailing".
-alias tl='qeval less --chop-long-lines +F'
+alias less-trunc='qeval less --chop-long-lines +F'
 
 
 #
@@ -166,18 +166,20 @@ alias tl='qeval less --chop-long-lines +F'
 alias l1='qeval ls -1F'
 alias l1r='qeval l1 -r'
 #
-alias ll='qeval ls -oghF'
+alias ll='ls -oghF'
 alias llt='qeval ll -t'
 alias lltr='qeval ll -tr'
 alias lls='qeval ll -S'
 alias llsr='qeval ll -Sr'
 #
-alias la='qeval ls -AlhF'
+alias la='ls -alhF'
+alias lA='ls -AlhF'
 alias lat='qeval la -t'
 alias latr='qeval la -tr'
 alias las='qeval la -S'
 alias lasr='qeval la -Sr'
 #
+alias lld='qeval ll -d'
 alias l1d='qeval l1 -d'
 alias lad='qeval la -d'
 #
@@ -249,14 +251,14 @@ ps-grep() {
 			ps_cmd="$ps_cmd -e '$1'" && shift 1
 		done
 	fi
-	# ((! opt_long)) && ps_cmd="$ps_cmd | awk '{printf(\"%-10s %5s %5s %5s %s\n\", \$1,\$2,\$3,\$4,\$8)}'"
+	# ! ((opt_long)) && ps_cmd="$ps_cmd | awk '{printf(\"%-10s %5s %5s %5s %s\n\", \$1,\$2,\$3,\$4,\$8)}'"
 	# ps_cmd="$ps_cmd | egrep -v -e '$$ .+ egrep -e USER'"
 	ps_cmd="$ps_cmd | egrep -v -e ' egrep '"
 	ps_cmd="$ps_cmd | head -n 15"
 	qeval "$ps_cmd"
 }
 ps-java() {
-	qeval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +([[:digit:]]+ +){2}([^[:space:]]+ +){4}([^[:space:]]+) +).*( ([a-z]+\.)+[A-Z][^.]+.*)$/\1 - \5/p;'" \
+	veval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +([[:digit:]]+ +){2}([^[:space:]]+ +){4}([^[:space:]]+) +).*( ([a-z]+\.)+[A-Z][^.]+.*)$/\1 - \5/p;'" \
 		| sed -E 's:\/Library\/Java\/JavaVirtualMachines\/::'
 	# qeval "ps-grep -l java | sed -E -n '/^USER/p; /^[[:alnum:]]+ +([[:digit:]]+ +){2}/ s/^([[:alnum:]]+ +(?:[[:digit:]]+ +){2} +(?:[^[:space:]]+ +){4} +([^[:space:]]+) +).+$/\1/; p;'" # + \d+ +\d+/p;' #' +\w+ +\w+ +\w+ +'
 	# qeval "ps-grep -l java | sed -E -n 's/^(USER.+)|([[:alnum:]]+ +([[:digit:]]+ +){2} +([[:digit:]]+ +){5} +.+)$/\2/; p;'" # + \d+ +\d+/p;' #' +\w+ +\w+ +\w+ +'
@@ -364,10 +366,10 @@ echo-color() {
 # Update mtime of folders with latest mtime of its contents
 touchd() {
 	[[ -z "$1" ]] && echo-error "usage: touchd dir [...]" && return 1
-	local SH_VERBOSE=$((SH_VERBOSE))
+	local _VERBOSE=$((_VERBOSE))
 	local count=0 arg
 	for arg in $@; do
-			[[ "$arg" =~ ^(-v|--verbose)$ ]] && SH_VERBOSE=1 && continue
+			[[ "$arg" =~ ^(-v|--verbose)$ ]] && _VERBOSE=1 && continue
 			
 			local dir="$arg"
 			local dir_tilde="${dir/$HOME/~}"
@@ -396,7 +398,7 @@ touchd-R() {
 	local dirs=($@)
 	[[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
 	for dir in "${dirs[@]}"; do
-			[[ "$dir" =~ ^(-v|--verbose)$ ]] && [[ -n "$SH_VERBOSE" ]] && continue
+			[[ "$dir" =~ ^(-v|--verbose)$ ]] && [[ -n "$_VERBOSE" ]] && continue
 			find "$dir" -depth ! -type f -print |\
 			while read -r subdir; do
 					qeval touchd "$subdir"
@@ -441,10 +443,10 @@ glob-path-first() {
 ln-valid() {
 	local USAGE="Usage: ln-valid [FILE ...]; default is *"
 	
-	local opt_quiet= opt_verbose=
+	local _QUIET= _VERBOSE=
 	while [[ "$1" =~ ^-.+ ]]; do case "$1" in
-		-q|--quiet)    opt_quiet=1; opt_verbose=; shift 1;;
-		-v|--verbose)  opt_verbose=1; opt_quiet=; shift 1;;
+		-q|--quiet)    _QUIET=1; _VERBOSE=; shift 1;;
+		-v|--verbose)  _VERBOSE=1; _QUIET=; shift 1;;
 		*) echo-error "$USAGE" && return 1
 	esac; done
 	
@@ -454,7 +456,7 @@ ln-valid() {
 		local target=
 		local status="OK"
 		if [[ ! -L "$link" ]]; then
-			((! opt_verbose)) && continue
+			! ((_VERBOSE)) && continue
 			status="NON-LINK"
 		else
 			target="$(readlink "$link")"
@@ -462,7 +464,7 @@ ln-valid() {
 		fi
 		local line="$(printf '%-9s %s -> %s\n' $status $link $target)"
 		if [[ "$status" == "OK" ]]; then
-			((! opt_quiet)) && echo "$line"
+			qecho "$line"
 		elif [[ "$status" == "NON-LINK" ]]; then
 			echo-color blue "$line"
 		else
@@ -513,9 +515,9 @@ fwf-nice() {
 	local delim='|'; [[ "$1" =~ ^-d|--delim$ ]] && delim="$2" && shift 2
 	local is_pipe=; [[ ! -t 0 ]] && is_pipe=1
 	
-	local fwf=; ((! is_pipe)) && fwf="$1" && shift
+	local fwf=; ! ((is_pipe)) && fwf="$1" && shift
 	# [[ -z "$fwf" ]] && echo-error "$USAGE" && return 1
-	((! is_pipe)) && [[ ! -f "$fwf" ]] && echo-error "fwf-nice: $fwf: No such file" && return 1
+	! ((is_pipe)) && [[ ! -f "$fwf" ]] && echo-error "fwf-nice: $fwf: No such file" && return 1
 	local c='print ' first=1
 	while true; do
 		local cr=0
@@ -643,9 +645,9 @@ fwf-nice() {
     return 1
   fi
 
-  ((SH_DEBUG)) && .tick-bash-profile "... PATH before 'brew shellenv': [$PATH]"
+  ((_DEBUG)) && .tick-bash-profile "... PATH before 'brew shellenv': [$PATH]"
   eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"
-  ((SH_DEBUG)) && .tick-bash-profile "... PATH after  'brew shellenv': [$PATH]"
+  ((_DEBUG)) && .tick-bash-profile "... PATH after  'brew shellenv': [$PATH]"
   if [[ ! -d "$HOMEBREW_PREFIX" ]]; then
     .tick-bash-profile "... homebrew 'shellenv' did not properly set \$HOMEBREW_PREFIX"
     return 1
@@ -673,7 +675,7 @@ fwf-nice() {
 
 	.tick-bash-profile "[end] .setup-homebrew, PATH=$PATH"
 }
-((! SETUP_HOMEBREW_DISABLED)) && .setup-homebrew
+! ((_SKIP_HOMEBREW_SETUP)) && .setup-homebrew
 
 
 #
@@ -683,23 +685,40 @@ fwf-nice() {
 	.tick-bash-profile '[start] .setup-iterm'
 	[[ "$TERM_PROGRAM" != "iTerm.app" ]] && .tick-bash-profile "... iTerm2 not installed" && return 1
 
+  safe-source --quiet "$HOME/.iterm2_shell_integration.bash"
+  export ITERM_BADGE="$ITERM_PROFILE"
+  iterm2_print_user_vars() {
+    iterm2_set_user_var badge "$ITERM_BADGE"
+  }
+
 	# From https://superuser.com/a/344397/17666
-	# $1 = type; 0 - both [default], 1 - tab, 2 - window
-	iterm-set-title () {
-		[[ ! "$1" =~ -b|-t|-w ]] && echo-error "usage: iterm-set-title --both|--tab|--window TEXT" && return 1
-		local mode=0
-		if [[ "$1" =~ -t ]]; then
-      mode=1
-		elif [[ "$1" =~ -w ]]; then
-      mode=2
-    fi
-		shift
-		echo -ne "\033]$mode;$@\007"
+  # Note that tab and window take effect imediately; badge needs to wait for a prompt display
+	# mode: 0 - both [default], 1 - tab, 2 - window
+	iterm-text() {
+    local USAGE='usage: iterm-text --badge|--tab|--window TEXT...'
+		local mode= do_tab= do_window= do_badge= obj="tab and window"
+    while [[ "$1" ]]; do case "$1" in
+      -t|--tab)   do_tab=1; shift 1;;
+      -w|--win*)  do_window=1; shift 1;;
+      -b|--badge) do_badge=1; shift 1;;
+      -*) echo-error "iterm-text: illegal option -- $1"
+          echo-error $USAGE
+          return 1;;
+      *) break;;
+    esac; done
+    [[ -z "$do_tab$do_window$do_badge" ]] && do_tab=1 do_window=1 do_badge=1
+    local text="$@"
+    [[ -z "$text" ]] && echo-error "$USAGE" && return 1
+
+    ((do_tab))    && echo -ne "\e]1;$text\a"    && echo-verbose "Updated iTerm tab title to: $text"
+    ((do_window)) && echo -ne "\e]2;$text\a"    && echo-verbose "Updated iTerm window title to: $text"
+    ((do_badge))  && export ITERM_BADGE="$text" && echo-verbose "Updating iTerm badge to: $text"
 	}
+  alias itt='iterm-text'
 
 	.tick-bash-profile "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
 }
-((! SETUP_ITERM_DISABLED)) && .setup-iterm
+! ((_SKIP_ITERM_SETUP)) && .setup-iterm
 
 
 #
@@ -715,10 +734,10 @@ fwf-nice() {
 	git-alias() {
     local USAGE="usage: git-alias [[--max-count] n] [patt]"
 		local opt_patt='.+' opt_maxcount=999
-    local SH_QUIET=$SH_QUIET SH_VERBOSE=$SH_VERBOSE
+    local _quiet=$_QUIET _verbose=$_VERBOSE
 		while [[ -n "$1" ]]; do case "$1" in
-      -q | --quiet)     SH_QUIET=1; shift;;
-      -v | --verbose)   SH_VERBOSE=1; shift;;
+      -q | --quiet)     _quiet=1; shift;;
+      -v | --verbose)   _verbose=1; shift;;
 			-n | --max-count) shift 1; 
                         if [[ -n "$1" ]]; then
                           opt_maxcount=$1; 
@@ -736,21 +755,6 @@ fwf-nice() {
       | head -n $opt_maxcount \
       | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
 	}
-  #
-  alias gco='qeval git checkout'
-  alias gcod='qeval git checkout develop'
-  alias gcom='qeval git checkout master'
-  #
-  git-checkout-remote-branch() {
-    [[ -z "$1" ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
-    [[ ! "$1" =~ .+/.+ ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
-    local remote_branch="$1" && shift
-    local remote_name="$(substring_before_first $remote_branch '/')"
-    local branch_name="$(substring_after_first $remote_branch '/')"
-    echo-verbose "$(echo-glob remote_branch remote_name branch_name)"
-    qeval git checkout -b $branch_name $remote_name/$branch_name || return 1
-    qeval git branch --set-upstream-to $remote_name/$branch_name
-  }
   #
 	git-branch() {
     local branch_level=1; while [[ "$1" =~ [012] ]]; do branch_level="$1" && shift 1; done
@@ -817,11 +821,11 @@ fwf-nice() {
   alias gbsuto='qeval git-branch-set-upstream-to'
   #
   git-branches-with() {
-    local SH_QUIET=$((SH_QUIET)) SH_VERBOSE=$((SH_VERBOSE))
+    local _QUIET=$! _quiet_on _VERBOSE=$((_VERBOSE))
     local log_opts=
     while [[ "$1" ]]; do case "$1" in
-      -q|--quiet)   SH_QUIET=1 SH_VERBOSE=0; shift 1;;
-      -v|--verbose) SH_QUIET=0 SH_VERBOSE=1; shift 1;;
+      -q|--quiet)   _QUIET=1 _VERBOSE=0; shift 1;;
+      -v|--verbose) _QUIET=0 _VERBOSE=1; shift 1;;
       -n|--max-count) log_opts="$log_opts $1 $2"; shift 2;;
       -{1,2,3,4,5,6,7,8,9}*) log_opts="$log_opts -n $1"; shift 1;;
       *) break;;
@@ -838,8 +842,20 @@ fwf-nice() {
   }
   alias gbw='qeval git-branches-with'
   #
-  alias gcod='qeval git cod'
-  alias gcom='qeval git com'
+  alias gco='qeval git checkout'
+  alias gcod='qeval git checkout develop'
+  alias gcom='qeval git checkout master'
+  #
+  git-checkout-remote-branch() {
+    [[ -z "$1" ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
+    [[ ! "$1" =~ .+/.+ ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
+    local remote_branch="$1" && shift
+    local remote_name="$(substring_before_first $remote_branch '/')"
+    local branch_name="$(substring_after_first $remote_branch '/')"
+    echo-verbose "$(echo-glob remote_branch remote_name branch_name)"
+    qeval git checkout -b $branch_name $remote_name/$branch_name || return 1
+    qeval git branch --set-upstream-to $remote_name/$branch_name
+  }
   #
   git-commit-message() {
     local opts=
@@ -852,6 +868,10 @@ fwf-nice() {
     qeval git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
   }
   alias gcm='qeval git-commit-message'
+  #
+  alias gds='qeval git ds'
+  alias gdss='qeval git dss'
+  alias gdds='qeval git dds'
 
 # LOG/PRETTY FORMAT FIELDS
 # %h  - abbrev hash
@@ -961,9 +981,16 @@ fwf-nice() {
   #
   alias gpff='qeval git pff'
   #
-  alias grdev='qeval git rebase develop'
-  alias grmas='qeval git rebase master'
-  alias grab='qeval git rebase --abort'
+  alias gr-dev='qeval git rebase develop'
+  alias gr-mas='qeval git rebase master'
+  alias gr-ab='qeval git rebase --abort'
+  #
+  alias gs='qeval git stash'
+  alias gsh='qeval git stash --help'
+  alias gsl='qeval git stash list' 
+  alias gsa='qeval git stash apply' 
+  alias gss='qeval git stash show' 
+
   #
   git-status() {
     local status_level=1; [[ -n "$1" ]] && status_level="$1" && shift 1
@@ -1075,7 +1102,7 @@ fwf-nice() {
 
 	.tick-bash-profile '[end] .setup-git'
 }
-((! SETUP_GIT_DISABLED)) && .setup-git
+! ((_SKIP_GIT_SETUP)) && .setup-git
 
 
 #
@@ -1117,7 +1144,7 @@ fwf-nice() {
 
 	.tick-bash-profile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
-((! SETUP_SDKMAN_DISABLED)) && .setup-java-sdkman
+! ((_SKIP_SDKMAN_SETUP)) && .setup-java-sdkman
 
 
 #
@@ -1156,7 +1183,7 @@ fwf-nice() {
 
   .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
-if ! type -t sdk &>/dev/null && ((! SETUP_JENV_DISABLED)); then
+if ! type -t sdk &>/dev/null && ! ((_SKIP_SETUP_JENV)); then
   .setup-java-jenv
 fi
 
@@ -1177,7 +1204,7 @@ fi
   alias pg-stop='qeval brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
   .tick-bash-profile '[end] .setup-pg, PATH=$PATH"'
 }
-((! SETUP_POSTGRES_DISABLED)) && .setup-pg
+! ((_SKIP_POSTGRES_SETUP)) && .setup-pg
 
 
 #
@@ -1244,7 +1271,7 @@ fi
     schemaspy-pg -I 'adw.+'
   }
 }
-((! SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy
+! ((_SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy
 
 
 #
@@ -1259,24 +1286,63 @@ fi
 	export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
 	export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
 
-	vb() { 
-    qeval VBoxManage $@
+	vb() { qeval VBoxManage $@; }
+  #
+  vb-list() {
+    local _QUIET=$_QUIET _VERBOSE=$_VERBOSE _WHATIF=$_WHATIF
+    local opt_hostonly opt_running
+    local opts_are_general=1 general_opts
+    while [[ "$1" ]]; do echo "arg: $1"; case "$1" in
+      -q|--quiet)     _QUIET=1; shift 1;;
+      -v|--verbose)   _VERBOSE=1; shift 1;;
+      -h|--host*)     opt_hostonly=1; shift 1;;
+      -r|--run*)      opt_running=1; shift 1;;
+
+      --) opts_are_general=0; shift 1;;
+      -*) if ((! opts_are_general)); then
+            echo "((! opts_are_general))"
+            break
+          else
+            general_opts="$general_opts $1"
+            shift 1
+            echo-var general_opts
+          fi;;
+      *) break;;
+    esac; done
+    local specific_opts="$@"
+    echo-var opt_hostonly opt_running opts_are_general general_opts specific_opts
+    if ((opt_hostonly)); then
+      local hostonly="hostonlynets"; [[ "$VBOX_VERSION" =~ ^6 ]] && hostonly="hostonlyifs"
+      qeval vb $general_opts list $specific_opts "$hostonly"
+    else
+      local obj="vms"; ((opt_running)) && obj="runningvms" && shift 1
+      qeval vb $general_opts list --sorted $specific_opts "$obj"
+    fi
+
   }
-  vb-ls() { 
-    vb list $@
-  }
+  alias vbls='qeval vb-list'
 	#
 	vb-status() {
-		printf '\n'
-		qeval "vb-ls --long --sorted vms | egrep '^(Name|State|UUID):\s{2,}'" \
-			| sed -E -e 's/^(State:.+\))/\1\n/'
+    local USAGE="usage: vb-status [--all] [--long]"
+    local all= long=
+    while [[ "$1" ]]; do case "$1" in
+      -a|--all)   all=1; shift 1;;
+      -l|--long)  long=1; shift 1;;
+      *) break;;
+    esac; done
+
+    ((all)) && printf "\nALL VMS\n" && vb-list
 		
-		vb-ls runningvms
-		printf '\n'
-		
-		local hostonly='hostonlynets'; [[ "$VBOX_VERSION" =~ ^6 ]] && hostonly='hostonlyifs'
-		vb-ls "$hostonly"
+    printf "\nRUNNING VMS\n"
+    vb-list --running
+
+    if ((long)); then
+      printf "\nRUNNING VMS --long\n"
+      vb-list --running -- --long |\
+        egrep '^(Name|Guest OS|UUID|Config file|Log folder|Memory size|State):\s{2,}'
+    fi
 	}
+  alias vbst=vb-status
 
 	# Lookup full vm name given a pattern; if not found, return pattern with error status.
 	vb-vm-name() {
@@ -1293,6 +1359,7 @@ fi
 			 return 1
 		fi
 	}
+  alias vbn=vb-vm-name
 
 	vb-start() {
 		[[ -z "$1" ]] && echo-error "usage: vb-start vm_name [startvm options]" && return 1
@@ -1308,26 +1375,29 @@ fi
 	vb-reboot() {
 		[[ -z "$1" ]] && echo-error "usage: vb-reboot vm_name" && return 1
 		local vm_name_patt="$1" && shift
-		vb-controlvm "$(vb-vm-name $vm_name_patt)" reboot $@
-	}
-	vb-shutdown() {
-		[[ -z "$1" ]] && echo-error "usage: vb-shutdown vm_name_patt [--force]" && return 1
-		local vm_name_patt="$1" && shift
-		vb-controlvm "$(vb-vm-name $vm_name_patt)" shutdown $@
+		qeval vb-controlvm "$(vb-vm-name $vm_name_patt)" reboot $@
 	}
 	vb-poweroff() {
+    qecho "START vb-poweroff \$@=$@"
 		[[ -z "$1" ]] && echo-error "usage: vb-poweroff vm_name_patt [--type=gui|headless|..., other startvm options]" && return 1
 		local vm_name_patt="$1" && shift
-		vb-controlvm "$(vb-vm-name $vm_name_patt)" poweroff $@
+    local vm_name="$(vb-vm-name $vm_name_patt)"
+    gecho 'vm_name'
+		qeval vb-controlvm "$vm_name" poweroff $@
 	}
 
+  vb-less() {
+    [[ -z "$1" ]] && echo-error "usage: vb-less vm_name ['less' options]" && return 1
+    local vm_name_patt="$1" && shift
+    qeval less $@ '"$VBOX_VMS_HOME/$(vb-vm-name $vm_name_patt)/Logs/VBox.log"'
+  }
 	vb-tail() {
-		[[ -z "$1" ]] && echo-error "usage: vb-tail vm_name_patt [-f or other tail options]" && return 1
+		[[ -z "$1" ]] && echo-error "usage: vb-tail vm_name_patt [-f or other 'tail' options]" && return 1
 		local vm_name_patt="$1" && shift
 		qeval tail $@ '"$VBOX_VMS_HOME/$(vb-vm-name $vm_name_patt)/Logs/VBox.log"'
 	}
 }
-((! SETUP_VBOX_DISABLED)) && .setup-vbox
+! ((_SKIP_SETUP_VBOX)) && .setup-vbox
 
 
 #
@@ -1342,7 +1412,7 @@ fi
 
 	.tick-bash-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
 }
-((! SETUP_MAPR_DISABLED)) && .setup-mapr
+! ((_SKIP_SETUP_MAPR)) && .setup-mapr
 
 
 #
@@ -1362,12 +1432,10 @@ fi
 
 	.tick-bash-profile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
 }
-((! SETUP_HADOOP_DISABLED)) && .setup-hadoop
+! ((_SKIP_SETUP_HADOOP)) && .setup-hadoop
 
 #
 ### GRADLE/GRADLEW
-#
-alias gw='qeval ./gradlew'
 #
 # -a, --no-rebuild                   Do not rebuild project dependencies.
 # --build-cache                      Enables the Gradle build cache. Gradle will try to reuse outputs from previous builds.
@@ -1399,24 +1467,41 @@ alias gw='qeval ./gradlew'
 # --watch-fs                         Enables watching the file system for changes, allowing data about the file system to be re-used for the next build.
 # --write-locks                      Persists dependency resolution for locked configurations, ignoring existing locking information if it exists
 # -x, --exclude-task                 Specify a task to be excluded from execution.
-gw-task() {
-	# local USAGE='Usage: gw-task [wrapper_opt... --] task [opt...]'
-	# local wrapper_opts= task_opts=
-	# while [[ -n "$1" ]]; do
-	#   case "$1" in
-	#     --) shift 1; task_opts="$@"; break;;
-	#      *) wrapper_opts="$wrapper_opts $1"; shift 1
-	#   esac
-	# done
-	# qeval gw $wrapper_opts $task_opts
-	qeval ./gradlew $@
+#
+# Usage:  gw --no-tee|-T ...
+#           Pass through the remaining argument to gw without any log/tee handling
+#         gw_alias=int-start gw
+#           Use the given alias as part of the tee'd log name
+# The base tee log is built from $PWD, date/time, and gradle tasks.
+gw() {
+  [[ "$1" =~ ^--no-tee|-T$ ]] && shift 1 && eval-unquiet ./gradlew $@ && return
+
+  [[ -n "$gw_alias" ]] && iterm-text "$gw_alias"
+  
+  local app="$(substring_after_last "$PWD" '/')"
+  local now="__$(date +'%Y%m%d.%H%M%S')"
+  [[ -n "$gw_alias" ]] && gw_alias="__${gw_alias}"
+
+  local br="$(git branch --show-current)"
+  if [[ "$br" =~ ^feature/.+$ ]]; then
+    br="__$(sed -E 's#feature/([A-Z]+\-[0-9]+).*#\1#' <<< "$br")"
+  else
+    br="__$(substring_before_first "$br" '/')"
+  fi
+
+  local tasks=
+  for arg in $@; do
+    if [[ "$arg" =~ ^:.+$ ]]; then
+      tasks="${tasks}${arg//:/_}"
+    fi
+  done
+  [[ -n "$tasks" ]] && tasks="_${tasks}"
+
+  local logfile="${app}${br}${now}${tasks}${gw_alias}.log"
+  vecho-var app br now tasks gw_alias logfile
+
+  eval-unquiet ./gradlew $@ |& tee "logs/$logfile"
 }
-# gw-task() {
-#   local USAGE='Usage: gw-task [-w wrapper_option... --] task [args...]'
-#   local wrapper_opts=
-#   [[ "$1" == "-w" ]] && wrapper_opts="$2" && shift 2
-#   qeval ./gradlew $wrapper_opts $@
-# }
 
 #
 ### PS1 COMMAND LINE PROMPT
@@ -1473,7 +1558,6 @@ gw-task() {
 # }
 # .setup-ps1
 
-
 .source-extra-bash-profiles() {
 	.tick-bash-profile '[start] .source-extra-bash-profiles'
 	if glob-path-exists ~/.bash_profile.*; then
@@ -1488,6 +1572,8 @@ gw-task() {
 
 
 alias .reload-shell='qeval exec $SHELL -l'
+alias .rs='veval .reload-shell'
+
 alias .reload-bash-profile='qeval . "~/.bash_profile"'
 alias .rlbp='veval .reload-bash-profile'
 

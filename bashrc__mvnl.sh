@@ -6,7 +6,7 @@
 #
 [[ -e "${MAVEN_HOME:-$HOME/.m2}/settings.xml" ]] &&\
 mvnl() {
-  local SH_QUIET=$SH_QUIET SH_VERBOSE=$SH_VERBOSE
+  local _QUIET=$_QUIET _VERBOSE=$_VERBOSE
   local goal='list-phase' build_plan='clean,deploy' dirs= mvn_opts=
 
   while [[ -n "$1" ]]; do
@@ -27,9 +27,9 @@ mvnl() {
         echo "     [*directory]  The directories (with pom.xml files) to run the command in"
         return 0;;
       -v|--verbose)
-          SH_VERBOSE=1;;
+          _VERBOSE=1;;
       -q|--quiet)
-          SH_QUIET=1;;
+          _QUIET=1;;
       -b|--build_plan)
           build_plan="$1" && shift
           [[ -z "$build_plan" ]] && eecho "mvnl: -b|--build-plan requires a parameter, comma-separated tasks; e.g., 'clean,install', 'deploy', 'install'" && return 1

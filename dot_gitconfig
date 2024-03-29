@@ -11,6 +11,7 @@
   brmv = branch -M
   brrm = branch -D
   brsu = branch --set-upstream-to
+  bruu = branch --unset-upstream
 
   b = branch --list --ignore-case --sort=-committerdate --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:12,left)%(committerdate:relative)%(end)\\ \\ %(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(color:white)\\ %(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)%(color:reset)"
   br = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(if)%(upstream)%(then)\\ %(color:white)%(align:2,left)[%(upstream:trackshort)]%(end)%(color:reset)%(end)%(end)\\ %(contents:subject)"

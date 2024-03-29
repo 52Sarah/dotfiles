@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-[ -n "$SH_VERBOSE" ] && echo "[.alias_ucp]"
+[ -n "$_ECHO_V" ] && echo "[.alias_ucp]"
 
 if [[ "$(hostname -s)" = "SHEFFIELD" ]]; then
 
@@ -37,8 +37,8 @@ if [[ "$(hostname -s)" = "SHEFFIELD" ]]; then
     unset SVN_BRANCH
     while [ -n "$1" ]; do
       case "$1" in
-        -q|--quiet )    local SH_QUIET=1; unset SH_VERBOSE  ;;
-        -v|--verbose )  local SH_VERBOSE=1; unset SH_QUIET  ;;
+        -q|--quiet )    local _ECHO_UNLESS_Q=1; unset _ECHO_V  ;;
+        -v|--verbose )  local _ECHO_V=1; unset _ECHO_UNLESS_Q  ;;
         -* )            eecho "ERROR: Unexpected switch: '$1'" && return 1  ;;
         * )             export SVN_BRANCH="$1"  ;;
       esac
@@ -85,7 +85,7 @@ if [[ "$(hostname -s)" = "SHEFFIELD" ]]; then
     function ucp.cd.myinfinitec.wc()   { ucp.svn.branch --quiet; cd "$UCP_MYINFINITEC_WC"; }
     function ucp.cd.engage()           { ucp.svn.branch --quiet; cd "$UCP_ENGAGE"; }
     function ucp.cd.infinitext.wc()    { ucp.svn.branch --quiet; cd "$UCP_INFINITEXT_WC"; }
-    [ -n "$SH_VERBOSE" ] && declare -F | grep -E -o 'ucp\.cd\..*'
+    [ -n "$_ECHO_V" ] && declare -F | grep -E -o 'ucp\.cd\..*'
 
     function ucp.tunnel.dev()          { ssh -v -NC -i "$UCP_STAGING_PEM" ubuntu@dev.myinfinitec.org -L "${1:-3306}:localhost:${2:-${1:-3306}}"; }
     function ucp.tunnel.staging()      { ssh -v -NC -i "$UCP_STAGING_PEM" ubuntu@staging.myinfinitec.org -L "${1:-3306}:localhost:${2:-${1:-3306}}"; }
@@ -94,14 +94,14 @@ if [[ "$(hostname -s)" = "SHEFFIELD" ]]; then
     alias ucp.tunnel.db.staging='ucp.tunnel.staging 3306'
     alias ucp.tunnel.db.prod='ucp.tunnel.prod 3306'
     alias ucp.tunnel.jmx.prod='ucp.tunnel.prod 50500'
-    [ -n "$SH_VERBOSE" ] && declare -F | grep -E -o 'ucp\.tunnel\..+'
+    [ -n "$_ECHO_V" ] && declare -F | grep -E -o 'ucp\.tunnel\..+'
 
     alias ucp.i='bash $HOME/infinitec.sh'
     alias ucp.refresh='~/svn/tsg-alfresco-scripts/webscripts/ucp/ucp-refresh.sh'
     alias ucp.find='~/svn/tsg-alfresco-scripts/webscripts/ucp/ucp-find.sh'
     alias ucp.test='~/svn/tsg-alfresco-scripts/webscripts/ucp/ucp-test-myinfinitec.sh'
     alias ucp.up='~/svn/tsg-alfresco-scripts/bash/up.sh'
-    [ -n "$SH_VERBOSE" ] && alias ucp.i ucp.refresh ucp.test | grep -E -o 'ucp\..+'
+    [ -n "$_ECHO_V" ] && alias ucp.i ucp.refresh ucp.test | grep -E -o 'ucp\..+'
 
       # Change current directory if we started inside the old branch
     #vecho_vars old_SVN_BRANCH SVN_BRANCH PWD

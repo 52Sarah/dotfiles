@@ -3,15 +3,13 @@
 # For debugging login files; this file should be included at the top of each.
 # The __echo function should be called only if debugging is enabled;
 # it will echo its arguments and write to __login.log if one of the following is true:
-#   - the SH_DEBUG env var is already set
+#   - the _DEBUG env var is already set
 #   - script is called with --debug as its $1
 #   - existence of ~/.login.debug.enabled file
 #   - existence of ~/$script.debug file, where $script is ".profile", etc.
 
 __echo() {
-  if [[ -z "$__DATETIME" ]]; then
-    export __DATETIME="$(datetime_plus_ms 3)"
-  fi
+  [[ -z "$__DATETIME" ]] && export __DATETIME="$(datetime_plus_ms 3)"
   echo "$__DATETIME  $*" >> "$HOME/__login.log" 
 }
 
@@ -39,7 +37,7 @@ dot___login_debug() {
 
   local script="$1" && shift
   
-  [[ -n "$SH_DEBUG" ]] && return 0
+  [[ -n "$_DEBUG" ]] && return 0
   [[ -e "$HOME/.__login.debug" ]] && return 0
 
   [[ -z "$1" ]] && return 1
@@ -47,4 +45,4 @@ dot___login_debug() {
   
   return 1
 }
-dot___login_debug "$@"
+dot___login_debug $@

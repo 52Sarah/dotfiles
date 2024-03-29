@@ -92,7 +92,7 @@ __gitdir ()
 __git ()
 {
 	git ${__git_C_args:+"${__git_C_args[@]}"} \
-		${__git_dir:+--git-dir="$__git_dir"} "$@" 2>/dev/null
+		${__git_dir:+--git-dir="$__git_dir"} $@ 2>/dev/null
 }
 
 # Removes backslash escaping, single quotes and double quotes from a word,
@@ -327,7 +327,7 @@ __gitcompappend ()
 __gitcompadd ()
 {
 	COMPREPLY=()
-	__gitcompappend "$@"
+	__gitcompappend $@
 }
 
 # Generates completion reply, appending a space to possible completion words,
@@ -445,7 +445,7 @@ __gitcomp_nl_append ()
 __gitcomp_nl ()
 {
 	COMPREPLY=()
-	__gitcomp_nl_append "$@"
+	__gitcomp_nl_append $@
 }
 
 # Fills the COMPREPLY array with prefiltered paths without any additional

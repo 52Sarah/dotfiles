@@ -4,19 +4,19 @@ prev_head="$1" && shift
 new_head="$1" && shift
 branch_checkout_flag=$1 && shift
 
-((SH_VERBOSE)) && echo "prev_head='$prev_head', new_head='$new_head', branch_checkout_flag=$branch_checkout_flag"
+((_LOG_VERBOSE)) && echo "prev_head='$prev_head', new_head='$new_head', branch_checkout_flag=$branch_checkout_flag"
 
 if ((branch_checkout_flag)); then
 	branch="$(git branch --show-current)"
 	
-	((SH_VERBOSE)) && echo "branch='$branch'"
+	((_LOG_VERBOSE)) && echo "branch='$branch'"
 
 	heads="$(git rev-parse --git-dir)/HEADS";
   echo "$branch" >> "$heads" \
   		&& uniq "$heads" > "${heads}.tmp" \
   		&& mv -f "${heads}.tmp" "$heads"
 
- 	((SH_VERBOSE)) && echo "$heads:" && cat "$heads"
+ 	((_LOG_VERBOSE)) && echo "$heads:" && cat "$heads"
 fi
 
 exit 0

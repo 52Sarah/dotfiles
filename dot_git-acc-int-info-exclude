@@ -6,6 +6,7 @@
 # *~
 iterm-logs
 logs
+notes-acc
 
 *.sublime-*
 *.con.txt
@@ -14,5 +15,7 @@ logs
 ddl.final.sql
 icnow_constraint.sql
 
-curl/
+curl
 usr
+.idea*
+.run

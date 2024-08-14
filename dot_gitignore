@@ -12,3 +12,5 @@
 **/*.BAK.*
 
 **/build/
+
+activemq-data/

@@ -117,21 +117,47 @@ timeout() {
 
 #
 ### GRADLE helpers
+# Removed --configuration-cache since it often causes grief, even with problems=warn
 #
-gw-slower() {
+gw-slowest() {
   gw --info  --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
 }
 gw-slow() {
   gw --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
 }
 gw-normal() {
-  gw --build-cache --no-configuration-cache --no-configure-on-demand  $@
+  gw --build-cache --no-configuration-cache --no-configure-on-demand --dependency-verification=off  $@
 }
 gw-fast() {
-  gw --build-cache --configuration-cache --configure-on-demand  $@
+  gw --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
 }
 gw-faster() {
-  gw --offline --no-rebuild  --build-cache --configuration-cache --configure-on-demand  $@
+  gw --offline  --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
+}
+gw-fastest() {
+  gw --offline --no-rebuild  --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
+}
+#
+gw-test() {
+  [[ -z "$3" ]] && echo-error "Usage: gw-test fast|faster|... testTask testClass [useContainer:false]" && return 1
+  local speed=$1 testTask=$2 testClass=$3; shift 3
+  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
+  local excludes="-x:validateDbScripts -x:tag -x:version"
+  rm -rf build/reports/tests/$testTask
+  gw-$speed --no-build-cache :$testTask --tests "$testClass" $excludes -Puse-container=$useContainer  $@
+  open build/reports/tests/$testTask/index.html
+}
+int-dbTestOracle() {
+  [[ -z "$2" ]] && echo-error "Usage: dbTestOracle fast|faster|... testClass [useContainer:false]" && return 1
+  local speed=$1 testClass=$2; shift 2
+  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
+  gw_alias=int-dbTestOracle gw-test $speed dbTestOracle $testClass $useContainer  $@
+}
+int-dbIntTestOracle() {
+  [[ -z "$2" ]] && echo-error "Usage: dbIntTestOracle fast|faster|... testClass [useContainer:false]" && return 1
+  local speed=$1 testClass=$2; shift 2
+  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
+  gw_alias=int-dbIntTestOracle gw-test $speed dbIntTestOracle $testClass $useContainer  $@
 }
 #
 bin-clean-start() { 
@@ -144,69 +170,86 @@ bin-start-fastest() {
   gw_alias=bin-start-fastest gw-fastest :server:start2  $@
 }
 #
-eng-start() {
-  gw_alias=emg-start gw-normal :runEngine  -x:validateDb -x:listDb  $@
+eng-run() {
+  gw_alias=eng-run gw-normal :runEngine -Pmapr-enabled=false  -x:validateDb -x:listDb  $@
 }
-eng-start-fastest() {
-  gw_alias=eng-start-fastest gw-faster :runEngine  -x:validateDb -x:listDb  -x:compileJava  -x:node  -x:war -x:explodeWar  $@
+eng-run-fastest() {
+  gw_alias=eng-run-fastest gw-fastest :runEngine -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  -x:node  -x:war -x:explodeWar  $@
 }
 #
 int-clean() { 
   gw_alias=int-clean gw-slow :clean  $@
 }
 int-clean-start() { 
-  gw_alias=int-clean-start gw-slow :clean :start  $@
+  gw_alias=int-clean-start gw-slow :clean :start -Pmapr-enabled=false  $@
 }
 #
-int-start-slower() {
-  gw_alias=int-start-slower gw-slower :start  $@
+int-start-slowest() {
+  gw_alias=int-start-slowest gw-slowest :start  $@
 }
 int-start-slow() {
   gw_alias=int-start-slow gw-slow :start  $@
 }
 #
 int-start() {
-  gw_alias=int-start gw-normal :start  -x:validateDb -x:listDb  $@
+  gw_alias=int-start gw-normal :start -Pmapr-enabled=false  -x:validateDb -x:listDb  $@
 }
 #
 int-start-fast() {
-  gw_alias=int-start-fast gw-fast :start  -x:validateDb -x:listDb  -x:compileJava  -x:node  $@
+  gw_alias=int-start-fast gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  -x:node  $@
 }
 int-start-faster-nojava() {
-  gw_alias=int-start-faster-nojava gw-faster :start  -x:validateDb -x:listDb  -x:compileJava  $@
+  gw_alias=int-start-faster-nojava gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  $@
 }
 int-start-faster-nonode() {
-  gw_alias=int-start-faster-nonode gw-faster :start  -x:validateDb -x:listDb  -x:node  $@
+  gw_alias=int-start-faster-nonode gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:node  $@
 }
 int-start-fastest() {
-  gw_alias=int-start-fastest gw-fastest :start  $@
+  gw_alias=int-start-fastest gw-fastest --offline --no-rebuild \
+    --build-cache --configuration-cache --configure-on-demand \
+    -x:validateDbScripts -x:listDbScripts \
+    -x:tag -x:version \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    :start $@ \
+    -Pmapr-enabled=false
 }
 #
 int-db-migrate() {
   gw-normal :dbTaskInfoCore :dbTaskMigrateCore  $@
 }
 #
-# For database unit test container
-#
-int-ora-prep-db() {
-  gw-normal :oraclePrepareDatabase  $@
-}
-int-ora-start() {
-  gw-fast :oracleStart  $@
-}
-int-ora-stop() {
-  gw-normal :oracleStop  $@
-}
-#
 tty-int-reset-icnow() {
   tty-int reset 44444 start
 }
+#
+# For database unit test container; see: https://accertify.atlassian.net/wiki/spaces/SDLC/pages/2019229708/Dockerized+Oracle+and+Postgres+Database+for+Interceptas+Unit+Testing#Initial-Postgres-Steps
+#
+int-docker-ora-prepare-db()   { gw-slow :oraclePrepareDatabase  $@; }
+int-docker-ora-start()        { gw-slow :oracleStart  $@; }
+int-docker-ora-stop()         { gw-slow :oracleStop  $@; }
+#
+int-docker-pg-prepare-db()    { gw-slow :postgresPrepareDatabase  $@; }
+int-docker-pg-start()        { gw-slow :postgresStart  $@; }
+int-docker-pg-stop()         { gw-slow :postgresStop  $@; }
 #
 api-start() {
   gw_alias=api-start gw-normal :startApi $@ -Pmapr-enabled=false
 }
 api-start-fast() {
   gw_alias=api-start-fast gw-fast :startApi $@ -Pmapr-enabled=false
+}
+api-start-fastest() {
+  gw_alias=api-start-fastest gw-fastest :startApi $@ -Pmapr-enabled=false
+}
+api-start2() {
+  gw_alias=api-start2 gw-normal :startApi2 $@ -Pmapr-enabled=false
+}
+api-start2-fast() {
+  gw_alias=api-start2-fast gw-fast :startApi2 $@ -Pmapr-enabled=false
+}
+api-start2-fastest() {
+  gw_alias=api-start2-fastest gw-fastest :startApi2 $@ -Pmapr-enabled=false
 }
 #
 rtd-start() {
@@ -216,7 +259,27 @@ rtd-start-fast() {
   gw_alias=rtd-start-fast gw-fast :startRtd $@ -Pmapr-enabled=false
 }
 rtd-start-fastest() {
-  gw_alias=rtd-start-fastest gw-fastest :startRtd $@ -Pmapr-enabled=false
+  gw_alias=rtd-start-fastest gw-fastest --offline --no-rebuild \
+    --build-cache --configuration-cache --configure-on-demand \
+    -x:validateDbScripts -x:listDbScripts \
+    -x:tag -x:version \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    :startRtd $@ \
+    -Pmapr-enabled=false
+}
+rtd-start2() {
+  gw_alias=rtd-start2 gw-normal :startRtd2 $@ -Pmapr-enabled=false
+}
+rtd-start2-fast() {
+  gw_alias=rtd-start2-fast gw-fast :startRtd2 $@ -Pmapr-enabled=false
+}
+rtd-start2-fastest() {
+  gw_alias=rtd-start2-fastest gw-fastest :startRtd2 $@ -Pmapr-enabled=false
+}
+#
+rtd-db-migrate() {
+  gw-normal :dbTaskInfoRtd :dbTaskMigrateRtd  $@
 }
 #
 flink-start() {
@@ -410,6 +473,62 @@ mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden
   fi
 }
 ! ((_SKIP_SETUP_DRILL)) && .setup-drill
+
+
+#
+### SCHEMASPY
+#
+.setup-schemaspy() {
+  if [[ ! -e "$HOME/lib/schemaspy.jar" ]] then
+    .tick-bash-profile "[end] .setup-schemaspy, schemaspy.jar not installed in ~/lib"
+    return 1
+  fi
+  schemaspy-ora() {
+    local db_type=orathin
+    local db_host=db01.vm db_port=1521
+    local db_name=COREVM db_user=core db_password=core
+    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
+      -host|--host)         db_host="$2"; shift 2;;
+      -port|--port)         db_port="$2"; shift 2;;
+      -db|--database-name)  db_name="$2"; shift 2;;
+      -u|--user)            db_user="$2"; shift 2;;
+      -p|--password)        db_password="$2"; shift 2;;
+      *) break;;
+    esac; done
+    local c="schemaspy \
+      -t  $db_type \
+      -db $db_name -host $db_host -port $db_port \
+      -u  $db_user -p $db_password \
+      -I  '^SYNCH_' \
+      -X  '^id$|^established|^modified' \
+      $@"
+    qecho "\>\$ $c"
+    $c
+  }
+  schemaspy-pg() {
+    local db_type=pgsql11
+    local db_host=localhost db_port=5432
+    local db_name=core db_user=core db_password=core
+    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
+      -host|--host)         db_host="$2"; shift 2;;
+      -port|--port)         db_port="$2"; shift 2;;
+      -db|--database-name)  db_name="$2"; shift 2;;
+      -u|--user)            db_user="$2"; shift 2;;
+      -p|--password)        db_password="$2"; shift 2;;
+      *) break;;
+    esac; done
+    qeval schemaspy \
+      -t "$db_type" \
+      -db "$db_name" -host "$db_host" -port "$db_port" \
+      -u "$db_user" -p "$db_password" \
+      $@
+  }
+  schemaspy-pg-core() {
+    schemaspy-pg -I 'adw.+'
+  }
+}
+! ((_SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy
+
 
 alias .reload-bash-profile-acc='eval-quiet . "~/.bash_profile.acc"'
 alias .rlbpa='eval-quiet .reload-bash-profile-acc'

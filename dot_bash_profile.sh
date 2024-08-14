@@ -802,13 +802,13 @@ fwf-nice() {
           ;;
     esac
 	}
-  alias gbr='qeval git-branch'
+  alias gbr='qeval "git-branch | egrep -v .BAK"'
   alias gbra='qeval git-branch 1'
   alias gbran='qeval git-branch 2' gbranc='gbran' gbranch='gbran'
   #
-  alias gbrrm='qeval git brrm'
-  alias gbrmv='qeval git brmv'
-  alias gbrcp='qeval git brcp'
+  alias gbr-rm='qeval git brrm'
+  alias gbr-mv='qeval git brmv'
+  alias gbr-cp='qeval git brcp'
   #
   git-branch-set-upstream() {
     qeval git branch --set-upstream-to "origin/$(git branch --show-current)" $@
@@ -1230,45 +1230,6 @@ fi
       -o  "$spy_output" \
       -noviews -noimplied -nopages -maxdet 9999 \
       $@
-  }
-  schemaspy-ora() {
-    local db_type=orathin
-    local db_host=db01.vm db_port=1521
-    local db_name=COREVM db_user=core db_password=core
-    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
-      -host|--host)         db_host="$2"; shift 2;;
-      -port|--port)         db_port="$2"; shift 2;;
-      -db|--database-name)  db_name="$2"; shift 2;;
-      -u|--user)            db_user="$2"; shift 2;;
-      -p|--password)        db_password="$2"; shift 2;;
-      *) break;;
-    esac; done
-    qeval schemaspy \
-      -t  "$db_type" \
-      -db "$db_name" -host "$db_host" -port "$db_port" \
-      -u  "$db_user" -p "$db_password" \
-      $@
-  }
-  schemaspy-pg() {
-    local db_type=pgsql11
-    local db_host=localhost db_port=5432
-    local db_name=core db_user=core db_password=core
-    while [[ "$1" =~ -[a-z] ]]; do case "$1" in
-      -host|--host)         db_host="$2"; shift 2;;
-      -port|--port)         db_port="$2"; shift 2;;
-      -db|--database-name)  db_name="$2"; shift 2;;
-      -u|--user)            db_user="$2"; shift 2;;
-      -p|--password)        db_password="$2"; shift 2;;
-      *) break;;
-    esac; done
-    qeval schemaspy \
-      -t "$db_type" \
-      -db "$db_name" -host "$db_host" -port "$db_port" \
-      -u "$db_user" -p "$db_password" \
-      $@
-  }
-  schemaspy-pg-core() {
-    schemaspy-pg -I 'adw.+'
   }
 }
 ! ((_SETUP_SCHEMASPY_DISABLED)) && .setup-schemaspy

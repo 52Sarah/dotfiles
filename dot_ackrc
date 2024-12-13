@@ -44,6 +44,8 @@
 --type-set
     log:ext:log
 --type-set
+    office:ext:xls,xlsx,xlsm,xlst,doc,docx,docm,dot,ppt,pptx,potx
+--type-set
     style:ext:css,js,less,sass,ts
 --type-set
     styled:ext:htm,html,js,jsp

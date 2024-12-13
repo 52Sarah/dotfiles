@@ -117,170 +117,233 @@ timeout() {
 
 #
 ### GRADLE helpers
-# Removed --configuration-cache since it often causes grief, even with problems=warn
 #
-gw-slowest() {
-  gw --info  --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
-}
-gw-slow() {
-  gw --no-build-cache --no-configuration-cache --no-configure-on-demand  $@
-}
-gw-normal() {
-  gw --build-cache --no-configuration-cache --no-configure-on-demand --dependency-verification=off  $@
-}
-gw-fast() {
-  gw --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
-}
-gw-faster() {
-  gw --offline  --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
-}
-gw-fastest() {
-  gw --offline --no-rebuild  --build-cache --no-configuration-cache --configure-on-demand --dependency-verification=off  $@
-}
-#
+# Relevant env:
+# - GW_SKIP_REPORT  1 to bypass opening the report in default browser
 gw-test() {
-  [[ -z "$3" ]] && echo-error "Usage: gw-test fast|faster|... testTask testClass [useContainer:false]" && return 1
-  local speed=$1 testTask=$2 testClass=$3; shift 3
-  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
-  local excludes="-x:validateDbScripts -x:tag -x:version"
-  rm -rf build/reports/tests/$testTask
-  gw-$speed --no-build-cache :$testTask --tests "$testClass" $excludes -Puse-container=$useContainer  $@
-  open build/reports/tests/$testTask/index.html
+  local testTaskFull="$(egrep -o ':[^ ]+' <<< $@)"
+  [[ -z "$testTaskFull" ]] && testTaskFull=':test'
+
+  # save [project] and task without ':'
+  local testProject testTask
+  if [[ "$testTaskFull" =~ ^:[^:]+:[^:]+ ]]; then
+    testProject="$(substring_before_last $testTaskFull ':')"
+    testProject="${testProject//:/}"
+  fi
+  testTask="$(substring_after_last $testTaskFull ':')"
+
+  GW_REPORT_DIR="build/reports/tests/$testTask"
+  if [[ -n "$testProject" ]]; then
+    [[ ! -d "$testProject" ]] && echo-error "gw-test: $testProject: No such directory"
+    GW_REPORT_DIR="$testProject/$GW_REPORT_DIR"
+  fi
+  export GW_REPORT="$GW_REPORT_DIR/index.html"
+  [[ -e "$GW_REPORT" ]] && rm -rf "$GW_REPORT_DIR"
+  
+  vecho-vars testTaskFull testProject testTask GW_REPORT_DIR GW_REPORT GW_SKIP_REPORT
+
+  gw -Pshow-logs=true $@
+
+  ((GW_SKIP_REPORT)) || qeval open "$GW_REPORT"
 }
+#
+gw-test-deprecated() {
+  local USAGE="Usage: gw-test [slow*|normal|fast*] [:testTask] [--tests] tests ..."
+  [[ -z "$2" ]] && echo-error "$USAGE" && return 1
+  local speed='normal'; [[ "$1" =~ slow.*|normal|fast.* ]] && speed="$1" && shift 1
+  local testTask=':test'; [[ "$1" =~ ^:.+ ]] && testTask="$1" && shift 1
+  [[ "$1" == '--tests' ]] && shift 1
+  [[ -z "$1" ]] && echo-error "$USAGE" && return 1
+  local tests="$1"; shift 1
+
+  if [[ "$testTask" =~ ^:[^:]+:[^:]+ ]]; then
+    local testSubProject="$(substring_before_last $testTask ':')"
+    testTask=":$(substring_after_last $testTask ':')"
+  fi
+
+  # local excludes="-x:tag -x:version"
+  # local excludes="$excludes -x:listDb -x:validateDb"
+  # local excludes="$excludes -x:compileGroovy -x:compileTestGroovy -x:compileIntTestGroovy"
+
+  GW_REPORT_DIR="build/reports/tests/${testTask//:/}"
+  [[ -n "$testSubProject" ]] && GW_REPORT_DIR="${testSubProject//:/}/$GW_REPORT_DIR"
+  export GW_REPORT="$GW_REPORT_DIR/index.html"
+  vecho-vars speed testSubProject testTask tests GW_REPORT_DIR GW_REPORT
+  rm -rf "$GW_REPORT_DIR"
+
+  # gw-$speed $testTask $excludes --no-build-cache $@
+  gw-$speed $testSubProject$testTask --no-build-cache --tests "$tests" $@
+
+  ((GW_SKIP_REPORT)) || qeval open "$GW_REPORT"
+}
+#
+int-copyJsp() {
+  qeval gw --quiet :copyJsp $@
+}
+#
 int-dbTestOracle() {
-  [[ -z "$2" ]] && echo-error "Usage: dbTestOracle fast|faster|... testClass [useContainer:false]" && return 1
-  local speed=$1 testClass=$2; shift 2
-  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
-  gw_alias=int-dbTestOracle gw-test $speed dbTestOracle $testClass $useContainer  $@
+  [[ -z "$2" ]] && echo-error "Usage: int-dbTestOracle slow*|normal|fast* ..." && return 1
+  qeval gw-test :dbTestOracle $@
 }
 int-dbIntTestOracle() {
-  [[ -z "$2" ]] && echo-error "Usage: dbIntTestOracle fast|faster|... testClass [useContainer:false]" && return 1
-  local speed=$1 testClass=$2; shift 2
-  local useContainer=false; [[ "$1" =~ ^(true|false)$ ]] && useContainer=$1 && shift
-  gw_alias=int-dbIntTestOracle gw-test $speed dbIntTestOracle $testClass $useContainer  $@
+  [[ -z "$2" ]] && echo-error "Usage: int-dbIntTestOracle slow*|normal|fast* ..." && return 1
+  qeval gw-test :dbIntTestOracle $@
 }
 #
-bin-clean-start() { 
-  gw_alias=bin-clean-start gw-slow :server:clean :server:start2  $@
-}
-bin-start() {
-  gw_alias=bin-start gw-normal :server:start2  $@
-}
-bin-start-fastest() {
-  gw_alias=bin-start-fastest gw-fastest :server:start2  $@
-}
+# Removed --configuration-cache since it often causes grief, even with problems=warn
+gw-slowest()  { gw --info --no-build-cache --no-configure-on-demand  --no-configuration-cache $@; }
+gw-slower()   { gw --no-build-cache --no-configure-on-demand  --no-configuration-cache $@; }
+gw-slow()     { gw --no-build-cache --no-configure-on-demand  --no-configuration-cache $@; }
+gw-normal()   { gw $@; }
+gw-fast()     { gw --build-cache $@; }
+gw-faster()   { gw --configure-on-demand --build-cache $@; }
+gw-fastest()  { gw --offline --no-rebuild --dependency-verification=off --configure-on-demand --build-cache $@; }
 #
-eng-run() {
-  gw_alias=eng-run gw-normal :runEngine -Pmapr-enabled=false  -x:validateDb -x:listDb  $@
+app-start-slowest() { app-start gw-slowest $@; }
+app-start-slower()  { app-start gw-slower $@; }
+app-start-slow()    { app-start gw-slow $@; }
+app-start() {
+  local gw=gw-normal; [[ -n "$1" ]] && gw="$1" && shift 1
+  local task=:start; [[ "$1" =~ ^:.+ ]] && task="$1" && shift 1
+  local http_port=8081
+  ncz -q $http_port && echo-error "app-start: Port $http_port already active" && return 1
+  $gw $task $@
 }
-eng-run-fastest() {
-  gw_alias=eng-run-fastest gw-fastest :runEngine -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  -x:node  -x:war -x:explodeWar  $@
+app-start-fast() { 
+  app-start gw-fast $@
 }
-#
-int-clean() { 
-  gw_alias=int-clean gw-slow :clean  $@
+app-start-faster() { 
+  app-start gw-faster \
+    -x:validateDb -x:listDbs  -x:tag -x:version \
+    $@
 }
-int-clean-start() { 
-  gw_alias=int-clean-start gw-slow :clean :start -Pmapr-enabled=false  $@
-}
-#
-int-start-slowest() {
-  gw_alias=int-start-slowest gw-slowest :start  $@
-}
-int-start-slow() {
-  gw_alias=int-start-slow gw-slow :start  $@
-}
-#
-int-start() {
-  gw_alias=int-start gw-normal :start -Pmapr-enabled=false  -x:validateDb -x:listDb  $@
-}
-#
-int-start-fast() {
-  gw_alias=int-start-fast gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  -x:node  $@
-}
-int-start-faster-nojava() {
-  gw_alias=int-start-faster-nojava gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:compileJava  $@
-}
-int-start-faster-nonode() {
-  gw_alias=int-start-faster-nonode gw-fast :start -Pmapr-enabled=false  -x:validateDb -x:listDb  -x:node  $@
-}
-int-start-fastest() {
-  gw_alias=int-start-fastest gw-fastest --offline --no-rebuild \
-    --build-cache --configuration-cache --configure-on-demand \
-    -x:validateDbScripts -x:listDbScripts \
-    -x:tag -x:version \
+app-start-only() {
+  app-start gw-fastest \
+    -x:validateDb -x:listDbs  -x:tag -x:version \
     -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
     -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
-    :start $@ \
-    -Pmapr-enabled=false
+    -x:compileJava -x:processResources -x:classes -x:war -x:explodeWar \
+    -x:makeTomcatDirs -x:apiTomcatConfig \
+    $@
 }
 #
-int-db-migrate() {
-  gw-normal :dbTaskInfoCore :dbTaskMigrateCore  $@
-}
+int-clean()       { gw-slow :clean $@; }
+app-clean-start() { gw-slow :clean :start $@; }
 #
-tty-int-reset-icnow() {
-  tty-int reset 44444 start
-}
-#
-# For database unit test container; see: https://accertify.atlassian.net/wiki/spaces/SDLC/pages/2019229708/Dockerized+Oracle+and+Postgres+Database+for+Interceptas+Unit+Testing#Initial-Postgres-Steps
-#
-int-docker-ora-prepare-db()   { gw-slow :oraclePrepareDatabase  $@; }
-int-docker-ora-start()        { gw-slow :oracleStart  $@; }
-int-docker-ora-stop()         { gw-slow :oracleStop  $@; }
-#
-int-docker-pg-prepare-db()    { gw-slow :postgresPrepareDatabase  $@; }
-int-docker-pg-start()        { gw-slow :postgresStart  $@; }
-int-docker-pg-stop()         { gw-slow :postgresStop  $@; }
+int-db-migrate()  { gw-normal :dbTaskInfoCore :dbTaskMigrateCore $@; }
 #
 api-start() {
-  gw_alias=api-start gw-normal :startApi $@ -Pmapr-enabled=false
+  local gw=gw-normal; [[ -n "$1" ]] && gw="$1" && shift 1
+  local task=:startApi; [[ "$1" =~ ^:.+ ]] && task="$1" && shift 1
+  local http_port=9088
+  ncz -q $http_port && echo-error "app-start: Port $http_port already active" && return 1
+  $gw $task \
+    -x:compileGroovy \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    $@
 }
 api-start-fast() {
-  gw_alias=api-start-fast gw-fast :startApi $@ -Pmapr-enabled=false
+  api-start gw-fast \
+    -x:validateDb -x:listDbs  -x:tag -x:version \
+    $@
 }
-api-start-fastest() {
-  gw_alias=api-start-fastest gw-fastest :startApi $@ -Pmapr-enabled=false
+api-start-faster() { 
+  api-start gw-faster $@
 }
-api-start2() {
-  gw_alias=api-start2 gw-normal :startApi2 $@ -Pmapr-enabled=false
-}
-api-start2-fast() {
-  gw_alias=api-start2-fast gw-fast :startApi2 $@ -Pmapr-enabled=false
-}
-api-start2-fastest() {
-  gw_alias=api-start2-fastest gw-fastest :startApi2 $@ -Pmapr-enabled=false
+api-start-only() { 
+  api-start gw-fastest \
+    -x:validateDb -x:listDbs  -x:tag -x:version \
+    -x:compileJava -x:processResources -x:classes -x:war -x:explodeWar \
+    -x:makeTomcatDirs -x:apiTomcatConfig \
+    $@
 }
 #
 rtd-start() {
-  gw_alias=rtd-start gw-normal :startRtd $@ -Pmapr-enabled=false
-}
-rtd-start-fast() {
-  gw_alias=rtd-start-fast gw-fast :startRtd $@ -Pmapr-enabled=false
-}
-rtd-start-fastest() {
-  gw_alias=rtd-start-fastest gw-fastest --offline --no-rebuild \
-    --build-cache --configuration-cache --configure-on-demand \
-    -x:validateDbScripts -x:listDbScripts \
-    -x:tag -x:version \
+  local gw="${1:-gw-normal}"
+  local task="${2:-:startRtd}"
+  $gw \
+    -x:compileGroovy \
     -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
     -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
-    :startRtd $@ \
-    -Pmapr-enabled=false
+    $task $@
 }
-rtd-start2() {
-  gw_alias=rtd-start2 gw-normal :startRtd2 $@ -Pmapr-enabled=false
+rtd-start-fast() {
+  local gw="${1:-gw-fast}"
+  local task="${2:-:startRtd}"
+  $gw \
+    -x:validateDb -x:listDb  -x:tag -x:version \
+    -x:compileGroovy \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    $task $@
 }
-rtd-start2-fast() {
-  gw_alias=rtd-start2-fast gw-fast :startRtd2 $@ -Pmapr-enabled=false
-}
-rtd-start2-fastest() {
-  gw_alias=rtd-start2-fastest gw-fastest :startRtd2 $@ -Pmapr-enabled=false
+rtd-start-faster()  { rtd-start-fast gw-faster $@; }
+rtd-start-only() { 
+  local gw="${1:-gw-fast}"
+  local task="${2:-:startRtd}"
+  $gw \
+    -x:validateDb -x:listDbs  -x:tag -x:version \
+    -x:compileGroovy \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    -x:compileJava -x:processResources -x:classes -x:war -x:explodeWar \
+    -x:makeTomcatDirs -x:apiTomcatConfig \
+    $task $@
 }
 #
-rtd-db-migrate() {
-  gw-normal :dbTaskInfoRtd :dbTaskMigrateRtd  $@
+rtd-start2()          { rtd-start gw-normal :startRtd2 $@; }
+rtd-start2-fast()     { rtd-start-fast gw-fast :startRtd2 $@; }
+rtd-start2-faster()   { rtd-start-fast gw-faster :startRtd2 $@; }
+rtd-start2-only()     { rtd-start-only gw-fastest :startRtd2 $@; }
+#
+rtd-db-migrate() { gw-normal :dbTaskInfoRtd :dbTaskMigrateRtd $@; }
+#
+eng-run() { 
+  local gw="${1:-gw-normal}"
+  local task="${2:-:runEngine}"
+  $gw \
+    -x:validateDb -x:listDb  -x:tag -x:version \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    $task $@
 }
+eng-run-fast() { 
+  $gw \
+    -x:validateDb -x:listDb  -x:tag -x:version \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    $task $@
+}
+eng-run-faster()  { eng-run-fast gw-faster $@; }
+eng-run-only() {
+  $gw \
+    -x:validateDb -x:listDb  -x:tag -x:version \
+    -x:concatCoreCommonJS -x:concatCoreMergedLegacyJS -x:concatTransactiondDetailJS -x:concatVendorJS \
+    -x:nodeSetup -x:npmSetup -x:npmInstall -x:jsDist \
+    -x:compileJava -x:node -x:war -x:explodeWar \
+    $task $@
+}
+#
+bin-clean-start()   { gw-slow :server:clean :server:start2 $@; }
+bin-start()         { gw-normal :server:start2 $@; }
+bin-start-fast()    { gw-fast :server:start2 $@; }
+bin-start-faster()  { gw-faster :server:start2 $@; }
+bin-start-only()    { gw-fastest :server:start2 $@; }
+bin-client-pub()    { gw-normal :client:publishMavenJavaPublicationToMavenLocal $@; }
+#
+vert-start()         { gw-normal :start2 $@; }
+vert-start-fastest() { gw-fastest :start2 $@; }
+#
+# For database unit test container; see: https://accertify.atlassian.net/wiki/spaces/SDLC/pages/2019229708/Dockerized+Oracle+and+Postgres+Database+for+Interceptas+Unit+Testing#Initial-Postgres-Steps
+#
+int-docker-ora-prepare-db()   { gw-slow :oraclePrepareDatabase $@; }
+int-docker-ora-start()        { gw-slow :oracleStart $@; }
+int-docker-ora-stop()         { gw-slow :oracleStop $@; }
+#
+int-docker-pg-prepare-db()    { gw-slow :postgresPrepareDatabase $@; }
+int-docker-pg-start()         { gw-slow :postgresStart $@; }
+int-docker-pg-stop()          { gw-slow :postgresStop $@; }
 #
 flink-start() {
   qeval flink-storage/docker/start.sh &
@@ -296,16 +359,16 @@ minion-task() {
   gw-task $MINION_OPTS $@
 }
 minion-queue-writer-start() {
-  gw_alias=minion-queue-writer-start gw-normal :bootRun -Pprofiles=queuewriter $@
+  gw-normal :bootRun -Pprofiles=queuewriter $@
 }
 minion-maprproxy-start() {
-  gw_alias=minion-maprproxy-start gw-normal :bootRun -Pprofiles=maprproxy $@
+  gw-normal :bootRun -Pprofiles=maprproxy $@
 }
 minion-velociraptor-direct-start() {
-  gw_alias=minion-velociraptor-direct-start gw-normal :bootRun -Pprofiles=velociraptor-direct $@
+  gw-normal :bootRun -Pprofiles=velociraptor-direct $@
 }
 minion-mv-start() {
-  gw_alias=minion-mv-start gw-normal :bootRun -Pprofiles=maprproxy,velociraptor-direct $@
+  gw-normal :bootRun -Pprofiles=maprproxy,velociraptor-direct $@
 }
 #
 minion-app-up() {
@@ -323,17 +386,18 @@ radar-task() {
 }
 
 # Tomcat console interfaces for various web apps running locally.
-# If command is sent directly, kill the terminal process immediately after,
+# If command is sent directly, kill the terminal process immediately after.
 tty-console() {
-  local USAGE="usage: tty-console -p port [-t timeout] [command]"
-  local port timeout="1.5" tty_cmd
+  local USAGE="usage: tty-console -p port [-s server] [-t timeout] [command]"
+  local port server="localhost" timeout="1.5" tty_cmd
   while [[ -n "$1" ]]; do case "$1" in
     -p|--port )     port="$2"; shift 2;;
+    -s|--server )   server="$2"; shift 2;;
     -t|--timeout )  timeout="$2"; shift 2;;
     *)              break;;
   esac; done
   tty_cmd="$@"
-  _debug && echo-var port timeout tty_cmd
+  _debug && echo-var server port timeout tty_cmd
   if [[ ! "$port" =~ ^[[:digit:]]{3,5}$ ]]; then
     echo-error "tty-console: missing or invalid port -- $port"
     echo-error "$USAGE"
@@ -341,7 +405,7 @@ tty-console() {
   fi
 
   # see https://superuser.com/a/410642/17666 for the echo/redirect magic
-  local c="nc localhost $port" cfull
+  local c="nc $server $port" cfull
   if [[ -n "$tty_cmd" && -n "$timeout" ]]; then
     # local cfull="timeout -c '$c' $timeout 'cat <(echo $tty_cmd) - | $c'"
     local con_tmp="/var/tmp/con.tmp"
@@ -355,39 +419,46 @@ tty-console() {
   echo-verbose "<<<"
 }
 #
-tty-int()    { qeval tty-console -p 9092 $@; }
-tty-api()    { qeval tty-console -p 9074 $@; }
-tty-engine() { qeval tty-console -p 9090 $@; }
-tty-rtd()    { qeval tty-console -p 9094 $@; }
-tty-binder() { qeval tty-console -p 9096 $@; }
-tty-radar()  { qeval tty-console -p 9999 $@; }
-tty-vert() { 
-  qeval tty-console -p 9999 $@ || qeval tty-console -p 9998 $@
+tty-app() { qeval tty-console -p 9092 $@; }
+tty-api() { qeval tty-console -p 9074 $@; }
+tty-eng() { qeval tty-console -p 9090 $@; }
+tty-rtd() { qeval tty-console -p 9094 $@; }
+tty-bin() { qeval tty-console -p 9096 $@; }
+tty-rad() { qeval tty-console -p 9999 $@; }
+tty-ver() { qeval tty-console -p 9999 $@ || qeval tty-console -p 9998 $@; }
+tapp()    { tty-app $@; }
+tapi()    { tty-api $@; }
+trtd()    { tty-rtd $@; }
+#
+tty-app-status() { tty-app status get; }
+tty-app-status-up() { tty-app status set up; }
+tty-app-reset-icnow() { qeval tty-app reset 44444 start; }
+tty-app-cache-status() { qeval tty-app cachestatus; }
+tty-app-cache-reset() { 
+  [[ -z "$@" ]] && echo-error "usage: tty-app-cache-reset CACHE_NAME" && return 1
+  qeval tty-app resetcache $@
+}
+tty-app-cache-reset-flex() { 
+  qeval tty-app resetcache FlexValue
+  qeval tty-app resetcache FLEX_VALUE2
+}
+tty-app-cache-reset-properties() { 
+  qeval tty-app resetcache Property
+  qeval tty-app resetcache PROPERTY_VALUE
+  qeval tty-app resetcache Hierarchy.properties
+}
+tty-app-cache-reset-rules() { 
+  qeval tty-app resetcache Rule
+  qeval tty-app resetcache RuleType
+  qeval tty-app resetcache RuleSet
+  qeval tty-app resetcache RulesInRuleSet
 }
 #
-tty-int-reset-icnow() { qeval tty-int reset 44444 start; }
-tty-int-cache-status() { qeval tty-int cachestatus; }
-tty-int-cache-reset() { 
-  [[ -z "$@" ]] && echo-error "usage: tty-int-cache-reset CACHE_NAME" && return 1
-  qeval tty-int resetcache $@
-}
-tty-int-cache-reset-flex() { 
-  qeval tty-int resetcache FlexValue
-  qeval tty-int resetcache FLEX_VALUE2
-}
-tty-int-cache-reset-properties() { 
-  qeval tty-int resetcache Property
-  qeval tty-int resetcache PROPERTY_VALUE
-  qeval tty-int resetcache Hierarchy.properties
-}
-tty-int-cache-reset-rules() { 
-  qeval tty-int resetcache Rule
-  qeval tty-int resetcache RuleType
-  qeval tty-int resetcache RuleSet
-  qeval tty-int resetcache RulesInRuleSet
-}
+tty-api-status() { tty-api status get; }
+tty-api-status-up() { tty-api status set up; }
 #
-
+tty-rtd-status() { tty-rtd status get; }
+tty-rtd-status-up() { tty-rtd status set up; }
 
 ### ORA vm helpers
 ora-ssh() { qeval ssh oracle@db01.vm $@; }
@@ -408,7 +479,7 @@ mapr-command() {
   if type -t systemctl &>/dev/null; then
     [[ -z "$1" ]] && eecho "$USAGE" && return 1
     ! _quiet || echo ">\$ $@"
-    $@
+  $@
   else
     qeval "ssh ${MAPR_USER}@maprdemo $@"
   fi
@@ -501,7 +572,7 @@ mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden
       -u  $db_user -p $db_password \
       -I  '^SYNCH_' \
       -X  '^id$|^established|^modified' \
-      $@"
+    $@"
     qecho "\>\$ $c"
     $c
   }
@@ -521,7 +592,7 @@ mapr-warden-log() { mapr-command "grep '$(date +%Y-%m-%d)' /opt/mapr/logs/warden
       -t "$db_type" \
       -db "$db_name" -host "$db_host" -port "$db_port" \
       -u "$db_user" -p "$db_password" \
-      $@
+    $@
   }
   schemaspy-pg-core() {
     schemaspy-pg -I 'adw.+'

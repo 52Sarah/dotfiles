@@ -161,7 +161,11 @@ eecho-var() { >&2 echo-var $@; }
 decho-var() { _debug && echo-var $@; }
 vecho-var() { _verbose && echo-var $@; }
 qecho-var() { _quiet || echo-var $@; }
-
+alias echo-vars=echo-var
+alias eecho-vars=eecho-var
+alias decho-vars=decho-var
+alias vecho-vars=vecho-var
+alias qecho-vars=qecho-var
 
 #
 ### 'echo' / 'eval' helpers

@@ -1250,7 +1250,7 @@ fi
 ### SCHEMASPY
 #
 .setup-schemaspy() {
-  if [[ ! -e "$HOME/lib/schemaspy.jar" ]] then
+  if [[ ! -e "$HOME/lib/schemaspy.jar" ]]; then
     .tick-bash-profile "[end] .setup-schemaspy, schemaspy.jar not installed in ~/lib"
     return 1
   fi
@@ -1521,7 +1521,7 @@ gw() {
   # unset GW_ALIAS
 
   echo-unquiet "./gradlew $@ |& tee $GW_LOG"
-  ./gradlew -Djava.awt.headless=true $@ |& tee "$GW_LOG"
+  ./gradlew $@ | tee "$GW_LOG"
   
   local ret=$?
   ((GW_OPEN_LOG)) && open "$GW_LOG"

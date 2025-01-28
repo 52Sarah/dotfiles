@@ -139,7 +139,11 @@
   # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
 
 [credential]
-  helper = osxkeychain
+  helper =
+  helper = /usr/local/share/gcm-core/git-credential-manager
+
+[credential "https://dev.azure.com"]
+  useHttpPath = true
 
 # See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffdirstat  
 #   .dirstat parameters: files|CHANGES|lines, cumulative|NONCUMULATIVE, 3 (cutoff %)
@@ -229,7 +233,7 @@
 
 [user]
   name = Todd Pierzina
-  email = tpierzina@accertify.com
+  email = tpierzina@1worldsync.com
 
 
 #

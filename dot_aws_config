@@ -1,0 +1,6 @@
+[default]
+region = us-west-2
+
+[profile pwr-base]
+region = us-west-2
+output = json

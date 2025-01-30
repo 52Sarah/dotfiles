@@ -1,34 +1,134 @@
-              #!/usr/bin/env bash
+#!/usr/bin/env zsh
 
-# At startup, Bash reads from:
-#   1. Login shells: first of [~/.bash_profile, ~/.bash_login, ~/.profile]
-#   2. Interactive shells: ~/.bashrc
-# If BASH_ENV is defined (typically ~/.bashrc), it is read when Bash executes a shell script.
-# See: https://stackoverflow.com/a/18187389/160955
+if [[ -z "$_DOT_ZSHRC_MTIME" ]] || (( $(stat -L -f '%m' ~/.zshrc) > _DOT_ZSHRC_MTIME )); then
 
-# Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-# _TICK_x variables control its behavior; all default to false/0/off.
-# export _TICK_OFF= _TICK_ON=
-# export _TICK_STDERR= _TICK_STDOUT=
-type -t .tick >&/dev/null || . ~/.tick.sh
-.tick-bashrc() { .tick -s '.bashrc' $@; }
+# At startup, Zsh reads, in order, from:
+#   1. ~/.zshenv
+#   2. ~/.zprofile for login shells
+#   3. ~/.zshrc for interactive shells
+#   4. ~/.zlogin for login shells
+# See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
-.tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
+zshrc-wrapper() {
 
-# Private env vars, etc. can be in the optional file ~/.secrets.
-[[ -e ~/.secrets ]] && . ~/.secrets
+  # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
+  # _TICK_x variables control its behavior; all default to false/0/off.
+  # export _TICK_OFF= _TICK_ON= _TICK_STDERR= _TICK_STDOUT=
+  is-defined .tick || . ~/.tick.sh
+  .tick-zshrc() { .tick -s '.zshrc' $@; }
+  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.zshrc)" #, \$PATH=[$PATH]"
 
-# Put my homemade scripts and other miscellany here at the start of the classpath.
-if ! matches "$PATH" "$HOME/bin(:|$)"; then
-  export PATH="$HOME/bin:$PATH"
-fi
 
-#
-### Define come convenience directories
-#
-export TTPP_DIR="$HOME/ttpp"
-export DOTFILES_DIR="$TTPP_DIR/dotfiles"
-export BIN_DIR="$TTPP_DIR/bin"
+  # Private env vars, etc. can be in the optional file ~/.secrets.
+  if [[ -e ~/.secrets ]]; then
+    source ~/.secrets
+    .tick-zshrc '... read ~/.secrets'
+  fi
+
+  # Put my homemade scripts and other miscellany here at the start of the classpath.
+  if ! matches "$PATH" "$HOME/bin(:|$)"; then
+    path-prepend "$HOME/bin"
+    .tick-zshrc '... prepended $HOME/bin to PATH'
+  fi
+
+  ### START: Zsh-specific settings from zshrc.zsh-template
+  #
+  export ZSH="$HOME/.oh-my-zsh"
+
+  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+  ZSH_THEME=eastwood
+
+  # Uncomment the following line if pasting URLs and other text is messed up.
+  # DISABLE_MAGIC_FUNCTIONS="true"
+
+  zstyle ':omz:update' mode auto      
+
+  # Uncomment the following line if you want to disable marking untracked files
+  # under VCS as dirty. This makes repository status check for large repositories
+  # much, much faster.
+  # DISABLE_UNTRACKED_FILES_DIRTY="true"
+
+  # Uncomment the following line if you want to change the command execution time
+  # stamp shown in the history command output.
+  # You can set one of the optional three formats:
+  # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
+  # or set a custom format using the strftime function format specifications,
+  # see 'man strftime' for details.
+  # HIST_STAMPS="mm/dd/yyyy"
+
+  # Would you like to use another custom folder than $ZSH/custom?
+  # ZSH_CUSTOM=/path/to/new-custom-folder
+
+  # Standard plugins can be found in $ZSH/plugins/
+  # Custom plugins may be added to $ZSH_CUSTOM/plugins/
+  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
+  plugins=(asdf)
+  # plugins+=(ssh git git-prompt)
+  # plugins+=(macos)
+  # plugins+=(colored-man-pages)
+  # plugins+=(sublime)
+  # plugins+=(mvn)
+  .tick-zshrc "... loaded zsh plugins: $plugins"
+
+  # aws docker jira kubectl kubectx
+  # brew alias-finder common-aliases command-not-found history-substring-search systemd
+  # jsontools
+  # lpass
+  # vscode
+  # node nvm pip yarn
+  # react-native
+
+  source $ZSH/oh-my-zsh.sh
+
+  # Compilation flags
+  # export ARCHFLAGS="-arch $(uname -m)"
+
+  # Set personal aliases, overriding those provided by Oh My Zsh libs,
+  # plugins, and themes. Aliases can be placed here, though Oh My Zsh
+  # users are encouraged to define aliases within a top-level file in
+  # the $ZSH_CUSTOM folder, with .zsh extension. Examples:
+  # - $ZSH_CUSTOM/aliases.zsh
+  # - $ZSH_CUSTOM/macos.zsh
+  
+  #
+  ### FINISH: Zsh-specific settings from zshrc.zsh-template
+
+  #
+  ### Interactive shell options.
+  #
+  # ## expansion and globbing
+  setopt EXTENDED_GLOB
+  # setopt BAD_PATTERN  # print error msg for bad glob pattern
+  # setopt CASE_GLOB    # glob case-sensitive
+  # setopt CASE_MATCH   # regex case-sensitive
+  # setopt CASE_PATHS   # paths case-sensitive
+  # setopt GLOB         # perform globbing
+  # setopt GLOB_SUBST   # enable globbing after parameter substitution
+  # setopt NO__MATCH    # if glob has no matches, error
+  #
+  # ## input/output
+  setopt PATH_SCRIPT          # check current directory for script, then command path
+  #
+  # ## job control
+  setopt LONG_LIST_JOBS
+  # setopt MONITOR      # allow job control
+  #
+  # ## functions
+  # setopt WARN_CREATE_GLOBAL   # warn if global parameter created in function
+  # setopt WARN_NESTED_VAR      # warn if enclosing function parameter is set
+
+
+  export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"
+  export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+  _QUIET=1 safe-source $HOME/configure_nexus_npm_token.sh
+
+  #
+  ### PWR-JUMPER
+  #
+  source $HOME/.pwrfunc.sh
+
+  .tick-zshrc "[END-WRAPPER] (\$\$=$$)" #, \$PATH=[$PATH])"
+}
 
 #
 ### 'echo/printf' helpers
@@ -121,11 +221,11 @@ echo-glob() {
   local ret=1
   for patt in $@; do
     [[ ! "$patt" =~ \* ]] && patt="${patt}*"
-    local indirect_vars="$(eval echo $(printf "\${!%s}" "$patt"))"
+    local indirect_vars="$(eval echo $(printf "\${(P)%s}" "$patt"))"
     [[ -z "$indirect_vars" ]] && printf '%s=\n' "$patt" && continue
     local IFS=' '
     for var in $indirect_vars; do
-      printf "%s=%s\n" "$var" "${!var}"
+      printf "%s=%s\n" "$var" "${(P)var}"
       ret=0
     done
   done
@@ -154,7 +254,7 @@ echo-var() {
   local var value
   while [[ -n "$1" ]]; do
     var="$1"; shift 1
-    value="${!var}"
+    value="${(P)var}"
     echo "$var: $value"
   done
 }
@@ -197,16 +297,19 @@ deval() { eval-debug $@; }
 veval() { eval-verbose $@; }
 qeval() { eval-quiet $@; }
 
+# True if $1 is any kind of executable: alias, keyword, function, builtin, file
+is-defined() {
+  [[ -z "$1" ]] && echo-error "usage: is-defined command" && return 1
+  type $1 >&/dev/null
+}
 
 # Source given file(s). If a file does not exist, echo-unquiet a warning and ignore.
 safe-source() {
-  local _QUIET=$_QUIET; matches "$1" '^-q|--quiet$' ]] && _QUIET=1 && shift 1
-  [[ -z "$1" ]] && echo-stderr "usage: safe-source [--quiet] file [...]" && return 1
-
+  [[ -z "$1" ]] && echo-stderr "usage: safe-source file [...]" && return 1
   while [[ -n "$1" ]]; do
     local script_path="$1"; shift
     if [[ ! -e "$script_path" ]]; then
-      ! ((_quiet)) && echo-stderr "safe-source: $script_path: No such file"
+      ((! _QUIET)) && echo-stderr "safe-source: $script_path: No such file"
     else
       eval-quiet . "$script_path"
     fi
@@ -276,7 +379,7 @@ split-lines() {
 # List path variable's elements, 1 per line.
 path-list() {
   local var=${1:-PATH}
-  split-lines ':' <<< "${!var}"
+  split-lines ':' <<< "${(P)var}"
 }
 path-echo() { qeval path-list $@; }
 #
@@ -288,7 +391,7 @@ path-append() {
   [[ -z "$1" ]] && echo-stderr "usage: path-append [var] path" && return 1
   
   local elem="$1" && shift
-  local elements="${!var}"
+  local elements="${(P)var}"
   if [[ -z "$elements" ]]; then
     export $var="$elem"
     return 0
@@ -311,6 +414,14 @@ path-prepend() { path-append --prepend $@; }
 # The following functions operate on stdin OR $@; [[ -t 0 ]] is true if stdin is a terminal
 # from: https://stackoverflow.com/a/30520299
 #
+# Does $1 match regex $2? Quoting works for Zsh and Bash.
+matches() {
+  [[ -z "$2" ]] && eecho "usage: matches text pattern" && return 1
+  local text="$1" && shift
+  local pattern="$*" && shift
+  [[ "$text" =~ $pattern ]]
+}
+#
 ends_with() {
   [[ -z "$2" ]] && echo-error "usage: ends_with [--verbose] text suffix_to_test" && return 1
   [[ "$1" =~ .*$2$ ]]
@@ -319,6 +430,7 @@ starts_with() {
   [[ -z "$2" ]] && echo-error "usage: starts_with [--verbose] text prefix_to_test" && return 1
   [[ "$1" =~ ^$2.*$ ]]
 }
+#
 trim() {
   [[ ! -t 0 ]] && sed -E -e 's/[[:space:]]*(.*)[[:space:]]*/\1/g' && return 0
   trim <<< $@
@@ -344,6 +456,7 @@ lower() {
   [[ -z "$1" ]] && >&2 echo "usage: lower word [...], or ... | lower" && return 1
   lower <<< $@
 }
+#
 substring_before_first() {
   local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
   [[ ! -t 0 ]] && read line && printf "%s\n" "${line%%${delim}*}" && return 0
@@ -411,36 +524,13 @@ tilde-home-compress-expand() {
   printf '\n'
 }
 
-# Does $1 match regex $2? Quoting works for Zsh and Bash.
-matches() {
-  [[ -z "$2" ]] && eecho "usage: matches text pattern" && return 1
-  local text="$1" && shift
-  local pattern="$*" && shift
-  [[ "$text" =~ $pattern ]]
-}
 
-alias .reload-bashrc='qeval . ~/.bashrc'
-alias .rlbrc='qeval .reload-bashrc'
-alias .rlbr='qeval .reload-bashrc'
+alias .reload-zshrc='qeval . ~/.zshrc'
+alias .rlzrc='qeval .reload-zshrc'
 
-# Optional post-script hook.
-[[ -e ~/.bashrc_post ]] && . ~/.bashrc_post
+zshrc-wrapper $@
 
-.tick-bashrc "[END-FILE] (\$\$=$$, \$PATH=[$PATH])"
+export _DOT_ZSHRC_MTIME="$(stat -L -f '%m' ~/.zshrc)"
+.tick-zshrc "[END-FILE] (\$\$=$$), mtime=$_DOT_ZSHRC_MTIME" #, \$PATH=[$PATH])"
 
-export NODE_EXTRA_CA_CERTS="$(mkcert -CAROOT)/rootCA.pem"
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-_QUIET=1 safe-source $HOME/configure_nexus_npm_token.sh
-
-#
-### ASDF
-#
-safe-source ~/.asdf/asdf.sh
-
-#
-### PWR-JUMPER
-#
-safe-source $HOME/.pwrfunc.sh
-
-# _QUIET=1 safe-source ~/.asdf/plugins/java/set-java-home.bash
-# PATH="/usr/local/opt/openjdk/bin:$PATH"
+fi

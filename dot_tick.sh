@@ -1,30 +1,33 @@
 #!/usr/bin/env bash
 
-# If .tick-enabled() is true, .tick logs to ~/.tick.log.
-# Then it also echoes to stdout/stderr if _TICK_STDOUT/_TICK_STDERR is set.
-# Optional .tick options:
+# Executes with Zsh or Bash.
+# If .tick-enabled(), .tick logs to ~/.tick.log.
+# Then it also echoes to stdout/stderr if .tick.stdout/err-enabled()
+# Other .tick options:
 #   --scriptname  used with '.tick' to determine whether this script's ticks should fire
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
 #   --vars        log each variable given along with its value
 
 # Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
 .tick-enabled() {
-  local scriptf="$1" scriptv="${1//./dot_}"
-  if [[ -n "$scriptv" ]]; then
-    v="TICK_${scriptv}_DISABLED"
-    [[ -n "$(eval echo "\${!v}")" || -e ~/.tick${scriptf}.disabled ]] && return 1
-    local v="TICK_${scriptv}_ENABLED"
-    [[ -n "$(eval echo "\${!v}")" || -e ~/.tick${scriptf}.enabled ]] && return 0
+  local scriptf="$1"
+  if [[ -n "$scriptf" ]]; then
+    [[ -e ~/.tick${scriptf}.disabled ]] && return 1
+    [[ -e ~/.tick${scriptf}.enabled ]] && return 0
   fi
-  [[ -n "$_TICK_OFF" || -e ~/.tick.disabled ]] && return 1
-  [[ -n "$_TICK_ON" || -e ~/.tick.enabled ]] && return 0
-  [[ -n "$_TICK_STDOUT" || -n "$_TICK_STDERR" ]] && return 0
+  [[ -e ~/.tick.disabled ]] && return 1
+  [[ -e ~/.tick.enabled ]] && return 0
+  .tick.stdout-enabled && return 0
+  .tick.stderr-enabled && return 0
   return 1
 }
+#
+.tick.stdout-enabled() { [[ -e ~/.tick.stdout ]]; }
+.tick.stderr-enabled() { [[ -e ~/.tick.stderr ]]; }
 
 .tick() {
   local script_name= opt_eval= opt_vars=
-  while [[ "$1" =~ ^- ]]; do case "$1" in
+  while [[ "${1:0:1}" = '-' ]]; do case "$1" in
     -s|--script) script_name="$2"; shift 2;;
     -e|--eval) opt_eval=1; shift;;
     -v|--vars) opt_vars=1; shift;;
@@ -54,15 +57,17 @@
   export TICK__LAST_MS=$epoch_ms
 
   # unindent for [finish]
-  ((_TICK_INDENT >= 2)) && [[ "$msg" =~ ^\[(finish|end|FINISH-FILE|END-FILE)\] ]] && ((_TICK_INDENT -= 2))
+  if ((_TICK_INDENT >= 2)); then
+    matches "$msg" '^\[(finish|end|FINISH|END)' >&/dev/null && ((_TICK_INDENT -= 2))
+  fi
 
   local tick_line="$(printf "%s +%4d %-13s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
   echo "$tick_line" >> ~/.tick.log
-  ((_TICK_STDOUT)) &&  echo "$tick_line"
-  ((_TICK_STDERR)) && >&2 echo "$tick_line"
+  .tick.stdout-enabled &&  echo "$tick_line"
+  .tick.stderr-enabled && >&2 echo "$tick_line"
 
   # indent for [start]
-  [[ "$msg" =~ ^\[(start|START-FILE)\] ]] && ((_TICK_INDENT += 2))
+  matches "$msg" '^\[(start|START)' >&/dev/null && ((_TICK_INDENT += 2))
 
   return 0
 }

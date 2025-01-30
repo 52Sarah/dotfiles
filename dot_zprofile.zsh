@@ -1,72 +1,107 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
-# At startup, Bash reads from:
-# - Login shells: first of [~/.bash_profile, ~/.bash_login, ~/.profile]
-# - Interactive shells: ~/.bashrc
-# - Non-interactive shells: $BASH_ENV (~/.bashrc)
-# - Any shell invoked as 'sh': $ENV file (~/.profile)
-# See: https://stackoverflow.com/a/18187389/160955
+if [[ -z "$_DOT_ZPROFILE_MTIME" ]] || (( $(stat -L -f '%m' ~/.zprofile) > _DOT_ZPROFILE_MTIME )); then
 
-# Don't show the 'zsh is the default shell' message.
-export BASH_SILENCE_DEPRECATION_WARNING=1
+# At startup, Zsh reads, in order, from:
+#   1. ~/.zshenv
+#   2. ~/.zprofile for login shells
+#   3. ~/.zshrc for interactive shells
+#   4. ~/.zlogin for login shells
+# See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
 # _TICK_x variables control its behavior; all default to false/0/off.
-# export _TICK_OFF= _TICK_ON=
-# export _TICK_STDERR= _TICK_STDOUT=
+# export _TICK_OFF= _TICK_ON= _TICK_STDERR= _TICK_STDOUT=
 export _TICK_INDENT=
-type -t .tick >&/dev/null || . ~/.tick.sh
-.tick-bash-profile() { .tick -s '.bash_profile' $@; }
+. ~/.tick.sh
+.tick-zprofile() { .tick -s '.zprofile' $@; }
+.tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.zprofile)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
 
-.tick-bash-profile "[START-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
+if [[ -e ~/.zshrc ]]; then
+  .tick-zprofile '... reading ~/.zshrc...'
+  . ~/.zshrc
+  .tick-zprofile '... read ~/.zshrc'
+fi
 
-# Shell scripts executed with Bash will read this file.
-export BASH_ENV=~/.bashrc
-[[ -e ~/.bashrc ]] && . ~/.bashrc
+zprofile-wrapper() {
 
-# Shell scripts executed with sh will read this file.
-export ENV=~/.profile
+  .tick-zprofile "[START-WRAPPER] (\$\$=$$)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
 
-export EDITOR=vim
-export CLICOLOR=1
+  # Shell scripts executed with sh will read this file.
+  export ENV=~/.zprofile
 
-# Uncomment to color output even when being piped.
-# Turning this on has an adverse interaction with a few tools.
-export CLICOLOR_FORCE=1
+  export EDITOR=vim
+  export CLICOLOR=1
 
-# See: https://ss64.com/bash/less.html
-# -#, --shift               Percent of screen to scroll right and left for wide files
-# -A, --SEARCH-SKIP-SCREEN  Search just after current line, not visible page
-# -F, --quit-if-one-screen  Do not display prompt for short files
-# -g, --hilite-search       Only hilite one search result
-# -i, --ignore-case         Ignore case unless pattern contains uppercase letters
-# -J, --status-column       Displays column at left for search matches
-# -m, --long-prompt         Prompts like 'more'; -M even more verbose
-# -n, --line-numbers        Suppress line numbers in prompt
-# -N, --LINE-NUMBERS        Show line numbers at start of each line
-# -q, --quit-at-eof         Exit second time at eof, not just with 'q'; -Q quits first time
-# -r, --raw-control-chars   Render all escape sequences properly; -R renders only colors
-# -s, --squeeze-blank-lines Consecutive blank lines shown as one
-# -S, --chop-long-lines     Truncate long lines, do not wrap
-# -w, --hilite-unread       Highlight "new" line after 1+ pages forward movement; -W after any 1+ lines
-# -X, --no-init             Do not clear screen when loading
-export LESS='--shift=.33 --SEARCH-SKIP --quit-if-one --status-column --LONG-PR --quit-at-eof --raw --squeeze --HILITE-UNREAD --no-init'
-export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
+  # Uncomment to color output even when being piped.
+  # Turning this on has an adverse interaction with a few tools.
+  export CLICOLOR_FORCE=1
 
-# Ignore repeated lines and lines starting with ' '
-export HISTCONTROL=ignoreboth
-export HISTSIZE=100000
-export HISTFILESIZE=$HISTSIZE
-export HISTTIMEFORMAT='%m/%d %H:%M:%S  '
+  export CASE_SENSITIVE="true"
+  export ENABLE_CORRECTION="true"
+  export COMPLETION_WAITING_DOTS="%F{white}waiting...%f"
 
-# Exclude from tab completion
-export FIGNORE='DS_Store:Icon?'
+  # See: https://ss64.com/bash/less.html
+  # -#, --shift               Percent of screen to scroll right and left for wide files
+  # -A, --SEARCH-SKIP-SCREEN  Search just after current line, not visible page
+  # -F, --quit-if-one-screen  Do not display prompt for short files
+  # -g, --hilite-search       Only hilite one search result
+  # -i, --ignore-case         Ignore case unless pattern contains uppercase letters
+  # -J, --status-column       Displays column at left for search matches
+  # -m, --long-prompt         Prompts like 'more'; -M even more verbose
+  # -n, --line-numbers        Suppress line numbers in prompt
+  # -N, --LINE-NUMBERS        Show line numbers at start of each line
+  # -q, --quit-at-eof         Exit second time at eof, not just with 'q'; -Q quits first time
+  # -r, --raw-control-chars   Render all escape sequences properly; -R renders only colors
+  # -s, --squeeze-blank-lines Consecutive blank lines shown as one
+  # -S, --chop-long-lines     Truncate long lines, do not wrap
+  # -w, --hilite-unread       Highlight "new" line after 1+ pages forward movement; -W after any 1+ lines
+  # -X, --no-init             Do not clear screen when loading
+  export LESS='--shift=.33 --SEARCH-SKIP --quit-if-one --status-column --LONG-PR --quit-at-eof --raw --squeeze --HILITE-UNREAD --no-init'
+  export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
+
+  export HISTCONTROL=ignoreboth
+  export HISTSIZE=100000
+  export HISTFILESIZE=$HISTSIZE
+
+  ### Login shell options
+  #
+  # ## changing directories
+  setopt AUTO_CD        # if command is not defined, try to cd instead
+  setopt AUTO_PUSHD     # cd pushes onto stack
+  setopt PUSHD_IGNORE_DUPS
+  setopt PUSHD_MINUS    # more intuitive +/- when moving to stack by position
+  #
+  # ## completion
+  setopt ALWAYS_TO_END    # move cursor to end of word after any completion
+  setopt COMPLETE_IN_WORD # complete from both ends of word
+  #
+  # ## history
+  setopt NO__BANG_HIST        # do not perform ! history expansion
+  setopt EXTENDED_HISTORY     # save timestamp and duration seconds to history file
+  setopt HIST_EXPIRE_DUPS_FIRST
+  setopt HIST_IGNORE_DUPS     # ignore subsequent identical lines
+  setopt HIST_IGNORE_SPACE    # ignore lines beginning with space
+  setopt HIST_VERIFY          # load line into buffer, do not execute immediately
+  setopt SHARE_HISTORY
+  #
+  # ## input/output
+  setopt CORRECT_ALL          # try to correct spelling of entire line
+  setopt INTERACTIVE_COMMENTS # allow comments in interactive shells
+  #
+  # ## prompting
+  setopt PROMPT_SUBST   # expansion and substitution are performed in prompts
+
+  .tick-zprofile "[END-WRAPPER] (\$\$=$$)" #, \$PATH=[$PATH], \$PS1=[$PS1]))"
+}
 
 #
 ### 'ack' helpers
 #
-alias ack-help-types='qeval ack --help-types'
-alias ack-java='qeval ack --type=java'; alias ackj='ack-java'
+if is-defined ack; then
+  alias ack-help-types='qeval ack --help-types'
+  alias ack-java='qeval ack --type=java'; alias ackj='ack-java'
+fi
 
 #
 ### 'cd' helpers
@@ -216,9 +251,11 @@ lso() {
   | sed -E -e "s:\\$HOME:\\~:g"
 }
 
+#
+### 'nc' helpers:
+# 
 ncz() {
-  local opt_quiet=0; [[ "$1" =~ ^-q$|--quiet$ ]] && opt_quiet=1 && shift
-  [[ -z "$1" ]] && echo-error "Usage: ncz [-q] [host] port" && return 1
+  [[ -z "$1" ]] && echo-error "Usage: ncz [host] port" && return 1
   local host= port=
   if [[ -n "$2" ]]; then
     host=$1
@@ -233,7 +270,7 @@ ncz() {
   veval nc -z $host $port $@
   
   local ret=$?
-  if (( ! opt_quiet )); then
+  if (( ! _QUIET )); then
     (( ret == 0 )) && echo "Active" || echo "Inactive"
   fi
   return $ret
@@ -258,7 +295,7 @@ ncz() {
 #         command - very long, so we limit line length to window size
 ps-grep() {
   local USAGE='Usage: ps-grep [--long] [patt...]'
-  local opt_long=; [[ "$1" =~ -l|--long ]] && opt_long=1 && shift 1
+  local opt_long=; matches "$1" '-l|--long' && opt_long=1 && shift 1
 
   local ps_cmd="ps -e -o user,pid,ppid,start,time"
   ((opt_long)) && ps_cmd="${ps_cmd},%cpu,%mem,command" || ps_cmd="${ps_cmd},comm"
@@ -383,10 +420,8 @@ echo-color() {
 # Update mtime of folders with latest mtime of its contents
 touchd() {
   [[ -z "$1" ]] && echo-error "usage: touchd dir [...]" && return 1
-  local _VERBOSE=$((_VERBOSE))
   local count=0 arg
   for arg in $@; do
-      [[ "$arg" =~ ^(-v|--verbose)$ ]] && _VERBOSE=1 && continue
       
       local dir="$arg"
       local dir_tilde="${dir/$HOME/~}"
@@ -415,7 +450,6 @@ touchd-R() {
   local dirs=($@)
   [[ ${#dirs[@]} == 0 ]] && dirs=("$PWD")
   for dir in "${dirs[@]}"; do
-      [[ "$dir" =~ ^(-v|--verbose)$ ]] && [[ -n "$_VERBOSE" ]] && continue
       find "$dir" -depth ! -type f -print |\
       while read -r subdir; do
           qeval touchd "$subdir"
@@ -492,78 +526,9 @@ ln-valid() {
   return $ret
 }
 
-# Inspect $1 and, using javascript-like truthy rules, return status 0 (true) or 1 (false).
-# Usage: parse-bool [--echo] value
-# If --echo is specified, 1 or nothing is echoed to stdout; else just the status is returned.
-# Examples, in each case leaving some_var == 1 (if value is true) or empty (false).
-# - parse-bool "true" && some_var=1
-# - some_var=$(parse-bool --echo "true")
-# Truthiness:
-# - false: <unset>, "", "0", "false", "no", "null" or "undefined"
-# - true:  any non-blank that doesn't evaluate to false is true
-parse-bool() {
-    [[ "$1" =~ -?-e(cho)? ]] && do_echo=1 && shift
-    val="$1"; shift
-
-    # ret=0: true; ret=1: false; but echo 1 for true, nothing for false. Nice.
-    ret=0
-    [[ -z "$val" || "$val" =~ ^(0|false|no|null|undefined)$ ]] && ret=1
-
-    [[ -n "$do_echo" && $ret == 0 ]] && echo "1"
-    return $ret
-}
-
-#
-### fixed-width file helpers
-#
-# Record lengths along with count of each length, in the same sequence as file.
-record-lengths() {
-  [[ -z "$1" ]] && >&2 echo "usage: record-lengths file [...]" && return 1
-  local files=$@
-  for f in $files; do
-    printf "%s\n  %s\n" "$f" "$(awk '{print length($0)}' "$f" | sort -n | uniq -c)"
-  done
-}
-alias recl='qeval record-lengths'
-#
-# View a fix-width file in a more human-readable format.
-fwf-nice() {
-  local USAGE="usage: fwf-nice [-d delim] file [col-expr [...]"
-  local delim='|'; [[ "$1" =~ ^-d|--delim$ ]] && delim="$2" && shift 2
-  local is_pipe=; [[ ! -t 0 ]] && is_pipe=1
-  
-  local fwf=; ! ((is_pipe)) && fwf="$1" && shift
-  # [[ -z "$fwf" ]] && echo-error "$USAGE" && return 1
-  ! ((is_pipe)) && [[ ! -f "$fwf" ]] && echo-error "fwf-nice: $fwf: No such file" && return 1
-  local c='print ' first=1
-  while true; do
-    local cr=0
-    [[ "$1" = "CR" ]] && cr=1 && shift 1
-    [[ -z "$1" || -z "$2" ]] && break
-    local pos=$1 len=$2; shift 2
-    if ((first)); then
-      c="print substr(\$0, $pos, $len)"
-      first=0
-    elif ((cr)); then
-      c="$c \"\n\" substr(\$0, $pos, $len)"
-    else
-      c="$c \"$delim\" substr(\$0, $pos, $len)"
-    fi
-  done
-  ((is_pipe)) && awk "{$c}" || awk "{$c}" "$fwf"
-}
-
-# # Used by profile badge to show pwd (lowercase) via user.tildePath variable.
-# # From: https://iterm2.com/documentation-scripting-fundamentals.html
-#
-# Disabled since it doesn't play so well w git-prompt.
-#
-# iterm_print_vars() {
-#   iterm_set_var 'tildePath' "$(tilde-compress "$PWD" | lower)"
-# }
 
 .bash_profile_sets() {
-  # .tick-bash-profile -e 'printf "[start] .bash_profile_sets (%s, %s)\n" $- $SHELLOPTS'
+  .tick-zprofile -e 'printf "[start] .bash_profile_sets (%s, %s)\n" $- $SHELLOPTS'
 
   # Usage: 'set -o name' enables "name" and 'set +o name' disables it. 
   # Some have a single letter equivalent following the same pattern.
@@ -595,12 +560,12 @@ fwf-nice() {
   # set +x +o xtrace      # print commands and args as they are executed
   # set -i                # indicates shell is interactive; read-only
 
-  # .tick-bash-profile -e 'printf "[end] .bash_profile_sets (%s, %s)\n" $- $SHELLOPTS'
+  .tick-zprofile -e 'printf "[end] .bash_profile_sets (%s, %s)\n" $- $SHELLOPTS'
 }
-.bash_profile_sets
+# .bash_profile_sets
 
 .bash_profile_shopts() {
-  # .tick-bash-profile -e 'printf "[start] .bash_profile_shopts (%s, %s)\n" $- $(shopt -s | cut -f1 | join-lines ':')'
+  .tick-zprofile -e 'printf "[start] .bash_profile_shopts (%s, %s)\n" $- $(shopt -s | cut -f1 | join-lines ':')'
   
   # Usage: 'shopt -s optname' enables (SETS) the option; -u (UNSET) disables it.
   # Default enabled options: cdspell:checkwinsize:cmdhist:expand_aliases:extglob:
@@ -646,50 +611,51 @@ fwf-nice() {
   # shopt -u shift_verbose          # shifting too far results in an error
   # shopt -u xpg_echo               # expand backslash-escape sequences
 
-  # .tick-bash-profile -e 'printf "[end] .bash_profile_shopts (%s, %s)\n" $- $(shopt -s | cut -f1 | join-lines ':')'
+  .tick-zprofile -e 'printf "[end] .bash_profile_shopts (%s, %s)\n" $- $(shopt -s | cut -f1 | join-lines ':')'
 }
-.bash_profile_shopts
+# .bash_profile_shopts
+
 
 #
 ###  HOMEBREW
 #
 .setup-homebrew() {
-  .tick-bash-profile '[start] .setup-homebrew'
+  .tick-zprofile '[start] .setup-homebrew'
   if [[ ! -x /usr/local/bin/brew ]]; then
-    .tick-bash-profile "... homebrew not installed"
-    .tick-bash-profile "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+    .tick-zprofile "... homebrew not installed"
+    .tick-zprofile "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
     return 1
   fi
 
-  ((_DEBUG)) && .tick-bash-profile "... PATH before 'brew shellenv': [$PATH]"
+  ((_DEBUG)) && .tick-zprofile "... PATH before 'brew shellenv': [$PATH]"
   eval "$(/opt/homebrew/bin/brew shellenv 2>/dev/null)"
-  ((_DEBUG)) && .tick-bash-profile "... PATH after  'brew shellenv': [$PATH]"
+  ((_DEBUG)) && .tick-zprofile "... PATH after  'brew shellenv': [$PATH]"
   if [[ ! -d "$HOMEBREW_PREFIX" ]]; then
-    .tick-bash-profile "... homebrew 'shellenv' did not properly set \$HOMEBREW_PREFIX"
+    .tick-zprofile "... homebrew 'shellenv' did not properly set \$HOMEBREW_PREFIX"
     return 1
   fi
   # Let path-prepend de-dupe the /usr/local/... paths.
   path-prepend PATH /usr/local/sbin
   path-prepend PATH /usr/local/bin
-  .tick-bash-profile "... \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
+  .tick-zprofile "... \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
 
   alias bs='qeval brew services'
   
-  _QUIET=1 safe-source /usr/local/etc/bash_completion.d/brew && .tick-bash-profile '... loaded brew completion' || .tick-bash-profile '!!! failed to load brew completion'
+  _QUIET=1 safe-source /usr/local/etc/bash_completion.d/brew && .tick-zprofile '... loaded brew completion' || .tick-zprofile '!!! failed to load brew completion'
 
   local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
   if [[ -e "$gnu_getopt_home" ]]; then
     path-prepend PATH "$gnu_getopt_home/bin"
-    .tick-bash-profile "... prepended $gnu_getopt_home/bin to PATH"
+    .tick-zprofile "... prepended $gnu_getopt_home/bin to PATH"
   fi
 
   local openssl_home="$HOMEBREW_PREFIX/opt/openssl@1.1"
   if [[ -e "$openssl_home" ]]; then
     path-prepend PATH "$openssl_home/bin"
-    .tick-bash-profile "... prepended $openssl_home/bin to PATH"
+    .tick-zprofile "... prepended $openssl_home/bin to PATH"
   fi
 
-  .tick-bash-profile "[end] .setup-homebrew, PATH=$PATH"
+  .tick-zprofile "[end] .setup-homebrew, PATH=$PATH"
 }
 ! ((_SKIP_HOMEBREW_SETUP)) && .setup-homebrew
 
@@ -698,20 +664,21 @@ fwf-nice() {
 ###  ITERM window/tab titles
 #
 .setup-iterm() {
-  .tick-bash-profile '[start] .setup-iterm'
-  [[ "$TERM_PROGRAM" != "iTerm.app" ]] && .tick-bash-profile "... iTerm2 not installed" && return 1
+  .tick-zprofile '[start] .setup-iterm'
+  [[ "$TERM_PROGRAM" != "iTerm.app" ]] && .tick-zprofile "... iTerm2 not installed" && return 1
 
-  _QUIET=1 safe-source "$HOME/.iterm2_shell_integration.bash"
-  export ITERM_BADGE="$ITERM_PROFILE"
-  iterm2_print_user_vars() {
-    iterm2_set_user_var badge "$ITERM_BADGE"
-  }
+  if [[ -e "$HOME/.iterm2_shell_integration.bash" ]]; then
+    source "$HOME/.iterm2_shell_integration.bash"
+    export ITERM_BADGE="$ITERM_PROFILE"
+    iterm2_print_user_vars() {
+      iterm2_set_user_var badge "$ITERM_BADGE"
+    }
+  fi
 
   # From https://superuser.com/a/344397/17666
   # Note that tab and window take effect imediately; badge needs to wait for a prompt display
-  # mode: 0 - both [default], 1 - tab, 2 - window
   iterm-text() {
-    local USAGE='usage: iterm-text --badge|--tab|--window TEXT...'
+    local USAGE="usage: iterm-text ${ITERM_BADGE:+--badge|}--tab|--window TEXT..."
     local mode= do_tab= do_window= do_badge= obj="tab and window"
     while [[ "$1" ]]; do case "$1" in
       -t|--tab)   do_tab=1; shift 1;;
@@ -722,7 +689,7 @@ fwf-nice() {
           return 1;;
       *) break;;
     esac; done
-    [[ -z "$do_tab$do_window$do_badge" ]] && do_tab=1 do_window=1 do_badge=1
+    [[ -z "$do_tab$do_window$do_badge" ]] && do_tab=1 do_window=1 do_badge=${+ITERM_BADGE}
     local text="$@"
     [[ -z "$text" ]] && echo-error "$USAGE" && return 1
 
@@ -732,7 +699,7 @@ fwf-nice() {
   }
   alias itt='iterm-text'
 
-  .tick-bash-profile "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
+  .tick-zprofile "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
 }
 ! ((_SKIP_ITERM_SETUP)) && .setup-iterm
 
@@ -741,10 +708,10 @@ fwf-nice() {
 ###  GIT
 #
 .setup-git() {
-  .tick-bash-profile '[start] .setup-git'
-  ! type -t git &>/dev/null && .tick-bash-profile "[end] .setup-git: git not installed" && return 0
+  .tick-zprofile '[start] .setup-git'
+  ! is-defined git && .tick-zprofile "[end] .setup-git: git not installed" && return 0
 
-  .tick-bash-profile "... using $(git --version)"
+  .tick-zprofile "... using $(git --version)"
 
   # usage: git-alias [--max-count n] [patt]
   git-alias() {
@@ -1086,17 +1053,13 @@ fwf-nice() {
     done      
   }
 
-  .tick-bash-profile "... checking for ~/.git-completion"
-  _QUIET=1 safe-source ~/.git-completion
-  complete -p | grep -E -q 'git$' && .tick-bash-profile "... loaded git cli completion" || .tick-bash-profile "... not using git completion"
-
-  .tick-bash-profile '... checking for git-flow'
-  if type -t git-flow &>/dev/null; then
+  .tick-zprofile '... checking for git-flow'
+  if is-defined git-flow; then
     # https://github.com/aleksandr-m/gitflow-maven-plugin
 
-    .tick-bash-profile "... checking for ~/.git-flow-completion"
+    .tick-zprofile "... checking for ~/.git-flow-completion"
     _QUIET=1 safe-source ~/.git-flow-completion
-    complete -p | grep -E -q 'git-flow$' && .tick-bash-profile "... loaded git-flow cli completion" || .tick-bash-profile "... not using git-flow completion"
+    complete -p | grep -E -q 'git-flow$' && .tick-zprofile "... loaded git-flow cli completion" || .tick-zprofile "... not using git-flow completion"
 
     # Usage: gf-feature-start featureName [mvn_opts] [gitflow_opts]
     gf-feature-start() {
@@ -1120,27 +1083,18 @@ fwf-nice() {
   fi
     
   .setup-git-prompt() {
-    .tick-bash-profile "[start] .setup-git-prompt, PROMPT_COMMAND=[$PROMPT_COMMAND]"
+    .tick-zprofile "[start] .setup-git-prompt, PS1=[$PS1]"
 
-    export __GIT_PROMPT_DIR="$(brew --prefix)/opt/bash-git-prompt/share"
-    local gitprompt_sh="$__GIT_PROMPT_DIR/gitprompt.sh"
-    [[ ! -e "$gitprompt_sh" ]] && .tick-bash-profile "[end] .setup-git-prompt: $gitprompt_sh: No such file" && return 0
-
-    # results in prefixing setLastCommandState; to PROMPT_COMMAND, which sets GIT_PROMPT_LAST_COMMAND_STATE=$?
-    # and calls setGitPrompt which calls updatePrompt to override any prior PS1
-    .tick-bash-profile "... loading $gitprompt_sh"
-    export GIT_PROMPT_ONLY_IN_REPO=
-    export GIT_PROMPT_SHOW_UPSTREAM=1
-    export GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all
-    export GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=1
-    export GIT_PROMPT_THEME='Custom'
-    . "$gitprompt_sh" 
+    # export GIT_PROMPT_ONLY_IN_REPO=
+    # export GIT_PROMPT_SHOW_UPSTREAM=1
+    # export GIT_PROMPT_SHOW_UNTRACKED_FILES=normal # can be no, normal or all
+    # export GIT_PROMPT_SHOW_CHANGED_FILES_COUNT=1
     
-    .tick-bash-profile "[end] .setup-git-prompt"
+    .tick-zprofile "[end] .setup-git-prompt, PS1=[$PS1]"
   }
   .setup-git-prompt 
 
-  .tick-bash-profile '[end] .setup-git'
+  .tick-zprofile '[end] .setup-git'
 }
 ! ((_SKIP_GIT_SETUP)) && .setup-git
 
@@ -1149,32 +1103,32 @@ fwf-nice() {
 ### SDKMAN/JAVA
 #
 .setup-java-sdkman() {
-  .tick-bash-profile '[start] .setup-java-sdkman'
+  .tick-zprofile '[start] .setup-java-sdkman'
   if [[ ! -e "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
-    .tick-bash-profile "[end] SDKMAN not installed"
+    .tick-zprofile "[end] .setup-java-sdkman, SDKMAN not installed"
     return 1
   fi
 
   export SDKMAN_DIR="$HOME/.sdkman"
 
   if [[ "$(type -t sdk)" == "function" ]]; then
-    .tick-bash-profile 'sdkman already initialized'
+    .tick-zprofile 'sdkman already initialized'
   else
-    .tick-bash-profile '... initializing sdkman'
+    .tick-zprofile '... initializing sdkman'
     . "$SDKMAN_DIR/bin/sdkman-init.sh"
     path-prepend "$SDKMAN_DIR/bin"
-    .tick-bash-profile "... initialized sdkman"
+    .tick-zprofile "... initialized sdkman"
   fi
-  # .tick-bash-profile -e 'echo "... using $(sdkman version)"'
-  # .tick-bash-profile -e 'echo "... $ which javac: $(2>&1 which javac)"'
-  # .tick-bash-profile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
+  # .tick-zprofile -e 'echo "... using $(sdkman version)"'
+  # .tick-zprofile -e 'echo "... $ which javac: $(2>&1 which javac)"'
+  # .tick-zprofile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
   
   if [[ -z "$JAVA_HOME" ]]; then
-    .tick-bash-profile "sdkman left a blank JAVA_HOME"
+    .tick-zprofile "sdkman left a blank JAVA_HOME"
   elif [[ ! -d "$JAVA_HOME" ]]; then
-    .tick-bash-profile "sdkman left a non-directory JAVA_HOME: $JAVA_HOME"
+    .tick-zprofile "sdkman left a non-directory JAVA_HOME: $JAVA_HOME"
   elif [[ ! -d "$JAVA_HOME/bin" ]]; then
-    .tick-bash-profile "sdkman non-directory JAVA_HOME/bin: $JAVA_HOME/bin"
+    .tick-zprofile "sdkman non-directory JAVA_HOME/bin: $JAVA_HOME/bin"
   fi
 
   sdk-ls() {
@@ -1182,7 +1136,7 @@ fwf-nice() {
     sdk ls java '$@' | egrep '>>>| installed | local only '
   }
 
-  .tick-bash-profile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
+  .tick-zprofile -e tilde-compress "[end] .setup-java-sdkman, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
 ! ((_SKIP_SDKMAN_SETUP)) && .setup-java-sdkman
 
@@ -1191,58 +1145,53 @@ fwf-nice() {
 ### JENV/JAVA
 #
 .setup-java-jenv() {
-  .tick-bash-profile '[start] .setup-java-jenv'
-  if ! type -t jenv &>/dev/null; then
-    .tick-bash-profile "[end] .setup-java-jenv, jenv not installed"
-    return 1
-  fi
+  .tick-zprofile '[start] .setup-java-jenv'
+  ! is-defined jenv && .tick-zprofile "[end] .setup-java-jenv, jenv not installed" && return 1
 
   if [[ "$(type -t jenv)" == "function" ]]; then
-    .tick-bash-profile 'jenv already initialized'
+    .tick-zprofile 'jenv already initialized'
   else
-    .tick-bash-profile '... initializing jenv'
+    .tick-zprofile '... initializing jenv'
     eval "$(jenv init --no-rehash -)"
     path-prepend "$HOME/.jenv/bin"
-    .tick-bash-profile "... initialized jenv"
+    .tick-zprofile "... initialized jenv"
   fi
-  # .tick-bash-profile -e 'echo "... using $(jenv --version)"'
-  # .tick-bash-profile -e 'echo "... using java $(jenv version)"'
-  # .tick-bash-profile -e 'echo "... $ which javac: $(2>&1 which javac)"'
-  # .tick-bash-profile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
+  # .tick-zprofile -e 'echo "... using $(jenv --version)"'
+  # .tick-zprofile -e 'echo "... using java $(jenv version)"'
+  # .tick-zprofile -e 'echo "... $ which javac: $(2>&1 which javac)"'
+  # .tick-zprofile -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
   
   local javahome="$(jenv javahome)"
   if [[ -z "$javahome" ]]; then
-    .tick-bash-profile "jenv reports a blank JAVA_HOME"
+    .tick-zprofile "jenv reports a blank JAVA_HOME"
   elif [[ ! -d "$javahome" ]]; then
-    .tick-bash-profile "jenv reports a non-directory JAVA_HOME: $javahome"
+    .tick-zprofile "jenv reports a non-directory JAVA_HOME: $javahome"
   elif [[ ! -d "$javahome/bin" ]]; then
-    .tick-bash-profile "jenv non-directory JAVA_HOME/bin: $javahome/bin"
+    .tick-zprofile "jenv non-directory JAVA_HOME/bin: $javahome/bin"
   else
     export JAVA_HOME="$javahome"
   fi
 
-  .tick-bash-profile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
+  .tick-zprofile -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
 }
-if ! type -t sdk &>/dev/null && ! ((_SKIP_SETUP_JENV)); then
-  .setup-java-jenv
-fi
+! ((_SKIP_SETUP_JENV)) && ! is-defined sdk && .setup-java-jenv
 
 
 #
 ### POSTGRESQL
 #
 .setup-pg() {
-  .tick-bash-profile '[start] .setup-pg'
+  .tick-zprofile '[start] .setup-pg'
   export HOMEBREW_POSTGRESQL_SERVICE="$(readlink /usr/local/opt/postgresql)"
   if [[ -z "$HOMEBREW_POSTGRESQL_SERVICE" ]]; then
-    .tick-bash-profile '[end] .setup-pg, no /usr/local/opt/postgresql; pg not installed'
+    .tick-zprofile '[end] .setup-pg, no /usr/local/opt/postgresql; pg not installed'
     return 1
   fi
   path-append '/usr/local/opt/postgresql/bin'
   alias pg-restart='qeval brew services restart $HOMEBREW_POSTGRESQL_SERVICE'
   alias pg-start='qeval brew services start $HOMEBREW_POSTGRESQL_SERVICE'
   alias pg-stop='qeval brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
-  .tick-bash-profile '[end] .setup-pg, PATH=$PATH"'
+  .tick-zprofile '[end] .setup-pg, PATH=$PATH"'
 }
 ! ((_SKIP_POSTGRES_SETUP)) && .setup-pg
 
@@ -1252,7 +1201,7 @@ fi
 #
 .setup-schemaspy() {
   if [[ ! -e "$HOME/lib/schemaspy.jar" ]]; then
-    .tick-bash-profile "[end] .setup-schemaspy, schemaspy.jar not installed in ~/lib"
+    .tick-zprofile "[end] .setup-schemaspy, schemaspy.jar not installed in ~/lib"
     return 1
   fi
 
@@ -1279,10 +1228,7 @@ fi
 ### VIRTUAL BOX general helpers
 #
 .setup-vbox() {
-  if ! type -t VBoxManage &>/dev/null; then
-    .tick-bash-profile '[end] .setup-vbox, VirtualBox not installed'
-    return 1
-  fi
+  ! is-defined VBoxManage && .tick-zprofile '[end] .setup-vbox, VirtualBox not installed' && return 1
 
   export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
   export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
@@ -1406,13 +1352,13 @@ fi
 ### MAPR (client)
 #
 .setup-mapr() {
-  .tick-bash-profile '[start] .setup-mapr'
-  [[ ! -e "/opt/mapr" ]] && .tick-bash-profile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
+  .tick-zprofile '[start] .setup-mapr'
+  [[ ! -e "/opt/mapr" ]] && .tick-zprofile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
 
   export MAPR_HOME="/opt/mapr"
   path-prepend PATH "$MAPR_HOME/bin"
 
-  .tick-bash-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
+  .tick-zprofile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
 }
 ! ((_SKIP_SETUP_MAPR)) && .setup-mapr
 
@@ -1421,8 +1367,8 @@ fi
 ### HADOOP (client & server, not embedded in MapR)
 #
 .setup-hadoop() {
-  .tick-bash-profile '[start] .setup-hadoop'
-  [[ ! -e "/opt/hadoop" ]] && .tick-bash-profile '[end] .setup-hadoop, no such directory: /opt/mapr' && return 1
+  .tick-zprofile '[start] .setup-hadoop'
+  [[ ! -e "/opt/hadoop" ]] && .tick-zprofile '[end] .setup-hadoop, no such directory: /opt/mapr' && return 1
 
   export HADOOP_HOME="/opt/hadoop"
   path-prepend PATH "$HADOOP_HOME/sbin"
@@ -1432,102 +1378,9 @@ fi
   export HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop"
   export HADOOP_LOG_DIR="/var/log/hadoop"
 
-  .tick-bash-profile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
+  .tick-zprofile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
 }
 ! ((_SKIP_SETUP_HADOOP)) && .setup-hadoop
-
-#
-### GRADLE/GRADLEW
-#
-# -a, --no-rebuild                   Do not rebuild project dependencies. DO NOT USE
-# --build-cache                      Enables the Gradle build cache. Gradle will try to reuse outputs from previous builds.
-# --configure-on-demand              Configure necessary projects only. Gradle will attempt to reduce configuration time for large multi-project builds. [incubating]
-# --continue                         Continue task execution after a task failure.
-# -D, --system-prop                  Set system property of the JVM (e.g. -Dmyprop=myvalue).
-# -d, --debug                        Log in debug mode (includes normal stacktrace).
-# --daemon                           Uses the Gradle daemon to run the build. Starts the daemon if not running.
-# -I, --init-script                  Specify an initialization script.
-# -i, --info                         Set log level to info.
-# -m, --dry-run                      Run the builds with all task actions disabled.
-# --no-build-cache                   Disables the Gradle build cache.
-# --no-configure-on-demand           Disables the use of configuration on demand. [incubating]
-# --no-daemon                        Do not use the Gradle daemon to run the build. Useful occasionally if you have configured Gradle to always run with the daemon by default.
-# --no-parallel                      Disables parallel execution to build projects.
-# --no-scan                          Disables the creation of a build scan. For more information about build scans, please visit https://gradle.com/build-scans.
-# --no-watch-fs                      Disables watching the file system.
-# --offline                          Execute the build without accessing network resources.
-# -P, --project-prop                 Set project property for the build script (e.g. -Pmyprop=myvalue).
-# -p, --project-dir                  Specifies the start directory for Gradle. Defaults to current directory.
-# -q, --quiet                        Log errors only.
-# --refresh-dependencies             Refresh the state of dependencies.
-# --rerun-tasks                      Ignore previously cached task results.
-# -s, --stacktrace                   Print out the stacktrace for all exceptions.
-# --status                           Shows status of running and recently stopped Gradle daemon(s).
-# --stop                             Stops the Gradle daemon if it is running.
-# -w, --warn                         Set log level to warn.
-# --warning-mode                     Specifies which mode of warnings to generate. Values are 'all', 'fail', 'summary'(default) or 'none'
-# --watch-fs                         Enables watching the file system for changes, allowing data about the file system to be re-used for the next build.
-# --write-locks                      Persists dependency resolution for locked configurations, ignoring existing locking information if it exists
-# -x, --exclude-task                 Specify a task to be excluded from execution.
-#
-# Usage:  gw ...
-#         GW_NO_TEE   If 1, do not redirect output to a log file
-#         GW_ALIAS    Use the given alias as part of the tee'd log name
-#         GW_OPEN_LOG If 1, open log file upon completion
-# The base tee log is built from $PWD, date/time, and gradle tasks.
-gw() {
-  ((_DEBUG)) && echo-glob 'GW_*'
-  
-  [[ "$1" == '-T' ]] && GW_NO_TEE=1 && shift 1
-  [[ "$1" =~ ^(tasks|help|dependencies)$ ]] && GW_NO_TEE=1
-  [[ ! "$@" =~ : ]] && GW_NO_TEE=1
-  [[ ! -d "logs" ]] && GW_NO_TEE=1
-  if ((GW_NO_TEE)); then
-    eval-unquiet ./gradlew $@
-    return
-  fi
-
-  # vecho-var GW_ALIAS
-  # if [[ -n "$GW_ALIAS" ]]; then
-  #   qeval iterm-text "$GW_ALIAS"
-  #   GW_ALIAS="$GW_ALIAS"
-  # fi
-  
-  local app="$(substring_after_last "$PWD" '/')"
-  local now="$(date +'%Y%m%d.%H%M%S')"
-  
-  local br="$(git branch --show-current)"
-  if [[ "$br" =~ ^feature/.+$ ]]; then
-    br="$(sed -E 's#feature/([A-Z]+\-[0-9]+).*#\1#' <<< "$br")"
-  elif [[ -n "$br" ]]; then
-    br="$(substring_before_first "$br" '/')"
-  fi
-
-  local tasks=
-  for arg in $@; do
-    if [[ "$arg" =~ ^:.+$ ]]; then
-      tasks="${tasks}${arg//:/_}"
-    fi
-  done
-
-  vecho-var app now br tasks GW_NO_TEE GW_ALIAS GW_OPEN_LOG
-  
-    # GW_LOG="logs/${app}_${br}_${now}_${tasks}_${GW_ALIAS}.log"
-  GW_LOG="logs/${app}_${br}_${now}_${tasks}.log"
-  GW_LOG="${GW_LOG//:/_}"
-  GW_LOG="${GW_LOG// /_}"
-  export GW_LOG
-
-  vecho-var GW_LOG
-  # unset GW_ALIAS
-
-  echo-unquiet "./gradlew $@ |& tee $GW_LOG"
-  ./gradlew $@ | tee "$GW_LOG"
-  
-  local ret=$?
-  ((GW_OPEN_LOG)) && open "$GW_LOG"
-  return $ret
-}
 
 
 #
@@ -1546,8 +1399,8 @@ _QUIET=1 safe-source $HOME/.pwrfunc.sh
 # - \u = user, \h = hostname, \w = working dir
 #
 # .setup-ps1() {
-#   .tick-bash-profile "[start] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"  #  PS1=[\h:\W \u\[\]\$\[\] ]
-#   [[ -z "$PS1" ]] && .tick-bash-profile '[end] .setup-ps1: non-interactive shell' && return 0
+#   .tick-zprofile "[start] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"  #  PS1=[\h:\W \u\[\]\$\[\] ]
+#   [[ -z "$PS1" ]] && .tick-zprofile '[end] .setup-ps1: non-interactive shell' && return 0
 
 #   export PROMPT_COMMAND='.ps1-set-last-command-state;_prompt_command'
 
@@ -1557,7 +1410,7 @@ _QUIET=1 safe-source $HOME/.pwrfunc.sh
 #   }
 
 #   _prompt_command() {
-#     # .tick-bash-profile "[start] _prompt_command: on entry, PROMPT_COMMAND=[$PROMPT_COMMAND], \$\?=$GIT_PROMPT_LAST_COMMAND_STATE, PS1=[$PS1]"
+#     # .tick-zprofile "[start] _prompt_command: on entry, PROMPT_COMMAND=[$PROMPT_COMMAND], \$\?=$GIT_PROMPT_LAST_COMMAND_STATE, PS1=[$PS1]"
 
 #     history -a 
 
@@ -1568,7 +1421,7 @@ _QUIET=1 safe-source $HOME/.pwrfunc.sh
 #     #   local k_ps1_text="$(kube_ps1)"
 #     #   local len_k_ps1_text=${#k_ps1_text}
 #     #   ((len_k_ps1_text>0)) && k_ps1_text="$k_ps1_text\\n"
-#     `#   # .tick-bash-profile "... k_ps1_text=[$k_ps1_text], len(k_ps1_text)=[$len_k_ps1_text]"
+#     `#   # .tick-zprofile "... k_ps1_text=[$k_ps1_text], len(k_ps1_text)=[$len_k_ps1_text]"
 #     # fi
 
 #     local g_ps1_text=
@@ -1580,34 +1433,39 @@ _QUIET=1 safe-source $HOME/.pwrfunc.sh
 #       g_ps1_text="$PS1"
 #     fi
 #     g_ps1_text="$g_ps1_text\\n${LAST_COMMAND_INDICATOR}${ResetColor} $(tilde-compress \\w) $ps1_suffix "
-#     # .tick-bash-profile "... g_ps1_text=[$g_ps1_text]"
+#     # .tick-zprofile "... g_ps1_text=[$g_ps1_text]"
 
 #     export PS1="$(printf '%s%s' "${k_ps1_text}" "${g_ps1_text}")"
 
-#     # .tick-bash-profile "[end] _prompt_command: on exit, PS1=[$PS1]"
+#     # .tick-zprofile "[end] _prompt_command: on exit, PS1=[$PS1]"
 #   }
 
-#   .tick-bash-profile "[end] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"
+#   .tick-zprofile "[end] .setup-ps1, PROMPT_COMMAND=[$PROMPT_COMMAND], PS1=[$PS1]"
 # }
 # .setup-ps1
 
-.source-extra-bash-profiles() {
-  .tick-bash-profile '[start] .source-extra-bash-profiles'
-  if glob-path-exists ~/.bash_profile.*; then
-    for f in ~/.bash_profile.*; do
-      .tick-bash-profile "... sourcing $f"
+.source-extra-start-files() {
+  .tick-zprofile "[start] .source-extra-start-files ($1)"
+  if glob-path-exists ~/$1.*; then
+    for f in ~/$1.*; do
+      .tick-zprofile "... sourcing $f"
       . $f
     done
   fi
-  .tick-bash-profile '[end] .source-extra-bash-profiles'
+  .tick-zprofile "[end] .source-extra-start-files ($1)"
 }
-.source-extra-bash-profiles
+# .source-extra-start-files
 
 
 alias .reload-shell='qeval exec $SHELL -l'
 alias .rs='veval .reload-shell'
 
-alias .reload-bash-profile='qeval . "~/.bash_profile"'
-alias .rlbp='veval .reload-bash-profile'
+alias .reload-zprofile='qeval . ~/.zprofile'
+alias .rlzp='qeval .reload-zprofile'
 
-.tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH])"
+zprofile-wrapper
+
+export _DOT_ZPROFILE_MTIME="$(stat -L -f '%m' ~/.zprofile)"
+.tick-zprofile "[END-FILE] (\$\$=$$), mtime=$_DOT_ZPROFILE_MTIME" #, \$PATH=[$PATH])"
+
+fi

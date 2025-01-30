@@ -1,6 +1,6 @@
 # Ignore case distinctions in PATTERN, only if PATTERN contains no upper case.
-# -S, --nosmart-case; -i, --ignore-case; -I, --no-ignore-case
---smart-case
+# --smart-case, -S, --nosmart-case; -i, --ignore-case, -I
+--no-ignore-case
 
 # Suppress error messages about nonexistent or unreadable files.
 -s
@@ -38,7 +38,7 @@
 --follow                  
 
 --type-set
-    config:ext:xml,yaml,yml
+    config:ext:properties,xml,yaml,yml
 --type-set
     data:ext:csv,json,sql
 --type-set

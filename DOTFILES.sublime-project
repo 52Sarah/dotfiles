@@ -29,28 +29,37 @@
       "folder_include_patterns": [".*", ".*/*"],
       "folder_exclude_patterns": [
         ".android",
+        ".asdf",
         ".bash_sessions",
         ".cups",
+        ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
+        ".m2",
         ".npm",
+        ".oh-my-zsh",
+        ".sdkman/libexec", ".sdkman/tmp",
         ".Trash",
         ".vmware",
-        ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
-        ".sdkman/libexec", ".sdkman/tmp",
+        ".yarn"
       ],
       "file_include_patterns": [
         ".*/*",
         ".alias",
         ".bash_login*",
+        ".pwr",
         ".secrets",
+        ".zsh*"
+      ],
+    },    {
+      "name": "/etc",
+      "path": "/etc",
+      "folder_exclude_patterns": ["*"],
+      "file_include_patterns": [
+        "bash_profile*",
+        "bashrc*",
+        "zprofile*",
+        "zsh*"
       ],
     },
-
-    {
-      "name": "~/Workspace/dotfiles",
-      "path": "~/Workspace/dotfiles",
-      "folder_exclude_patterns": [],
-    },
-
     {
       "name": "~/ttpp/bin",
       "path": "~/ttpp/bin",

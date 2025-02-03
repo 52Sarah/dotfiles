@@ -9,7 +9,7 @@
 #   4. ~/.zlogin for login shells
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
-[[ -e ~/.sh_bootstrap ]] && source ~/.sh_bootstrap
+[[ -e ~/.sh_bootstraprc ]] && source ~/.sh_bootstraprc
 
 zshrc-wrapper() {
 
@@ -17,7 +17,6 @@ zshrc-wrapper() {
   # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
   # _TICK_x variables control its behavior; all default to false/0/off.
   # export _TICK_OFF= _TICK_ON= _TICK_STDERR= _TICK_STDOUT=
-  is-defined .tick || . ~/.tick.sh
   .tick-zshrc() { .tick -s '.zshrc' $@; }
   .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.zshrc)" #, \$PATH=[$PATH]"
 
@@ -33,68 +32,6 @@ zshrc-wrapper() {
     path-prepend "$HOME/bin"
     .tick-zshrc '... prepended $HOME/bin to PATH'
   fi
-
-  ### START: Zsh-specific settings from zshrc.zsh-template
-  #
-  export ZSH="$HOME/.oh-my-zsh"
-
-  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-  ZSH_THEME=eastwood
-
-  # Uncomment the following line if pasting URLs and other text is messed up.
-  # DISABLE_MAGIC_FUNCTIONS="true"
-
-  zstyle ':omz:update' mode auto      
-
-  # Uncomment the following line if you want to disable marking untracked files
-  # under VCS as dirty. This makes repository status check for large repositories
-  # much, much faster.
-  # DISABLE_UNTRACKED_FILES_DIRTY="true"
-
-  # Uncomment the following line if you want to change the command execution time
-  # stamp shown in the history command output.
-  # You can set one of the optional three formats:
-  # "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
-  # or set a custom format using the strftime function format specifications,
-  # see 'man strftime' for details.
-  # HIST_STAMPS="mm/dd/yyyy"
-
-  # Would you like to use another custom folder than $ZSH/custom?
-  # ZSH_CUSTOM=/path/to/new-custom-folder
-
-  # Standard plugins can be found in $ZSH/plugins/
-  # Custom plugins may be added to $ZSH_CUSTOM/plugins/
-  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
-  plugins=(asdf)
-  # plugins+=(ssh git git-prompt)
-  # plugins+=(macos)
-  # plugins+=(colored-man-pages)
-  # plugins+=(sublime)
-  # plugins+=(mvn)
-  .tick-zshrc "... loaded zsh plugins: $plugins"
-
-  # aws docker jira kubectl kubectx
-  # brew alias-finder common-aliases command-not-found history-substring-search systemd
-  # jsontools
-  # lpass
-  # vscode
-  # node nvm pip yarn
-  # react-native
-
-  source $ZSH/oh-my-zsh.sh
-
-  # Compilation flags
-  # export ARCHFLAGS="-arch $(uname -m)"
-
-  # Set personal aliases, overriding those provided by Oh My Zsh libs,
-  # plugins, and themes. Aliases can be placed here, though Oh My Zsh
-  # users are encouraged to define aliases within a top-level file in
-  # the $ZSH_CUSTOM folder, with .zsh extension. Examples:
-  # - $ZSH_CUSTOM/aliases.zsh
-  # - $ZSH_CUSTOM/macos.zsh
-  
-  #
-  ### FINISH: Zsh-specific settings from zshrc.zsh-template
 
   #
   ### Interactive shell options.
@@ -135,7 +72,7 @@ zshrc-wrapper() {
 zshrc-wrapper $@
 
 alias .reload-zshrc='qeval . ~/.zshrc'
-alias .rlzrc='qeval .reload-zshrc'
+alias .rlzrc='veval .reload-zshrc'
 
 export _DOT_ZSHRC_MTIME="$(stat -L -f '%m' ~/.zshrc)"
 .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$_DOT_ZSHRC_MTIME" #, \$PATH=[$PATH])"

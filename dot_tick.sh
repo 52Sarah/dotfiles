@@ -8,7 +8,7 @@
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
 #   --vars        log each variable given along with its value
 
-[[ -e ~/.sh_bootstrap ]] && source ~/.sh_bootstrap
+[[ -e ~/.sh_bootstraprc ]] && source ~/.sh_bootstraprc
 
 # Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
 .tick-enabled() {

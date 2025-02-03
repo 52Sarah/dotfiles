@@ -6,7 +6,7 @@
 # If BASH_ENV is defined (typically ~/.bashrc), it is read when Bash executes a shell script.
 # See: https://stackoverflow.com/a/18187389/160955
 
-[[ -e ~/.sh_bootstrap ]] && source ~/.sh_bootstrap
+[[ -e ~/.sh_bootstraprc ]] && source ~/.sh_bootstraprc
 
 bashrc-wrapper() {
 
@@ -14,7 +14,6 @@ bashrc-wrapper() {
   # _TICK_x variables control its behavior; all default to false/0/off.
   # export _TICK_OFF= _TICK_ON=
   # export _TICK_STDERR= _TICK_STDOUT=
-  type -t .tick >&/dev/null || . ~/.tick.sh
   .tick-bashrc() { .tick -s '.bashrc' $@; }
 
   .tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
@@ -49,7 +48,7 @@ bashrc-wrapper() {
         .tick-bashrc "... $yarn_bin: No such directory; cannot prepend to PATH"
       fi
     done
-    safe-source $HOME/configure_nexus_npm_token.sh
+    _QUIET=1 safe-source $HOME/configure_nexus_npm_token.sh
 
     .tick-bashrc '[end] setup npm/Node/Nexus'
   }
@@ -63,8 +62,6 @@ bashrc-wrapper() {
     .tick-bashrc '... read ~/.asdf/asdf.sh'
     # _QUIET=1 safe-source ~/.asdf/plugins/java/set-java-home.bash
     # PATH="/usr/local/opt/openjdk/bin:$PATH"
-  else
-    .tick-bashrc '... ~/.asdf/asdf.sh not found'
   fi
 
   #
@@ -73,16 +70,11 @@ bashrc-wrapper() {
   if [[ -e ~/.pwrfunc.sh ]]; then
     source ~/.pwrfunc.sh
     .tick-bashrc '... read ~/.pwrfunc.sh'
-  else
-    .tick-bashrc '... ~/.pwrfunc.sh not found'
   fi
-
 
   .tick-bashrc "[END-FILE] (\$\$=$$, \$PATH=[$PATH])"
 }
 bashrc-wrapper $@
 
-
 alias .reload-bashrc='qeval . ~/.bashrc'
-alias .rlbrc='qeval .reload-bashrc'
-alias .rlbr='qeval .reload-bashrc'
+alias .rlbrc='veval .reload-bashrc'

@@ -1,6 +1,10 @@
 [default]
 region = us-west-2
 
+cli_auto_prompt = on-partial
+retry_mode = standard
+output = yaml
+
+
 [profile pwr-base]
 region = us-west-2
-output = json

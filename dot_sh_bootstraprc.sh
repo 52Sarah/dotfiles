@@ -1,38 +1,22 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # Shell-agnostic bootstrap functions and aliases for interactive shells.
+# Functions defined here should not depend on any other startup files.
+# No references to tick logging in this file.
 
-# if [[ -z "$_DOT_SHBOOTSTRAPRC_MTIME" ]] || (( $(stat -L -f '%m' ~/.sh_bootstrap) > _DOT_SHBOOTSTRAPRC_MTIME )); then
+# At startup, Zsh reads, in order, from:
+#   1. ~/.zshenv
+#   2. ~/.zprofile for login shells
+#   3. ~/.zshrc for interactive shells
+#   4. ~/.zlogin for login shells
+# See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
-  # Environment variables used to enable verbose or debug "log" output, or quiet "normal" info output.
-  _debug()   { ((_DEBUG)); }
-  _verbose() { ((_VERBOSE || _DEBUG)); }
-  _quiet()   { ((_QUIET && !(_VERBOSE || _DEBUG))); }
+[[ -e ~/.sh_bootstrap-0 ]] && source ~/.sh_bootstrap-0
 
-  #
-  ### 'echo/printf' helpers
-  #   d* = only print to stderr if _DEBUG is set
-  #   v* = only print to stderr if _VERBOSE or _DEBUG is set
-  #   q* = always print to stderr unless _QUIET is set
-  #   e* = always print to stderr
-  # usage, e.g.: echo-verbose [--prefix 'line prefix'] text
-  #
-  echo-stderr()   { >&2 echo $@; }
-  alias eecho=echo-stderr 
-  #
-  echo-debug()    { _debug && echo-stderr $@; }
-  echo-verbose()  { _verbose && echo-stderr $@; }
-  echo-quiet()    { _quiet || echo-stderr $@; }
-  alias decho=echo-debug vecho=echo-verbose qecho=echo-quiet
-  #
-  #
-  printf-stderr()  { >&2 printf $@; }
-  alias eprintf=printf-stderr
-  #
-  printf-debug()    { _debug && printf-stderr $@; }
-  printf-verbose()  { _verbose && printf-stderr $@; }
-  printf-quiet()    { _quiet || printf-stderr $@; }
-  alias dprintf=printf-debug vprintf=printf-verbose qprintf=printf-quiet
+# Do not execute this script if it has already been run this session and is not modified since.
+if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
+  
+  export DOTFILES="$HOME/ttpp/dotfiles"
 
   #
   ### Echo (and bubble) return status ($?) as-is, or use $1 for 0, $2 for non-0.
@@ -65,53 +49,25 @@
     local var value
     while [[ -n "$1" ]]; do
       var="$1"; shift 1
-      if [[ "$SHELL" =~ /zsh$ ]]; then
-        local value="${(P)var}"
-      else
-        local value="${!var}"
-      fi
-      echo "$var: $value"
+      is-zsh && value="${(P)var}" || value="${!var}"
+      echo "$var: [$value]"
     done
   }
-  alias echo-vars=echo-variables
-
+  alias echo-variable=echo-variables echo-vars=echo-variables echo-var=echo-variables
   #
-  ### 'echo' / 'eval' helpers
-  #
-  # Conditionally echo the expression to stderr before executing it, using
-  # similar logic as echo-* and printf-*.
-  : ${_EVAL_ECHO_PREFIX:=\>$}
-  eval-echo() { 
-    local _EVAL_ECHO_PREFIX=$_EVAL_ECHO_PREFIX
-    matches "$1" '^-p|--prefix$' ]] && _EVAL_ECHO_PREFIX="$2" && shift 2
-    echo-stderr "$_EVAL_ECHO_PREFIX $@"; 
-    eval "$@"
+  # List all variables matching $1 (globbing *, etc.) and their values.
+  echo-glob() {
+    local patt="$1"; [[ -z "$patt" ]] && echo-stderr "usage: echo-glob patt" && return 1
+    [[ ! "$patt" =~ [*?]$ ]] && patt="${patt}*"
+    if is-zsh; then
+      typeset -m "$patt"
+    else
+      echo ${!patt}
+    fi | sort
   }
-  alias eeval=eval-echo
-  #
-  eval-debug()    { if _debug; then eval-echo $@; else eval "$@"; fi; }
-  eval-verbose()  { if _verbose; then eval-echo $@; else eval $@; fi; }
-  eval-quiet()    { if _quiet; then eval $@; else eval-echo $@; fi; }
-  alias deval=eval-debug veval=eval-verbose qeval=eval-quiet
+  gecho() { echo-glob "$@"; }
+  alias ge='gecho'
 
-  # True if $1 is any kind of executable: alias, keyword, function, builtin, file
-  is-defined() {
-    [[ -z "$1" ]] && echo-stderr "usage: is-defined command" && return 1
-    type $1 >&/dev/null
-  }
-
-  # Source given file(s). If a file does not exist, echo a non-quiet warning and ignore.
-  safe-source() {
-    [[ -z "$1" ]] && echo-stderr "usage: safe-source file [...]" && return 1
-    while [[ -n "$1" ]]; do
-      local script_path="$1"; shift
-      if [[ ! -e "$script_path" ]]; then
-        _quiet || echo-stderr "safe-source: $script_path: No such file"
-      else
-        eval-quiet source "$script_path"
-      fi
-    done
-  }
 
   #
   ### du helpers
@@ -175,56 +131,14 @@
   #
   # List path variable's elements, 1 per line.
   path-list() {
-    local var=${1:-PATH}
-    if [[ "$SHELL" =~ /zsh$ ]]; then
-      local elems="${(P)var}"
-    else
-      local elems="${!var}"
-    fi
+    local var=${1:-PATH} elems
+    is-zsh && elems="${(P)var}" || elems="${!var}"
     split-lines ':' <<< "${elems}"
   }
   alias path-echo=path-list
-  #
-  # Add given path element to the end of the variable, or move it there if already present.
-  # usage: path-append [--prepend] [var] path
-  path-append() {
-    local opt_prepend=; [[ "$1" =~ -p ]] && opt_prepend='--prepend' && shift
-    local var='PATH'; [[ -n "$2" ]] && var="$1" && shift
-    [[ -z "$1" ]] && echo-stderr "usage: path-append [var] path" && return 1
-    
-    local elem="$1" && shift
-    if [[ "$SHELL" =~ /zsh$ ]]; then
-      local elements="${(P)var}"
-    else
-      local elements="${!var}"
-    fi
-    if [[ -z "$elements" ]]; then
-      export $var="$elem"
-      return 0
-    elif [[ "$elements" = "$elem" ]]; then
-      return 0
-    fi
-    elems_minus_elem="$(sed -e 's!:'"$elem"':!:!g' <<< ":$elements:")"
-    echo-debug "elems_minus_elem=[$elems_minus_elem]"
-    printf-debug "$_EVAL_ECHO_PREFIX path-append %s %s %s\n" "$opt_prepend" "$var" "$elem" && eeval path-list elems_minus_elem
-    if ((opt_prepend)); then
-      eval-debug export $var="$elem${elems_minus_elem:0:((${#elems_minus_elem}-1))}"
-    else
-      eval-debug export $var="${elems_minus_elem:1}$elem"
-    fi
-  }
-  alias path-prepend='path-append --prepend'
 
   #
   ## string/list handling helpers
-  #
-  # Does $1 match regex $2? Quoting works for Zsh and Bash.
-  matches() {
-    [[ -z "$2" ]] && eecho "usage: matches text pattern" && return 1
-    local text="$1" && shift
-    local pattern="$*" && shift
-    [[ "$text" =~ $pattern ]]
-  }
   #
   ends_with() {
     [[ -z "$2" ]] && echo-stderr "usage: ends_with [--verbose] text suffix_to_test" && return 1
@@ -316,7 +230,7 @@
     [[ -z "$1" ]] && eecho "usage: home-expand path [...]" && return 1
     home-expand <<< $@
   }
-
+  #
   # Convert stdin using the path_expr
   tilde-home-compress-expand() {
     [[ -z "$2" ]] && eecho "usage: tilde-home-compress-expand ${1:-fn_name} path_expr" && return 1
@@ -332,5 +246,18 @@
   }
 
 
-  export _DOT_SHBOOTSTRAPRC_MTIME="$(stat -L -f '%m' ~/.sh_bootstraprc)"
-# fi
+  .reload-bootstraprc() {
+    unset "_DOT_SH_MTIMES[sh_bootstraprc]"
+    eval-quiet source ~/.sh_bootstraprc
+  }
+
+  .reload-shell() {
+    unset "_DOT_SH_MTIMES"
+    eval-quiet exec $SHELL -l
+  }
+  alias .rs='eval-verbose .reload-shell'
+
+  .source-extra-start-files '.sh_bootstraprc'
+
+  sh-store-mtime ~/.sh_bootstraprc
+fi

@@ -42,7 +42,7 @@
 --type-set
     data:ext:csv,json,sql
 --type-set
-    log:ext:log
+    log:match:/\.log(\..+)?$/
 --type-set
     office:ext:xls,xlsx,xlsm,xlst,doc,docx,docm,dot,ppt,pptx,potx
 --type-set

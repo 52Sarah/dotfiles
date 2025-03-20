@@ -35,19 +35,25 @@
         ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
         ".m2",
         ".npm",
-        ".oh-my-zsh",
+        // ".oh-my-zsh",
         ".sdkman/libexec", ".sdkman/tmp",
+        ".snowsql/1.3.3",
         ".Trash",
         ".vmware",
-        ".yarn"
+        ".yarn",
+        ".zsh_sessions"
       ],
       "file_include_patterns": [
         ".*/*",
         ".alias",
         ".bash_login*",
+        ".git*",
         ".pwr",
         ".secrets",
         ".zsh*"
+      ],
+      "file_exclude_patterns": [
+        ".zsh_history"
       ],
     },    {
       "name": "/etc",

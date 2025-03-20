@@ -65,6 +65,167 @@ timeout() {
 
 
 #
+### VIRTUAL BOX general helpers
+#
+.setup-vbox() {
+  if is-defined VBoxManage; then
+    .tick-bootstrap-profile '... setting up VirtualBox'
+
+    export VBOX_VMS_HOME="$HOME/VirtualBox VMs"
+    export VBOX_VERSION="$(substring_before_last $(VBoxManage --version) '.')" # e.g., 6.1 or 7.1
+
+    vb() { eval-quiet VBoxManage $@; }
+    #
+    vb-list() {
+      local _QUIET=$_QUIET _VERBOSE=$_VERBOSE _WHATIF=$_WHATIF
+      local opt_hostonly opt_running
+      local opts_are_general=1 general_opts
+      while [[ "$1" ]]; do echo "arg: $1"; case "$1" in
+        -q|--quiet)     _QUIET=1; shift 1;;
+        -v|--verbose)   _VERBOSE=1; shift 1;;
+        -h|--host*)     opt_hostonly=1; shift 1;;
+        -r|--run*)      opt_running=1; shift 1;;
+
+        --) opts_are_general=0; shift 1;;
+        -*) if ((! opts_are_general)); then
+              echo "((! opts_are_general))"
+              break
+            else
+              general_opts="$general_opts $1"
+              shift 1
+              echo-var general_opts
+            fi;;
+        *) break;;
+      esac; done
+      local specific_opts="$@"
+      echo-var opt_hostonly opt_running opts_are_general general_opts specific_opts
+      if ((opt_hostonly)); then
+        local hostonly="hostonlynets"; [[ "$VBOX_VERSION" =~ ^6 ]] && hostonly="hostonlyifs"
+        eval-quiet vb $general_opts list $specific_opts "$hostonly"
+      else
+        local obj="vms"; ((opt_running)) && obj="runningvms" && shift 1
+        eval-quiet vb $general_opts list --sorted $specific_opts "$obj"
+      fi
+
+    }
+    alias vbls='eval-quiet vb-list'
+    #
+    vb-status() {
+      local USAGE="usage: vb-status [--all] [--long]"
+      local all= long=
+      while [[ "$1" ]]; do case "$1" in
+        -a|--all)   all=1; shift 1;;
+        -l|--long)  long=1; shift 1;;
+        *) break;;
+      esac; done
+
+      ((all)) && printf "\nALL VMS\n" && vb-list
+      
+      printf "\nRUNNING VMS\n"
+      vb-list --running
+
+      if ((long)); then
+        printf "\nRUNNING VMS --long\n"
+        vb-list --running -- --long |\
+          egrep '^(Name|Guest OS|UUID|Config file|Log folder|Memory size|State):\s{2,}'
+      fi
+    }
+    alias vbst=vb-status
+
+    # Lookup full vm name given a pattern; if not found, return pattern with error status.
+    vb-vm-name() {
+      [[ -z "$1" ]] && echo-error "usage: vb-vm-name patt" && return 1
+      local patt="$1" && shift
+      local save_clicolor_force=${CLICOLOR_FORCE}
+      unset CLICOLOR_FORCE
+      if ls -1A "$VBOX_VMS_HOME/" | egrep -i "$patt"; then
+        export CLICOLOR_FORCE=$save_clicolor_force
+        return 0
+      else
+         echo "$patt"
+         export CLICOLOR_FORCE=$save_clicolor_force
+         return 1
+      fi
+    }
+
+    vb-start() {
+      [[ -z "$1" ]] && echo-error "usage: vb-start vm_name [startvm options]" && return 1
+      local vm_name="$1" && shift
+      eval-quiet VBoxManage startvm \"$vm_name\" --type headless $@
+    }
+    vb-controlvm() {
+      [[ -z "$2" ]] && echo-error "usage: vb-controlvm vm_name_patt cmd [controlvm cmd options]" && return 1
+      local vm_name_patt="$1" && shift
+      local cmd="$1" && shift
+      local vm_name=$vm_name_patt #"$(vb-vm-name $vm_name_patt)"
+      eval-quiet VBoxManage controlvm \"$vm_name\" $cmd $@
+    }
+    vb-reboot() {
+      [[ -z "$1" ]] && echo-error "usage: vb-reboot vm_name" && return 1
+      local vm_name_patt="$1" && shift
+      local vm_name=$vm_name_patt #"$(vb-vm-name $vm_name_patt)"
+      eval-quiet vb-controlvm "$vm_name" reboot $@
+    }
+    vb-poweroff() {
+      [[ -z "$1" ]] && echo-error "usage: vb-poweroff vm_name_patt [--type=gui|headless|..., other startvm options]" && return 1
+      local vm_name_patt="$1" && shift
+      local vm_name=$vm_name_patt #"$(vb-vm-name $vm_name_patt)"
+      gecho vm_name
+      eval-quiet vb-controlvm "$vm_name" poweroff $@
+    }
+
+    vb-less() {
+      [[ -z "$1" ]] && echo-error "usage: vb-less vm_name ['less' options]" && return 1
+      local vm_name_patt="$1" && shift
+      local vm_name=$vm_name_patt #"$(vb-vm-name $vm_name_patt)"
+      eval-quiet less $@ \"$VBOX_VMS_HOME/$vm_name/Logs/VBox.log\"
+    }
+    vb-tail() {
+      [[ -z "$1" ]] && echo-error "usage: vb-tail vm_name_patt [-f or other 'tail' options]" && return 1
+      local vm_name_patt="$1" && shift
+      eval-quiet tail $@ \"$VBOX_VMS_HOME/$vm_name/Logs/VBox.log\"
+    }
+  fi
+}
+! ((_SKIP_SETUP_VBOX)) && .setup-vbox
+
+#
+### MAPR (client)
+#
+.setup-mapr() {
+  .tick-bootstrap-profile '[start] .setup-mapr'
+  [[ ! -e "/opt/mapr" ]] && .tick-bootstrap-profile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
+
+  export MAPR_HOME="/opt/mapr"
+  path-prepend PATH "$MAPR_HOME/bin"
+
+  .tick-bootstrap-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
+}
+! ((_SKIP_SETUP_MAPR)) && .setup-mapr
+
+
+#
+### HADOOP (client & server, not embedded in MapR)
+#
+.setup-hadoop() {
+  .tick-bootstrap-profile '[start] .setup-hadoop'
+  [[ ! -e "/opt/hadoop" ]] && .tick-bootstrap-profile '[end] .setup-hadoop, no such directory: /opt/mapr' && return 1
+
+  export HADOOP_HOME="/opt/hadoop"
+  path-prepend PATH "$HADOOP_HOME/sbin"
+  path-prepend PATH "$HADOOP_HOME/bin"
+
+  export HADOOP_LIBEXEC_DIR="$HADOOP_HOME/libexec"
+  export HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop"
+  export HADOOP_LOG_DIR="/var/log/hadoop"
+
+  .tick-bootstrap-profile "[end] .setup-hadoop, HADOOP_HOME=$HADOOP_HOME, PATH=$PATH"
+}
+! ((_SKIP_SETUP_HADOOP)) && .setup-hadoop
+
+
+
+#
 ### Virtual Box start/stop/log
 #
 .setup-vbox-acc-vm-aliases() {

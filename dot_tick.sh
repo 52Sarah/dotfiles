@@ -63,7 +63,7 @@
     matches "$msg" '^\[(finish|end|FINISH|END)' >&/dev/null && ((_TICK_INDENT -= 2))
   fi
 
-  local tick_line="$(printf "%s +%4d %-13s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
+  local tick_line="$(printf "%s +%4d %-6s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
   echo "$tick_line" >> ~/.tick.log
   .tick.stdout-enabled &&  echo "$tick_line"
   .tick.stderr-enabled && >&2 echo "$tick_line"

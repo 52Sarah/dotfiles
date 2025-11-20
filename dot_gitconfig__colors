@@ -1,5 +1,11 @@
 #! .gitconfig
 
+### AVAILABLE COLORS, ATTRIBUTES:
+#
+# normal, black, red, green, yellow, blue, magenta, cyan, or white
+# bold, dim, ul (underline), blink, and reverse
+
+
 # ui provides the default for all other commands: always|AUTO|never
 [color]
   ui = always
@@ -24,10 +30,10 @@
    repeatedLines = green  # seems to have no effect
 
 [color "branch"]
-  current = magenta   #! green
+  current = bold green  #! green
+  remote = cyan         #! red
+  upstream = cyan       #! blue
   #! local = normal
-  remote = cyan       #! red
-  upstream = blue     #! blue
   #! plain = normal
 
 # From: https://git-scm.com/docs/git-config#Documentation/git-config.txt-colordecorateltslotgt
@@ -43,9 +49,9 @@
 # %s  - subject line
 [color "decorate"]
   #! branch = bold green
-  remoteBranch = bold cyan  #! bold red
-  tag = bold cyan           #! bold cyan
-  stash = bold white
+  remoteBranch = cyan   #! bold red
+  tag = bold magenta    #! bold cyan
+  stash = white         #! bold white
   #! HEAD = green
   # grafted
 
@@ -57,7 +63,7 @@
 #   func = 
 #   old = 
 #   new = 
-   commit = yellow    #! yellow
+  commit = yellow   #! white
 #   whitespace =
 #   oldMoved =
 #   newMoved =
@@ -96,7 +102,7 @@
 # Match theese defaults and the default git-prompt colors as closely as possible.
 [color "status"]
   #! header = normal
-  branch = magenta
+  branch = bold green  #! magenta
   #! added = green
   changed = yellow
   untracked = red
@@ -107,15 +113,7 @@
 [color "transport"]
 #   rejected =
 
-
 # See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffcolorMoved
 [color "diff"]
 #   colorMoved =    # mode from color.diff above
 #   colorMovedWS =  # mode from color.diff above
-
-
-#
-### available colors, attributes
-#
-# normal, black, red, green, yellow, blue, magenta, cyan, or white
-# bold, dim, ul (underline), blink, and reverse

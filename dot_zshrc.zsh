@@ -41,13 +41,13 @@ if [[ "$(sh-ok-to-skip ~/.zshrc)" != 'true' ]]; then
   zshrc-wrapper $@
 
   .reload-zshrc() {
-    unset "_DOT_SH_MTIMES[zshrc]"
+    unset "_DOT_SH_MTIMES[~/.zshrc]"
     eval-quiet source ~/.zshrc
   }
   alias .rlzrc='eval-verbose .reload-zshrc'
 
-  .source-extra-start-files '.zshrc'
-
   sh-store-mtime ~/.zshrc
   .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$_DOT_SH_MTIMES[zshrc]" #, \$PATH=[$PATH])"
 fi
+
+.source-extra-start-files '.zshrc'

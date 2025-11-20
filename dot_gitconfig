@@ -1,7 +1,5 @@
 [alias]
 
-  alias = !bash -li -c 'git-alias'
-
   # -C - detect copied lines, even from other files in the same commit
   # -M - detect moved lines, even from other files in the same commit
   # -w - ignore whitespace
@@ -251,3 +249,9 @@
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
+[credential "https://github.com"]
+	helper = 
+	helper = !/usr/local/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = 
+	helper = !/usr/local/bin/gh auth git-credential

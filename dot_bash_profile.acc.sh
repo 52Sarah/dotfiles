@@ -197,7 +197,7 @@ timeout() {
   [[ ! -e "/opt/mapr" ]] && .tick-bootstrap-profile '[end] .setup-mapr, no such directory: /opt/mapr' && return 1
 
   export MAPR_HOME="/opt/mapr"
-  path-prepend PATH "$MAPR_HOME/bin"
+  path-prepend "$MAPR_HOME/bin"
 
   .tick-bootstrap-profile "[end] .setup-mapr, MAPR_HOME=$MAPR_HOME, PATH=$PATH"
 }
@@ -212,8 +212,8 @@ timeout() {
   [[ ! -e "/opt/hadoop" ]] && .tick-bootstrap-profile '[end] .setup-hadoop, no such directory: /opt/mapr' && return 1
 
   export HADOOP_HOME="/opt/hadoop"
-  path-prepend PATH "$HADOOP_HOME/sbin"
-  path-prepend PATH "$HADOOP_HOME/bin"
+  path-prepend "$HADOOP_HOME/sbin"
+  path-prepend "$HADOOP_HOME/bin"
 
   export HADOOP_LIBEXEC_DIR="$HADOOP_HOME/libexec"
   export HADOOP_CONF_DIR="$HADOOP_HOME/etc/hadoop"

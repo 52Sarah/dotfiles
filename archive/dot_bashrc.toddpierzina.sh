@@ -286,19 +286,19 @@ type -t .tick >&/dev/null || . ~/.tick
     # path-list PATH
 
     # Homebrew expects sbin to be in the path.
-    path-prepend PATH "/usr/local/sbin"
+    path-prepend "/usr/local/sbin"
     # echo "PATH_1: /usr/local/sbin"
     # path-list PATH
 
     # Put Ruby 3 in front of system's 2.6.
-    path-prepend PATH "/usr/local/opt/ruby/bin"
+    path-prepend "/usr/local/opt/ruby/bin"
     # echo "PATH_2: /usr/local/opt/ruby/bin"
     # path-list PATH
 
     # Put my homemade scripts and other miscellany here at the start of the classpath.
-    path-prepend PATH "/usr/local/opt/gnu-tar/libexec/gnubin"
-    path-prepend PATH "$HOME/bin"
-    path-prepend PATH "$HOME"
+    path-prepend "/usr/local/opt/gnu-tar/libexec/gnubin"
+    path-prepend "$HOME/bin"
+    path-prepend "$HOME"
     # echo "PATH_3: HOME, HOME/bin, /usr/local/opt/gnu-tar/libexec/gnubin"
     # path-list PATH
 

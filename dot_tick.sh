@@ -77,14 +77,14 @@
 
 # usage: [ms places] [format]
 datetime-plus-ms() {
-  local places="${1:-3}" && shift
-  local format="${1:-%D %T}" && shift
+  local places='3'; [[ -n "$1" ]] && places="$1" && shift
+  local format='%D %T'; [[ -n "$1" ]] && format="$1" && shift
   local ms="$(perl -e 'use Time::HiRes qw(time); my $t = time; printf "%06d", ($t - int($t)) * 1000000;')00000"
   date +"$format.${ms:0:$places}"
 }
 
 datetime-epoch-ms() {
-  perl -e 'use Time::HiRes qw(time); printf "%d", time * 1000;'
+  perl -e 'use Time::HiRes qw(time); printf "%d\n", time * 1000;'
 }
 
 

@@ -4,7 +4,9 @@
 # Functions defined here should not depend on any other startup files.
 # No references to tick logging in this file.
 
-# Do not execute this script if it has already been run this session and is not modified since.
+# Do not execute this script if it has already been run this session and is not modified since,
+# unless _DOT_SH_IGNORE_MTIMES = 1.
+_DOT_SH_IGNORE_MTIMES=1
 if [[ -z "$_DOT_SH_MTIMES" ]]; then
   typeset -A _DOT_SH_MTIMES 2>/dev/null || declare -a _DOT_SH_MTIMES
 fi
@@ -15,6 +17,8 @@ sh-ok-to-skip() {
   [[ -z "$1" ]] && >&2 echo 'usage: sh-ok-to-skip SH_FILE' && echo 'false' && return 1
   local sh_file="$1"; shift
   [[ ! -e "$sh_file" ]] && >&2 echo "sh-ok-to-skip: $sh_file: No such file" && echo 'false' && return 1
+
+  (( _DOT_SH_IGNORE_MTIMES )) && echo 'false' && return
 
   # TODO: figure out bash map handling here and in sh-store-mtime
   [[ ! "$SHELL" =~ /zsh$ ]] && echo 'false' && return
@@ -90,6 +94,34 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap-0)" != 'true' ]]; then
   eval-quiet()    { if _quiet; then eval $@; else eval-echo $@; fi; }
   alias deval=eval-debug veval=eval-verbose qeval=eval-quiet
 
+  substring_before_first() {
+    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
+    [[ -z "$1" ]] && >&2 echo "usage: substring_before_first [--delim DELIM] text" && return 1
+    echo "${1%%${delim}*}"
+  }
+  substring_before_last() {
+    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
+    [[ -z "$1" ]] && >&2 echo "usage: substring_before_last [--delim DELIM] text" && return 1
+    echo "${1%${delim}*}"
+    
+  }
+  substring_after_first() {
+    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
+    [[ -z "$1" ]] && >&2 echo "usage: substring_after_first [--delim DELIM] text" && return 1
+    echo "${1#*${delim}}"
+  }
+  substring_after_last() {
+    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
+    [[ -z "$1" ]] && >&2 echo "usage: substring_after_last [--delim DELIM] text" && return 1
+    echo "${1##*${delim}}"
+  }
+  #
+  substring_left() {
+    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
+    [[ -z "$2" ]] && >&2 echo "usage: substring_left nchars text" && return 1
+    echo "${2:0:$1}"
+  }
+
   # True if $1 is any kind of executable: alias, keyword, function, builtin, file
   is-defined() {
     [[ -z "$1" ]] && echo-stderr "usage: is-defined command" && return 1
@@ -110,32 +142,28 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap-0)" != 'true' ]]; then
   }
 
   #
-  # Add given path element to the end of the variable, or move it there if already present.
-  # usage: path-append [--prepend] [var] path
+  # Add given path element to the end of the PATH variable, or move it there if already present.
+  # usage: path-append [--prepend] elem
   path-append() {
-    local opt_prepend=; [[ "$1" =~ -p ]] && opt_prepend='--prepend' && shift
-    local var='PATH'; [[ -n "$2" ]] && var="$1" && shift
-    [[ -z "$1" ]] && echo-stderr "usage: path-append [var] path" && return 1
+    local opt_prepend=; [[ "$1" =~ -p ]] && opt_prepend=1 && shift
+    [[ -z "$1" ]] && echo-stderr "usage: path-append elem" && return 1
     
     local elem="$1" && shift
-    local elements
-    is-zsh && elements="${(P)var}" || elements="${!var}"
+    local elements="$PATH"
     if [[ -z "$elements" ]]; then
-      export $var="$elem"
+      export PATH="$elem"
       return 0
     elif [[ "$elements" = "$elem" ]]; then
       return 0
     fi
     elems_minus_elem="$(sed -e 's!:'"$elem"':!:!g' <<< ":$elements:")"
-    echo-debug "elems_minus_elem=[$elems_minus_elem]"
-    printf-debug "$_EVAL_ECHO_PREFIX path-append %s %s %s\n" "$opt_prepend" "$var" "$elem" && eeval path-list elems_minus_elem
     if ((opt_prepend)); then
-      eval-debug export $var="$elem${elems_minus_elem:0:((${#elems_minus_elem}-1))}"
+      export PATH="$elem${elems_minus_elem:0:((${#elems_minus_elem}-1))}"
     else
-      eval-debug export $var="${elems_minus_elem:1}$elem"
+      export PATH="${elems_minus_elem:1}$elem"
     fi
   }
-  path-prepend() { path-append --prepend $@; }
+  path-prepend() { path-append --prepend "$@"; }
 
   # Does $1 match regex $2? Quoting here works for both Zsh and Bash.
   matches() {
@@ -185,7 +213,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap-0)" != 'true' ]]; then
   }
   
   .reload-bootstraprc() {
-    unset "_DOT_SH_MTIMES[sh_bootstraprc]"
+    unset "_DOT_SH_MTIMES[~/.sh_bootstraprc]"
     eval-quiet source ~/.sh_bootstraprc
   }
 

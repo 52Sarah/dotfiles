@@ -241,6 +241,17 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
     }
 
     #
+    ### record-length tools
+    #
+    recl() {
+      [[ -z "$1" ]] && echo-error "Usage: recl FILE" && return 1
+      local infile="$1" && shift 1
+      [[ ! -e "$infile" ]] && echo error: "recl: $infile: No such file"
+      while IFS= read -r line; do
+        echo "Processing line: $line"
+      done < "$infile"    }
+
+    #
     ### 'tail' helpers
     #
     alias t='tail'
@@ -349,13 +360,16 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
 
     #
     ###  HOMEBREW
+    #    4/2025: For some reason, IntelliJ doesn't like substring_before_last as used in .setup-homebrew.
     #
     .setup-homebrew() {
       .tick-login '[start] .setup-homebrew'
+      .tick-login "... \$INTELLIJ_ENVIRONMENT_READER=$INTELLIJ_ENVIRONMENT_READER"
+      .tick-login "... \$SHELL=$SHELL"
 
-      local brew_bin="$(glob-path-first /usr/local/bin/brew /opt/homebrew/bin/brew)"
-      if [[ -n "$brew_bin" ]]; then
-        .tick-login "... using homebrew binary: $brew_bin"
+      local brew_binary="$(glob-path-first /usr/local/bin/brew /opt/homebrew/bin/brew)"
+      if [[ -n "$brew_binary" ]]; then
+        .tick-login "... using homebrew binary: $brew_binary"
       else
         .tick-login "... homebrew not installed"
         .tick-login "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
@@ -363,7 +377,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
         return 1
       fi
 
-      eval "$($brew_bin shellenv $SHELL 2>/dev/null)"
+      eval "$($brew_binary shellenv $SHELL 2>/dev/null)"
       if [[ -d "$HOMEBREW_PREFIX" ]]; then
         .tick-login "... homebrew shellenv set \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
       else
@@ -372,11 +386,15 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
         return 1
       fi
 
-      path-prepend PATH "$(substring_before_last $brew_bin '/')"
+      .tick-login "... computing brew_bin from \$brew_binary=$brew_binary"
+      local brew_bin="$(substring_before_last $brew_binary '/')"
+      path-prepend "$brew_bin"
+      .tick-login "... prepended $brew_bin to PATH"
 
       local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
+      .tick-login "... checking gnu_getopt_home=$gnu_getopt_home"
       if [[ -e "$gnu_getopt_home" ]]; then
-        path-prepend PATH "$gnu_getopt_home/bin"
+        path-prepend "$gnu_getopt_home/bin"
         .tick-login "... prepended $gnu_getopt_home/bin to PATH"
       else
         .tick-login "... gnu-getopt not installed via brew"
@@ -384,7 +402,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
 
       local openssl_home="$HOMEBREW_PREFIX/opt/openssl@3"
       if [[ -e "$openssl_home" ]]; then
-        path-prepend PATH "$openssl_home/bin"
+        path-prepend "$openssl_home/bin"
         .tick-login "... prepended $openssl_home/bin to PATH"
       else
         .tick-login '... openssl@3 not installed via brew'
@@ -393,6 +411,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
       .tick-login "[end] .setup-homebrew"
     }
     ! ((_SKIP_HOMEBREW_SETUP)) && .setup-homebrew
+    # ! ((_SKIP_HOMEBREW_SETUP)) && [[ -z "$INTELLIJ_ENVIRONMENT_READER" ]] && .setup-homebrew
 
 
     #
@@ -440,386 +459,6 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
       .tick-login "[end] .setup-iterm, ITERM_PROFILE=$ITERM_PROFILE"
     }
     ! ((_SKIP_ITERM_SETUP)) && .setup-iterm
-
-
-    #
-    ###  GIT
-    #
-    .setup-git() {
-      .tick-login '[start] .setup-git'
-      if ! is-defined git; then
-        .tick-login "[end] .setup-git: git not installed"
-        return 0
-      fi
-
-      .tick-login "... using $(git --version)"
-
-      # usage: git-alias [--max-count n] [patt]
-      git-alias() {
-        local USAGE="usage: git-alias [[--max-count] n] [patt]"
-        local opt_patt='.+' opt_maxcount=999
-        local _quiet=$_QUIET _verbose=$_VERBOSE
-        while [[ -n "$1" ]]; do case "$1" in
-          -q | --quiet)     _quiet=1; shift;;
-          -v | --verbose)   _verbose=1; shift;;
-          -n | --max-count) shift 1; 
-                            if [[ -n "$1" ]]; then
-                              opt_maxcount=$1; 
-                              shift;
-                            else
-                              echo-error "usage: $USAGE"
-                              return 1;
-                            fi;;
-          *) break;;
-        esac; done
-        [[ "$1" =~ ^[0-9]$ ]] && opt_maxcount=$1 && shift
-        opt_patt="$@"
-
-        git config --get-regexp "^alias\.${opt_patt}" \
-          | head -n $opt_maxcount \
-          | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
-      }
-      #
-      git-branch() {
-        local branch_level=1; while [[ "$1" =~ [012] ]]; do branch_level="$1" && shift 1; done
-        git branch --show-current 1>/dev/null || return 1
-
-        c_br_remote="$(git config --get-color color.branch.remote)"
-        c_br_current="$(git config --get-color color.branch.current)"
-        c_commit="$(git config --get-color color.diff.commit)"
-
-        c_green="$(git config --get-color color.blame.repeatedlines)"
-        c_blue="$(git config --get-color color.branch.upstream)"
-        c_white="$(git config --get-color color.decorate.stash)"
-        c_red="$(git config --get-color color.status.untracked)"
-        c_reset='%(color:reset)'
-
-        f_sha="%(if)%(HEAD)%(then)$c_br_current*%(else)$c_commit %(end)%(objectname:short)$c_reset"
-        f_track="$c_red%(if)%(upstream:track)%(then)[%(upstream:track)]%(end)$c_reset"
-        f_track_short="$c_red%(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)$c_reset"
-        f_date="$c_white%(align:14,left)%(committerdate:format:%F %T)%(end)$c_reset"
-        f_date_relative="$c_white%(align:20,left)%(committerdate:relative)%(end)$c_reset"
-        f_date_short="$c_white%(align:14,left)%(committerdate:format:%D %H:%M)%(end)$c_reset"
-        f_authorname_20="%(align:20,left)%(authorname)%(end)"
-        f_branch="%(if)%(HEAD)%(then)$c_br_current%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remote%(else)$c_reset%(end)%(end)%(refname:short)$c_reset"
-        f_comment="%(contents:subject)"
-        f_upstream="$c_blue%(if)%(upstream)%(then)   [%(upstream:short)]%(end)$c_reset"
-        f_branch_and_track_short="%(align:60,left)$f_branch%(if)%(upstream)%(then) $c_red%(align:2,left)[%(upstream:trackshort)]%(end)%(else)$c_reset%(end)%(end)"
-
-        case "$branch_level" in
-          0)  eval-verbose git branch --list --ignore-case --sort='-committerdate' \
-                --format="\"$f_sha $f_date_relative $f_branch $f_track_short\"" \
-                $@ | less
-              ;;
-          1)  eval-verbose git branch --list --ignore-case --sort='-committerdate' --column=never \
-                --format="\"$f_sha  $f_date_short  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment\"" $@ \
-                | awk -v MAXW=$((COLUMNS-8)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | less
-              ;;
-          2)  eval-verbose git branch --list --ignore-case --sort='-committerdate' --column=never \
-                --format="\"$f_sha  $f_date  $f_authorname_20 $f_branch_and_track_short $f_upstream $f_comment $f_track \"" $@ \
-                | awk -v MAXW=$((COLUMNS-8)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | less
-              ;;
-          *)  echo-error "git-branch: unexpected level: $branch_level"
-              return 1
-              ;;
-        esac
-      }
-      alias gbr='eval-verbose "git-branch | egrep -v \"[A-Z]+\.(feature|hotfix)|(feature|hotfix)\.[A-Z]+\""'
-      alias gbra='eval-verbose git-branch 1'
-      alias gbran='eval-verbose git-branch 2' gbranc='gbran' gbranch='gbran'
-      #
-      alias gbr-rm='eval-quiet git brrm'
-      alias gbr-mv='eval-quiet git brmv'
-      alias gbr-cp='eval-quiet git brcp'
-      #
-      git-branch-bak() {
-        [[ -z "$GIT_BRANCH" ]] && echo-error "No current branch" && return 1
-        [[ -n "$1" ]] && mmdd="$1" || mmdd="$(date +'%m%d')"
-        eval-quiet git brcp \"$GIT_BRANCH\" \"XXX.${GIT_BRANCH}.$mmdd\"
-      }
-      alias gbr-bak='eval-quiet git-branch-bak'
-      #
-      git-branch-set-upstream() {
-        eval-quiet git branch --set-upstream-to "origin/$GIT_BRANCH" $@
-      }
-      git-branch-set-upstream-to() {
-        eval-quiet git branch --set-upstream-to "${@:-origin/$GIT_BRANCH}"
-      }
-      git-branch-unset-upstream() {
-        eval-quiet git branch --unset-upstream "${@:-origin/$GIT_BRANCH}"
-      }
-      #
-      git-branches-with() {
-        local _QUIET=$! _quiet_on _VERBOSE=$((_VERBOSE))
-        local log_opts=
-        while [[ "$1" ]]; do case "$1" in
-          -q|--quiet)   _QUIET=1 _VERBOSE=0; shift 1;;
-          -v|--verbose) _QUIET=0 _VERBOSE=1; shift 1;;
-          -n|--max-count) log_opts="$log_opts $1 $2"; shift 2;;
-          -{1,2,3,4,5,6,7,8,9}*) log_opts="$log_opts -n $1"; shift 1;;
-          *) break;;
-        esac; done
-        [[ -z "$1" ]] && echo-error "usage: git-branches-with [-q|-v|-d] [-n count] file_glob" && return 1
-        local file_glob="$@"
-        eval-verbose git -P log --all -n 10 --date="iso-strict" --format=\"'%h %cd %cN'\" --color=never $log_opts -- $file_glob \
-          | while read commit_sha commit_dt committer; do
-              echo-verbose "$commit_sha | $commit_dt | $committer"
-              eval-verbose git -P branch --all --list --contains=$commit_sha --format="\"%(committerdate:format:%F %H:%M) | %(refname:short)\""
-            done \
-          | sort -r -s \
-          | uniq
-      }
-      alias gbw='eval-quiet git-branches-with'
-      #
-      alias gco='eval-quiet git checkout'
-      alias gcod='eval-quiet git checkout develop'
-      alias gcom='eval-quiet git checkout master'
-      #
-      git-checkout-remote-branch() {
-        [[ -z "$1" ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
-        [[ ! "$1" =~ .+/.+ ]] && echo-error "usage: git-checkout-remote-branch remote/branch_name" && return 1
-        local remote_branch="$1" && shift
-        local remote_name="$(substring_before_first $remote_branch '/')"
-        local branch_name="$(substring_after_first $remote_branch '/')"
-        echo-verbose "$(echo-glob remote_branch remote_name branch_name)"
-        eval-quiet git checkout -b $branch_name $remote_name/$branch_name || return 1
-        eval-quiet git branch --set-upstream-to $remote_name/$branch_name
-      }
-      #
-      git-commit-message() {
-        local opts=
-        while [[ "$1" =~ ^--?[a-z] ]]; do
-          opts="$opts $1"
-          shift
-        done
-        [[ -z "$1" ]] && echo-error "usage: git-commit-message 'message'" && return 1
-        eval-quiet git commit --message \"$@\" || return 1
-        eval-quiet git diff --stat=$COLUMNS HEAD^ | grep -E -v '[0-9]+ (files? changed|insertions?|deletions?)'
-      }
-      alias gcm='eval-quiet git-commit-message'
-      #
-      alias gds='eval-quiet git ds'
-      alias gdss='eval-quiet git dss'
-      alias gdds='eval-quiet git dds'
-
-      # LOG/PRETTY FORMAT FIELDS
-      # %h  - abbrev hash
-      # %C  - color or reset
-      # %cn - committer name; %cN via .mailmap
-      # %ce - committer email; %cE via .mailmap
-      # %cl - committer email local part; %cL via .mailmap
-      # %cd - commit date in --date's format
-      # %cr - commit date (relative)
-      # %D  - ref name(s)
-      # %s  - subject line
-      git-log() {
-        local log_level=1; [[ "$1" =~ ^[0123]$ ]] && log_level="$1" && shift 1
-        git branch --show-current 1>/dev/null || return 1
-
-        local hash_len=7
-
-        c_reset='%C(reset)'
-        c_commit="%C(yellow)"
-        c_tag="%C(bold cyan)"
-        c_white="%C(white)"
-
-        f_hash="%<($hash_len)${c_commit}%h"
-        f_author_name_mailmap="${c_reset}%<(18)%aN"
-        f_author_name_mailmap_long="${c_reset}%<(22)%aN"
-        f_author_name="${c_reset}%<(20)%an"
-        f_commit_date_rel="${c_white}%<(12)%cr"
-        f_commit_date_short="${c_white}%<(8)%cd"
-        f_commit_date="${c_white}%cd"
-        f_tags="${c_tag}%d"
-        f_tags_short="${c_tag}%D"
-        f_subject_line="${c_reset}%s"
-        f_subject_line_white="${c_white}%s"
-        f_body="${c_reset}%b"
-
-        case "$log_level" in
-          0)  hash_len=6
-              eval-verbose git log -20 --abbrev=$hash_len --decorate=short --date='format:%D' \
-                --format="\"$f_hash  $f_author_name_mailmap $f_commit_date_short $f_tags_short $f_subject_line$c_reset\"" $@ \
-                | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | sed -E \
-                  -e 's/origin/$O/g' \
-                  -e 's/tag: ?/$T:/g' \
-                  -e 's/ -> /->/g' \
-                | less
-                  # -e "s/$(git config --get user.name)/\$ME/g" \
-                ;;
-          1)  eval-verbose git log -20 --abbrev=$hash_len --date=human --use-mailmap \
-                --format="\"$f_hash  $f_author_name_mailmap_long $f_commit_date_rel $f_tags $f_subject_line$c_reset\"" $@ \
-                | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | sed -E \
-                  -e 's/origin/$O/g' \
-                  -e 's/tag: ?/$T:/g' \
-                  -e 's/ -> /->/g' \
-                | less
-                ;;
-          2) eval-verbose git log -20 --abbrev=$hash_len --date=human --use-mailmap \
-                --format="\"$f_hash  $f_author_name_mailmap_long  $f_commit_date_short $f_commit_date_rel $f_tags%n  $f_subject_line$c_reset\"" $@ \
-                | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | sed -E \
-                  -e 's/origin/$O/g' \
-                  -e 's/tag: ?/$T:/g' \
-                  -e 's/ -> /->/g' \
-                | less
-              ;;
-          3) eval-verbose git log -20 --abbrev=$hash_len --date=human --no-use-mailmap --stat \
-                --format="\"$f_hash  $f_author_name_mailmap_long  $f_commit_date  $f_commit_date_rel$f_tags%n  $f_subject_line_white%n  $f_body$c_reset\"" $@ \
-                | awk -v MAXW=$((COLUMNS+12)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | sed -E \
-                  -e 's/origin/$O/g' \
-                  -e 's/tag: ?/$T:/g' \
-                  -e 's/ -> /->/g' \
-                | less
-              ;;
-          *)  echo-error "git-log: unexpected level: $log_level"
-              return 1
-              ;;
-        esac
-      }
-      alias glo='eval-quiet git-log'
-      alias glog='eval-quiet git-log 1'
-      alias glogg='eval-quiet git-log 2'
-      alias gloggg='eval-quiet git-log 3'
-
-      git-log-me() {
-        git-log $@ -999 | grep "'$(git config --get user.name)'"
-      }
-      alias glme='eval-quiet git-log-me'
-      #
-      # cd into each given directory and perform a git pull --ff-only
-      # usage: git-pulld [dir ...]
-      git-pulld() {
-        local dirs="$@"
-        [[ -z "$dirs" ]] && dirs="$(find . -maxdepth 1 -type d)"
-
-        local f1=1
-        for d in $dirs; do
-          ((f1)) && f1= || printf '\n'
-          [[ ! -e "$d" ]] && echo-error "g-pulld: folder does not exist; aborting" && return 1
-          [[ ! -e "$d/.git" ]] && echo-error "g-pulld: folder is not a git repo; bypassing $d" && continue
-          cd "$d"
-          printf '== %s %s\n' "$d" "$(git branch --show-current)"
-          eval-quiet git pull --ff-only
-          cd ..
-        done
-      }
-      #
-      alias gpff='eval-quiet git pff'
-      #
-      alias gr-dev='eval-quiet git rebase develop'
-      alias gr-mas='eval-quiet git rebase master'
-      alias gr-ab='eval-quiet git rebase --abort'
-      #
-      alias gs='git stash'
-      alias gsh='eval-quiet git stash -h'
-      alias gsl='eval-quiet git stash list' 
-      alias gsld='eval-quiet git stash list --date=short' 
-      alias gsa='eval-quiet git stash apply' 
-      alias gss='eval-quiet git stash show'
-      #
-      git-stash-diff() {
-        local index=0; [[ -n "$1" ]] && index=$1 && shift
-        local index2=; [[ "$1" =~ ^[[:digit:]]+$ ]] && index2=$1 && shift
-        local rev="stash@{$index}"
-        local rev2=; [[ -n "$index2" ]] && rev2="stash@{$index2}"
-        eval-quiet git diff $rev $rev2 $@
-      }
-      git-stash-diff-stat() {
-        local index=0; [[ -n "$1" ]] && index=$1 && shift
-        local index2=; [[ "$1" =~ ^[[:digit:]]+$ ]] && index2=$1 && shift
-        local rev="stash@{$index}"
-        local rev2=; [[ -n "$index2" ]] && rev2="stash@{$index2}"
-        eval-quiet git diff --stat $rev $rev2 $@
-      }
-      alias gsd=git-stash-diff
-      alias gsds=git-stash-diff-stat
-      #
-      git-status() {
-        local status_level=1; [[ "$1" =~ ^[0123]$ ]] && local status_level=$1 && shift 1
-
-        git branch --show-current 1>/dev/null || return 1
-
-        c_remote_branch="$(git config --get-color color.status.remotebranch)"
-        c_stash="$(git config --get-color color.decorate.stash)"
-        c_reset="$(git config --get-color '' reset)"
-        
-        case "$status_level" in
-
-          0)  eval-verbose git -c advice.statusHints=false status --short $@ ;;
-          1)  eval-verbose git -c advice.statusHints=false status --column=dense --no-show-stash $@ \
-              | grep -E -v '^\#?\s*$' \
-              | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;"
-              ;;
-          2)  echo "#"
-              eval-verbose git -c advice.statusHints=false status --column=nodense --show-stash $@ \
-              | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;" \
-              | sed -E -e "s/(Your stash.+has [[:digit:]]+ entr(ies|y))/${c_stash}\\1${c_reset}/;"
-              ;;
-          3)  echo "#"
-              eval-verbose git -c advice.statusHints=false status --column=nodense --show-stash --ignored=traditional --verbose $@ \
-              | sed -E -e "s/'(.+)'/'${c_remote_branch}\\1${c_reset}'/;" \
-              | sed -E -e "s/(Your stash.+has [[:digit:]]+ entr(ies|y))/${c_stash}\\1${c_reset}/;"
-              ;;
-        esac
-      }
-      alias gst='eval-quiet git-status 0'
-      alias gsta='eval-quiet git-status 1'
-      alias gstat='eval-quiet git-status 2'
-      alias gstatu='eval-quiet git-status 3' gstatus='gstatu'
-
-      # update local mtime based on git log
-      # from: https://stackoverflow.com/a/2038768/160955
-      git-touch() {
-        [[ -z "$1" ]] && echo-error "usage: git-touch file [...]" && return 1
-        while [[ -n "$1" ]]; do
-          local f="$1"; shift
-          local rev="$(git rev-list -n 1 "HEAD" "$f")"
-          local commit_sec="$(git show --pretty=format:%at --abbrev-commit "$rev" | head -n 1)"
-          local commit_ts="$(date -r $commit_sec '+%Y%m%d%H%M.%S')"
-          qprintf 'before: ' && ls -oghF "$f"
-          eval-quiet touch -h -t "$commit_ts" "$f"
-          qprintf 'after:  ' && ls -oghF "$f"
-        done      
-      }
-
-      if is-defined git-flow; then
-        .tick-login '... git-flow is installed'
-        # https://github.com/aleksandr-m/gitflow-maven-plugin
-
-        .tick-login "... checking for ~/.git-flow-completion"
-        _QUIET=1 safe-source ~/.git-flow-completion
-        complete -p | grep -E -q 'git-flow$' && .tick-login "... loaded git-flow cli completion" || .tick-login "... not using git-flow completion"
-
-        # Usage: gf-feature-start featureName [mvn_opts] [gitflow_opts]
-        gf-feature-start() {
-          local gitbr="$(git branch --show-current 2> /dev/null)"
-          [[ -z "$gitbr" ]] && echo-error "gf-feature-start: not in a git repository" && return 1
-          local featureName="${1#*feature/}"; shift  # everything after "feature/", else entire string
-          local mvn_opts="$1"; shift
-          local gitflow_opts="$1"; shift
-          eval-quiet mvn --batch-mode "$mvn_opts" gitflow:feature-start -Dverbose=true -DfeatureName="$featureName" -DpushRemote=true "$gitflow_opts"
-        }
-      
-        # Usage (from feature branch): gf-feature-finish -m [mvn_opts] -g [gitflow_opts]
-        gf-feature-finish() {
-          local gitbr="$(git branch --show-current 2> /dev/null)"
-          [[ -z "$gitbr" ]] && echo-error "gf-feature-finish: not in a git repository" && return 1
-          local featureName="${gitbr#*feature/}"
-          local mvn_opts="$1"; shift
-          local gitflow_opts="$1"; shift
-          eval-quiet mvn --batch-mode "$mvn_opts" gitflow:feature-finish -Dverbose=true -DkeepBranch=true -DfeatureName="$featureName" -DfeatureSquash=true -DincrementVersionAtFinish=true "$gitflow_opts"
-        }
-      fi
-        
-      .tick-login '[end] .setup-git'
-    }
-    ! ((_SKIP_GIT_SETUP)) && .setup-git
 
 
     #
@@ -952,10 +591,12 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login)" != 'true' ]]; then
   bootstrap-login-wrapper
 
   .reload-bootstrap-login() {
-    unset "_DOT_SH_MTIMES[sh_bootstrap_login]"
+    unset "_DOT_SH_MTIMES[~/.sh_bootstrap_login]"
     eval-quiet source ~/.sh_bootstrap_login
   }
 
   sh-store-mtime ~/.sh_bootstrap_login
   .tick-login "[END-FILE] (\$\$=$$), mtime=$_DOT_SH_MTIMES[sh_bootstrap_login]" #, \$PATH=[$PATH])"
 fi
+
+.source-extra-start-files '.sh_bootstrap_login'

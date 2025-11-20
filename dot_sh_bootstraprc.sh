@@ -178,35 +178,6 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
     lower <<< $@
   }
   #
-  substring_before_first() {
-    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
-    [[ ! -t 0 ]] && read line && printf "%s\n" "${line%%${delim}*}" && return 0
-    [[ -z "$1" ]] && >&2 echo "usage: substring_before_first [--delim DELIM] text [DELIM], or ... | substring_before_first [--delim DELIM]" && return 1
-    [[ -n "$2" ]] && delim="$2"
-    substring_before_first --delim "$delim" <<< "$1"
-  }
-  substring_before_last() {
-    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
-    [[ ! -t 0 ]] && read line && printf "%s\n" "${line%${delim}*}" && return 0
-    [[ -z "$1" ]] && >&2 echo "usage: substring_before_last [--delim DELIM] text [DELIM], or ... | substring_before_last [--delim DELIM]" && return 1
-    [[ -n "$2" ]] && delim="$2"
-    substring_before_last --delim "$delim" <<< "$1"
-  }
-  substring_after_first() {
-    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
-    [[ ! -t 0 ]] && read line && printf "%s\n" "${line#*${delim}}" && return 0
-    [[ -z "$1" ]] && >&2 echo "usage: substring_after_first [--delim DELIM] text [DELIM], or ... | substring_after_first [--delim DELIM]" && return 1
-    [[ -n "$2" ]] && delim="$2"
-    substring_after_first --delim "$delim" <<< "$1"
-  }
-  substring_after_last() {
-    local delim='.'; matches "$1" '--delim|-d' && delim="$2" && shift 2
-    [[ ! -t 0 ]] && read line && printf "%s\n" "${line##*${delim}}" && return 0
-    [[ -z "$1" ]] && >&2 echo "usage: substring_after_last [--delim DELIM] text [DELIM], or ... | substring_after_last [--delim DELIM]" && return 1
-    [[ -n "$2" ]] && delim="$2"
-    substring_after_last --delim "$delim" <<< "$1"
-  }
-  #
   # Expand '~' to value of $HOME, or compress value of $HOME to ~
   tilde-compress() {
     [[ ! -t 0 ]] && tilde-home-compress-expand 'tilde-compress' '${path//$HOME/\~}' $@ && return 0
@@ -247,7 +218,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
 
 
   .reload-bootstraprc() {
-    unset "_DOT_SH_MTIMES[sh_bootstraprc]"
+    unset "_DOT_SH_MTIMES[~/.sh_bootstraprc]"
     eval-quiet source ~/.sh_bootstraprc
   }
 

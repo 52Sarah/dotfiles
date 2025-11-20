@@ -50,14 +50,15 @@ if [[ "$(sh-ok-to-skip ~/.zlogin)" != 'true' ]]; then
     plugins+=(pipenv)
     plugins+=(vi-mode)
     
+    # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode/README.md
+    VI_MODE_SET_CURSOR=true
+    # VI_MODE_CURSOR_VISUAL=5 # blinking line
+    # VI_MODE_CURSOR_INSERT=5 # blinking line
+
     .tick-zlogin "... loading oh-my-zsh, plugins=[$plugins]"
     source "$ZSH/oh-my-zsh.sh"
     .tick-zlogin "... loaded oh-my-zsh, plugins=[$plugins]"
     
-    VI_MODE_SET_CURSOR=true
-    VI_MODE_CURSOR_VISUAL=5 # blinking line
-    VI_MODE_CURSOR_INSERT=5
-
     ZSH_THEME_GIT_PROMPT_PREFIX='('
     ZSH_THEME_GIT_PROMPT_SUFFIX=')'
     ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[green]%}%{✔%G%}"
@@ -160,13 +161,23 @@ if [[ "$(sh-ok-to-skip ~/.zlogin)" != 'true' ]]; then
       .tick-zshrc '... pipenv is not installed'
     fi
 
+    #
+    ### rancher desktop
+    #
+    if [[ -e ~/.rd/bin ]]; then
+      path-prepend "$HOME/.rd/bin"
+      .tick-zshrc '... prepended ~/.rd/bin to PATH'
+    else
+      .tick-zshrc '... no ~/.rd/bin to add to PATH'
+    fi
+
     .tick-zlogin "[END-WRAPPER] (\$\$=$$)"
   }
   zlogin-wrapper
 
   .reload-zlogin() {
     plugins=()
-    unset "_DOT_SH_MTIMES[zlogin]"
+    unset "_DOT_SH_MTIMES[~/.zlogin]"
     eval-quiet . ~/.zlogin
   }
   alias .rlzl='veval .reload-zlogin'

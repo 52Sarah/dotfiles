@@ -8,3 +8,4 @@ output = yaml
 
 [profile pwr-base]
 region = us-west-2
+output = json

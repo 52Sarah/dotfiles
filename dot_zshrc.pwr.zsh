@@ -55,10 +55,6 @@ if [[ "$(sh-ok-to-skip ~/.zshrc.pwr)" != 'true' ]]; then
     #
     ### PWR TOOLS
     #
-    # api tunneling from: https://1worldsync.atlassian.net/wiki/spaces/PE/pages/6947471385/Tunneling+Command+Examples
-    alias pwr-tn-api-analytics-etl-dark='eval-quiet pwr tn 4401:analytics-etl-dark.powerreviews.com:443'
-    
-
     alias pwr-tn-api-core-services='eval-quiet pwr tn 4504:core-services.powerreviews.com:443'
     alias pwr-tn-api-content-pub='eval-quiet pwr tn 4518:content-publication-api.powerreviews.com:443'
     alias pwr-tn-api-core-data-etl='eval-quiet pwr tn 6668:core-data-etl.powerreviews.com:443'
@@ -71,6 +67,9 @@ if [[ "$(sh-ok-to-skip ~/.zshrc.pwr)" != 'true' ]]; then
     alias pwr-tn-api-filtering='eval-quiet pwr tn 4512:filtering-api.powerreviews.io:443'
     alias pwr-tn-api-format='eval-quiet pwr tn 4514:format-api.powerreviews.io:443'
     alias pwr-tn-api-publication-worker='eval-quiet pwr tn 4516:publication-worker.powerreviews.io:443'
+    #
+    # api tunneling from: https://1worldsync.atlassian.net/wiki/spaces/PE/pages/6947471385/Tunneling+Command+Examples
+    alias pwr-tn-api-analytics-etl-dark='eval-quiet pwr tn 4401:analytics-etl-dark.powerreviews.com:443'
     #
     # the above aliases would work with curls like this:
     #     curl -X GET "https://localhost:4500/config-service/properties/m9794?keys=FTP_PASSWORD,FTP_USERNAME,FTP_SITE" \
@@ -229,17 +228,23 @@ if [[ "$(sh-ok-to-skip ~/.zshrc.pwr)" != 'true' ]]; then
       qeval "$c"
     }
     #
-    aws-secrets-list() {
+    aws-secrets-ls() {
       local c="aws secretsmanager list-secrets --query 'SecretList[].Name' $@ | sort | awk '{print \$2}'"
       qeval "$c"
     }
-    alias aws-secrets-ls='aws-secrets-list'
     aws-secrets-get() {
       [[ -z "$1" ]] && echo-error "usage: aws-secrets-get secret_name" && return 1
       local secret_name="$1"; shift 1
       local c="aws secretsmanager get-secret-value --secret-id '$secret_name' --output 'text' --query 'SecretString' $@"
       local c_out="$(qeval $c)"
       [[ -z "$c_out" ]] && return 1 || jq --sort-keys <<< "$c_out"
+    }
+    aws-ssm-ls() {
+      [[ -z "$1" ]] && echo-error "usage: aws-ssm-ls path" && return 1
+      local param_path="$1"; shift 1
+      local c="aws ssm get-parameters-by-path --path '$param_path' --recursive --with-decryption --output 'json' $@"
+      local c_out="$(qeval $c)"
+      [[ -z "$c_out" ]] && return 1 || jq --sort-keys -r '.Parameters[] | [.Name, .Type, .Value] | @tsv' <<< "$c_out"
     }
     #
     aws-find-assumable-roles() {
@@ -291,6 +296,16 @@ if [[ "$(sh-ok-to-skip ~/.zshrc.pwr)" != 'true' ]]; then
     gh-prl-branch() { eval-quiet gh prl-all --head "$GIT_BRANCH"; }
     gh-prl-all() { eval-quiet gh prl-all --search "'updated:>=$(date -v -${1:-30}d -I)'"; }
 
+    #
+    ### sftp
+    #
+    sftp-tesco() {
+      qeval sftp $@ tesco@external-sftp.powerreviews.com
+    }
+    sftp-tesco-historical-active-ls() {
+      local suffix="${1:-*}"
+      qeval "echo 'ls /data/prod/80244/historical/active-Review-${suffix}' | sftp-tesco"
+    }
   }
   zshrc-pwr-wrapper
 

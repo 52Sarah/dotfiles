@@ -31,6 +31,7 @@
         ".android",
         ".asdf",
         ".bash_sessions",
+        ".config/gcloud/virtenv",
         ".cups",
         ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
         ".m2",
@@ -41,7 +42,7 @@
         ".Trash",
         ".vmware",
         ".yarn",
-        ".zsh_sessions"
+        ".zcompcache", ".zsh_sessions"
       ],
       "file_include_patterns": [
         ".*/*",
@@ -67,8 +68,8 @@
       ],
     },
     {
-      "name": "~/ttpp/bin",
-      "path": "~/ttpp/bin",
+      "name": "~/bin",
+      "path": "~/bin",
       "folder_exclude_patterns": ["old"],
     },
 	]

@@ -3,19 +3,19 @@
 # Shell-agnostic git-related functions and aliases for login shells.
 
 # Do not execute this script if it has already been run this session and is not modified since.
-if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login.git)" != 'true' ]]; then
+if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
 
   # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-  is-defined .tick || safe-source ~/.tick.sh
-  .tick-login-git() { .tick -s ".sh_bootstrap_login" $@; }
-  .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.sh_bootstrap_login.git)"
+  is-command .tick || safe-source ~/.tick.sh
+  .tick-login-git() { .tick -s ".sh_login" $@; }
+  .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.sh_login.git)"
 
   bootstrap-login-git-wrapper() {
     .tick-login-git "[START-WRAPPER] (\$\$=$$)"
 
     .setup-git() {
       .tick-login '[start] .setup-git'
-      if ! is-defined git; then
+      if ! is-command git; then
         .tick-login "[end] .setup-git: git not installed"
         return 0
       fi
@@ -304,7 +304,7 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login.git)" != 'true' ]]; then
         done      
       }
 
-      if is-defined git-flow; then
+      if is-command git-flow; then
         .tick-login '... git-flow is installed'
         # https://github.com/aleksandr-m/gitflow-maven-plugin
 
@@ -343,10 +343,10 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstrap_login.git)" != 'true' ]]; then
   bootstrap-login-git-wrapper
 
   .reload-bootstrap-login-git() {
-    unset "_DOT_SH_MTIMES[~/.sh_bootstrap_login.git]"
-    eval-quiet source ~/.sh_bootstrap_login.git
+    unset "_DOT_MTIMES[~/.sh_login.git]"
+    eval-quiet source ~/.sh_login.git
   }
 
-  sh-store-mtime ~/.sh_bootstrap_login.git
-  .tick-login-git "[END-FILE] (\$\$=$$), mtime=$_DOT_SH_MTIMES[sh_bootstrap_login.git]"
+  dot-store-mtime ~/.sh_login.git
+  .tick-login-git "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[sh_login.git]"
 fi

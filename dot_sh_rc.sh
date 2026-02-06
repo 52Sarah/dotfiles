@@ -11,14 +11,24 @@
 #   4. ~/.zlogin for login shells
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
-[[ -e ~/.sh_bootstrap-0 ]] && source ~/.sh_bootstrap-0
+source ~/.sh_bootstrap
 
-# Do not execute this script if it has already been run this session and is not modified since.
-if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
-  
-  export DOTFILES="$HOME/ttpp/dotfiles"
+shrc-wrapper() {
+  local dot_fname='.sh_rc'
 
-  #
+  # Do not execute scripts if they have already been run this session and are not modified since.
+  dot-ok-to-skip ~/$dot_fname && return 
+
+  .reload-shrc() {
+    unset "_DOT_MTIMES[.sh_rc]"
+    eval-quiet source ~/.sh_rc
+  }
+
+  is-command .tick || safe-source ~/.tick.sh
+  .tick-shrc() { .tick -s ".sh_rc" $@; }
+  .tick-shrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.sh_rc)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
+
+
   ### Echo (and bubble) return status ($?) as-is, or use $1 for 0, $2 for non-0.
   echo-status() {
     local st=$?
@@ -31,7 +41,6 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
     return $st
   }
 
-  #
   # Replace newlines, carriage-returns and tabs with \n, \r and \t.
   echo-unescape() {
     if [[ ! -t 0 ]]; then
@@ -40,12 +49,12 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
       | sed -E 's/\$(\\n)/\1/g; s/\$$//g;'
       return 0;
     fi
-    [[ -z "$1" ]] && eecho 'usage: echo-unescape text [...] or echo-unescape <<< text' && return 1
+    [[ -z "$1" ]] && echo-stderr 'usage: echo-unescape text [...] or echo-unescape <<< text' && return 1
     echo-unescape <<< $@
   }
   #
   echo-variables() {
-    [[ -z "$1" ]] && echo-stderr 'usage: echo-var varname [...]'
+    [[ -z "$1" ]] && echo-stderr 'usage: echo-variables name [...]'
     local var value
     while [[ -n "$1" ]]; do
       var="$1"; shift 1
@@ -88,36 +97,46 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
   ### array/lines helpers
   #
   join-array() {
+    [[ -z "$1" ]] && echo-stderr "usage: join-array delim [text ...]" && return 1
     local delim="$1" && shift
-    local i_first=1
-    decho-var delim i_first $@
+    local is_first=1
     for i in $@; do
-      vecho-var i
-      [[ -n "$i_first" ]] && printf "%s" "$i" && unset i_first || printf "%s%s" "$delim" "$i"
+      if ((is_first)); then
+        printf "%s" "$i"
+        unset is_first
+      else
+         printf "%s%s" "$delim" "$i"
+       fi
     done
     printf '\n'
   }
   #
   uniq-array() {
-    local i_first=1
-    decho-var delim i_first $@
-    local buff=
+    local is_first=1 buff=
     for i in $@; do
-      vecho-var i
-      if (( i_first )); then
+      if ((is_first)); then
         buff="$i"
-        unset i_first
+        unset is_first
       else
-          bu  ff="$(printf '%s\n%s' "$buff" "$i")"
+          buff="$(printf '%s\n%s' "$buff" "$i")"
       fi
     done
     echo "$buff" | sort -s | uniq
   }
   #
-  # Concatenate trimmed lines from stdin onto a single line, delimited by $1 (or '')
+  # Concatenate trimmed lines from stdin onto a single line, delimited by $1
   join-lines() {
-      delim="${1:-}"
-      sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do [[ -n "$not1st" ]] && printf "%s" "$delim" || not1st=1; printf "%s" "$ln"; done; printf '\n'
+      local delim="$1"
+      local is_first=1
+      sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do 
+        if ((!is_first)) then
+          printf "%s" "$delim"
+        else
+          unset is_first
+        fi
+        printf "%s" "$ln"
+      done
+      printf '\n'
   }
   # Split line(s) from stdin into separate lines, using $1 [,] as delimiter
   split-lines() {
@@ -125,11 +144,10 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
       sed -E -e "s/([^$delim]*)$delim([^$delim]*)/\\1"\\$'\n'"\\2/g"
   }
 
-
   #
   ### path helpers
   #
-  # List path variable's elements, 1 per line.
+  # List path variable's elements, 1 per line. Defaults to PATH.
   path-list() {
     local var=${1:-PATH} elems
     is-zsh && elems="${(P)var}" || elems="${!var}"
@@ -140,12 +158,12 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
   #
   ## string/list handling helpers
   #
-  ends_with() {
-    [[ -z "$2" ]] && echo-stderr "usage: ends_with [--verbose] text suffix_to_test" && return 1
+  ends-with() {
+    [[ -z "$2" ]] && echo-stderr "usage: ends-with text suffix_to_test" && return 1
     [[ "$1" =~ .*$2$ ]]
   }
   starts_with() {
-    [[ -z "$2" ]] && echo-stderr "usage: starts_with [--verbose] text prefix_to_test" && return 1
+    [[ -z "$2" ]] && echo-stderr "usage: starts_with text prefix_to_test" && return 1
     [[ "$1" =~ ^$2.*$ ]]
   }
   #
@@ -180,34 +198,32 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
   #
   # Expand '~' to value of $HOME, or compress value of $HOME to ~
   tilde-compress() {
-    [[ ! -t 0 ]] && tilde-home-compress-expand 'tilde-compress' '${path//$HOME/\~}' $@ && return 0
-    [[ -z "$1" ]] && eecho "usage: tilde-compress path [...]" && return 1
+    [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde-compress' '${path//$HOME/\~}' $@ && return 0
+    [[ -z "$1" ]] && echo-stderr "usage: tilde-compress path [...]" && return 1
     tilde-compress <<< $@
   }
   tilde-expand() {
-    [[ ! -t 0 ]] && tilde-home-compress-expand 'tilde-expand' '${path//\~/$HOME}' && return 0
-    [[ -z "$1" ]] && eecho "usage: tilde-expand path [...]" && return 1
+    [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde-expand' '${path//\~/$HOME}' && return 0
+    [[ -z "$1" ]] && echo-stderr "usage: tilde-expand path [...]" && return 1
     tilde-expand <<< $@
   }
   #
   # Compress user's home folder to the literal string '$HOME' (for writing commands to a script file, generally)
   home-compress() {
-    [[ ! -t 0 ]] && tilde-home-compress-expand 'home-compress' '${path//$HOME/\$HOME}' $@ && return 0
-    [[ -z "$1" ]] && eecho "usage: home-compress path [...]" && return 1
+    [[ ! -t 0 ]] && _tilde-home-compress-expand 'home-compress' '${path//$HOME/\$HOME}' $@ && return 0
+    [[ -z "$1" ]] && echo-stderr "usage: home-compress path [...]" && return 1
     home-compress <<< $@
   }
   home-expand() {
-    [[ ! -t 0 ]] && tilde-home-compress-expand 'home-expand' '${path//\$HOME/$HOME}' $@ && return 0
-    [[ -z "$1" ]] && eecho "usage: home-expand path [...]" && return 1
+    [[ ! -t 0 ]] && _tilde-home-compress-expand 'home-expand' '${path//\$HOME/$HOME}' $@ && return 0
+    [[ -z "$1" ]] && echo-stderr "usage: home-expand path [...]" && return 1
     home-expand <<< $@
   }
   #
   # Convert stdin using the path_expr
-  tilde-home-compress-expand() {
-    [[ -z "$2" ]] && eecho "usage: tilde-home-compress-expand ${1:-fn_name} path_expr" && return 1
-    local fn_name="$1" && shift
-    local path_expr="$1" && shift
-
+  _tilde-home-compress-expand() {
+    [[ -z "$2" ]] && echo-stderr "usage: _tilde-home-compress-expand ${1:-fn_name} path_expr" && return 1
+    local fn_name="$1" path_expr="$2"
     local delim= path=
     while read path; do
       printf '%s%s' "$delim" "$(eval "echo $path_expr")"
@@ -217,18 +233,10 @@ if [[ "$(sh-ok-to-skip ~/.sh_bootstraprc)" != 'true' ]]; then
   }
 
 
-  .reload-bootstraprc() {
-    unset "_DOT_SH_MTIMES[~/.sh_bootstraprc]"
-    eval-quiet source ~/.sh_bootstraprc
-  }
+  source-extra-dot-files $dot_fname
+  dot-store-mtime ~/$dot_fname
 
-  .reload-shell() {
-    unset "_DOT_SH_MTIMES"
-    eval-quiet exec $SHELL -l
-  }
-  alias .rs='eval-verbose .reload-shell'
-
-  .source-extra-start-files '.sh_bootstraprc'
-
-  sh-store-mtime ~/.sh_bootstraprc
-fi
+  .tick-shrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+}
+shrc-wrapper $@
+unset -f shrc-wrapper .tick-shrc

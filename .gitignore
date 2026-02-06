@@ -1,6 +1,9 @@
-dot_secrets.toddpierzina.sh
+#! .gitignore
 
-dot_bash_profile__cat.sh
-dot_bashrc__cat.sh
-dot_mailmap
+**/.DS_Store
+**/Icon?
 
+**/*.sublime-workspace
+
+**/*.BAK
+**/*.BAK.*

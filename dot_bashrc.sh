@@ -7,10 +7,12 @@
 # 4. Any shell invoked as 'sh': $ENV file (~/.profile)
 # See: https://stackoverflow.com/a/18187389/160955
 
-[[ -e ~/.sh_bootstraprc ]] && source ~/.sh_bootstraprc
+source ~/.sh_bootstrap
+
+safe-source ~/.sh_rc
 
 # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-is-defined .tick || source ~/.tick.sh
+is-command .tick || source ~/.tick.sh
 .tick-bashrc() { .tick -s '.bashrc' $@; }
 .tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
 

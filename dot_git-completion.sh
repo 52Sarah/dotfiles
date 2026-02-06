@@ -161,7 +161,7 @@ __git_dequote ()
 
 # The following function is based on code from:
 #
-#   bash_completion - programmable completion functions for bash 3.2+
+#   bash_rccompletion - programmable completion functions for bash 3.2+
 #
 #   Copyright © 2006-2008, Ian Macdonald <ian@caliban.org>
 #             © 2009-2010, Bash Completion Maintainers
@@ -2156,7 +2156,7 @@ _git_pull ()
 	__git_complete_remote_or_refspec
 }
 
-__git_push_recurse_submodules="check on-demand only"
+__git_push_rcrecurse_submodules="check on-demand only"
 
 __git_complete_force_with_lease ()
 {
@@ -2182,7 +2182,7 @@ _git_push ()
 		return
 		;;
 	--recurse-submodules)
-		__gitcomp "$__git_push_recurse_submodules"
+		__gitcomp "$__git_push_rcrecurse_submodules"
 		return
 		;;
 	esac
@@ -2192,7 +2192,7 @@ _git_push ()
 		return
 		;;
 	--recurse-submodules=*)
-		__gitcomp "$__git_push_recurse_submodules" "" "${cur##--recurse-submodules=}"
+		__gitcomp "$__git_push_rcrecurse_submodules" "" "${cur##--recurse-submodules=}"
 		return
 		;;
 	--force-with-lease=*)

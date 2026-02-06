@@ -5,103 +5,55 @@
   # -w - ignore whitespace
   bl = blame -C -M -w
 
-  brcp = branch -C
-  brmv = branch -M
-  brrm = branch -D
-  brsu = branch --set-upstream-to
-  bruu = branch --unset-upstream
+  br-cp = branch -C
+  br-mv = branch -M
+  br-rm = branch -D
+  br-su = branch --set-upstream-to
+  br-uu = branch --unset-upstream
 
-  b = branch --list --ignore-case --sort=-committerdate --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:12,left)%(committerdate:relative)%(end)\\ \\ %(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(color:white)\\ %(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)%(color:reset)"
-  br = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(if)%(upstream)%(then)\\ %(color:white)%(align:2,left)[%(upstream:trackshort)]%(end)%(color:reset)%(end)%(end)\\ %(contents:subject)"
-  
-  bra = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(if)%(HEAD)%(then)%(color:magenta)%(else)%(color:reset)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(color:reset)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(else)%(color:reset)%(end)%(end)%(refname:short)%(color:cyan)%(if)%(upstream)%(then)\\ %(upstream:track)%(end)%(color:reset)%(end)\\ %(contents:subject)"
+  br =  branch --list --ignore-case --sort=-committerdate --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:12,left)%(committerdate:relative)%(end)\\ \\ %(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(color:white)\\ %(if)%(upstream)%(then)%(align:2,left)[%(upstream:trackshort)]%(end)%(end)%(color:reset)"
+  br0 = br
+  br1 = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(color:reset)%(if)%(HEAD)%(then)%(color:magenta)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(end)%(end)%(refname:short)%(if)%(upstream)%(then)\\ %(color:white)%(align:2,left)[%(upstream:trackshort)]%(end)%(color:reset)%(end)%(end)\\ %(contents:subject)"
+  br2 = branch --list --ignore-case --sort=-committerdate --column=never --format="%(if)%(HEAD)%(then)%(color:magenta)*%(else)%(color:yellow)\\ %(end)%(objectname:short)\\ \\ %(if)%(HEAD)%(then)%(color:magenta)%(else)%(color:reset)%(end)%(align:14,left)%(committerdate:format:%D\\ %H:%M)%(end)\\ \\ %(align:20,left)%(authorname)%(end)\\ %(align:60,left)%(if)%(HEAD)%(then)%(color:reset)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)%(color:cyan)%(else)%(color:reset)%(end)%(end)%(refname:short)%(color:cyan)%(if)%(upstream)%(then)\\ %(upstream:track)%(end)%(color:reset)%(end)\\ %(contents:subject)"
+  br3 = br2
 
-#  xbra = branch --list --ignore-case --sort=-committerdate --column=never --format="
-#    %(if)%(HEAD)%(then)
-#      %(color:magenta)*
-#    %(else)
-#      %(color:yellow)
-#      \\ 
-#    %(end)
-#    %(objectname:short)
-#    \\ \\
-#    %(if)%(HEAD)%(then)
-#      %(color:magenta)
-#    %(else)
-#      %(color:reset)
-#    %(end)
-#    %(align:14,left)
-#      %(committerdate:format:%D\\ %H:%M)
-#    %(end)
-#    \\ \\ 
-#    %(align:20,left)%(authorname)%(end)
-#    \\ 
-#    %(align:60,left)
-#      %(if)%(HEAD)%(then)%(else)
-#        %(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)
-#          %(color:cyan)
-#        %(else)
-#          %(color:reset)
-#        %(end)
-#      %(end)
-#      %(refname:short)
-#      %(color:white)
-#      %(if)%(upstream)%(then)
-#        \\ 
-#        %(upstream:track)
-#      %(end)
-#      %(color:reset)
-#    %(end)
-#    \\
-#    %(color:cyan) 
-#    %(if)%(upstream)%(then)
-#      [%(upstream:short)]
-#      \\ 
-#    %(end)
-#    %(color:reset)
-#    \\ 
-#    %(contents:subject)
-#"
- 
   co =    checkout
-  com =   checkout master
-  cod =   checkout develop
+  co-d =  checkout develop
+  co-m =  checkout main
 
-  cp =    cherry-pick --edit
+  cp = cherry-pick --edit
   
-  d =     diff
-  ds =    diff --stat-graph-width=20
-  dss =   diff --shortstat
-  dds =   diff --dirstat
-  dt =    difftool --dir-diff
+  d =   diff
+  ds =  diff --stat-graph-width=20
+  dss = diff --shortstat
+  dds = diff --dirstat
+  
+  dt =  difftool --dir-diff
 
   fet =   fetch --progress --verbose
-  fett =  fetch --tags
+  fett =  fetch --progress --verbose --tags
 
-  lo = log -20 --abbrev=6 --date='format:%D'
-  loo = log -20 --abbrev=short --date=human --use-mailmap
-  looo = log -20 --abbrev=short --date=human --use-mailmap --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%<(8)%ad %C(white)%<(12)%ar %C(bold cyan)%d%n  %C(reset)%s%C(reset)'
-  loooo = log -20 --abbrev=short --date=human --no-use-mailmap --stat --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%ad  %C(white)%<(12)%ar%C(bold cyan)%d%n  %C(white)%s%n  %C(reset)%b%C(reset)'
+  lo =   log -20 --abbrev=6 --date='format:%D'
+  lo0 =  lo
+  lo1 =  log -20 --abbrev=short --date=human --use-mailmap
+  lo2 =  log -20 --abbrev=short --date=human --use-mailmap --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%<(8)%ad %C(white)%<(12)%ar %C(bold cyan)%d%n  %C(reset)%s%C(reset)'
+  lo3 =  log -20 --abbrev=short --date=human --no-use-mailmap --stat --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%ad  %C(white)%<(12)%ar%C(bold cyan)%d%n  %C(white)%s%n  %C(reset)%b%C(reset)'
 
-  # Enhance git checkout with post-update hook, which pushes branch names into $git_dir/HEADS
-  # for this function to pop.
-  popb = !git-popb.sh
-
-  pff   = pull --ff-only --progress
-  pullf = pull --ff-only --progress
-  pullr = pull --rebase --progress
+  pff = pull --ff-only --progress
+  prb = pull --rebase --progress
 
   pushup = push --set-upstream origin HEAD
 
-  rab =   rebase --abort
-  rc =    rebase --continue
+  rab = rebase --abort
+  rco = rebase --continue
 
-  st = status --short
-  stt = status --column=dense --no-show-stash
-  # Show files in columns
-  sttt = status --column=nodense --show-stash
-  # Show files in columns, include ignored files; show diffs
-  stttt = status --column=nodense --show-stash --ignored=traditional --verbose
+  st =  status --short
+  st0 = st
+  st1 = status --column=dense --no-show-stash
+  # st2: Show files in columns
+  st2 = status --column=nodense --show-stash
+  # st3: Show files in columns, include ignored files; show diffs
+  st3 = status --column=nodense --show-stash --ignored=traditional --verbose
 
 [blame]
   coloring = highlightRecent  # options: repeatedLines, highlightRecent, NONE
@@ -136,13 +88,6 @@
   whitespace = -trailing-space,tab-in-indent,tabwidth=2
   # whitespace defaults: space-before-tab, -indent-with-non-tab, -cr-at-eol
 
-[credential]
-  helper =
-  helper = /usr/local/share/gcm-core/git-credential-manager
-
-[credential "https://dev.azure.com"]
-  useHttpPath = true
-
 # See: https://git-scm.com/docs/git-config#Documentation/git-config.txt-diffdirstat  
 #   .dirstat parameters: files|CHANGES|lines, cumulative|NONCUMULATIVE, 3 (cutoff %)
 #   .relative 'true' only performs diff in current directory and below
@@ -175,9 +120,6 @@
   decorate = short     # none|short|full|AUTO
   follow = true
   #! mailmap = true
-
-[mailmap]
-  file = /Users/dad/.mailmap
 
 [merge]
   #! autoStash = false
@@ -218,7 +160,7 @@
 [stash]
   #! showStat = true
 
-# by default, full "status" command is complete; "st" alias is terse
+# by default, full "status" command is complete; "s" alias is terse
 [status]
   aheadBehind = true
   branch = true  # only relevant for short=true
@@ -229,29 +171,19 @@
   showStash = true
   #! showUntrackedFiles = normal  # options: no|NORMAL|all
 
-[user]
-  name = Todd Pierzina
-  email = tpierzina@1worldsync.com
 
-
-#
 ### available colors, attributes
-#
-#
-# normal, black, red, green, yellow, blue, magenta, cyan, or white
-# bold, dim, ul (underline), blink, and reverse
-
+# - normal, black, red, green, yellow, blue, magenta, cyan, or white
+# - bold, dim, ul (underline), blink, and reverse
 [include]
   path = .gitconfig__colors
-  
-[filter "lfs"]
-	required = true
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
-[credential "https://github.com"]
-	helper = 
-	helper = !/usr/local/bin/gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = 
-	helper = !/usr/local/bin/gh auth git-credential
+
+
+### Group 1001 specifics
+
+[user]
+  name = Todd Pierzina
+  email = todd.pierzina@group1001.com
+
+[http]
+  sslcainfo = /Users/todd.pierzina/.onyx-env/onyx-truststore.pem

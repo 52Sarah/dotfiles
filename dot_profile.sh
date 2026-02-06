@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # For interactive/login shells, Bash reads, in order:
-#   - ~/.bash_profile || ~/.bash_login || ~/.profile
+#   - ~/.bash_rcprofile || ~/.bash_rclogin || ~/.profile
 #   - once it finds one it stops looking
 # For non-interactive shells, Bash reads the $BASH_ENV file (usually ~/.bashrc).
 #

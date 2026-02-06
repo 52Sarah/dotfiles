@@ -1,9 +1,3 @@
-seconds_apart() {
-    local before="$1" && shift
-    local after="$1" && shift
-    echo $(( $(date +%s -d "$after") - $(date +%s -d "$before") ))
-}
-
 # Scale memory numbers to TB/GB/MB/KB; $1 = bytes, $2 = places [1]
 nice_byte_size() {
     local orig="$(from_stdin)"

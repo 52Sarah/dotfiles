@@ -8,8 +8,6 @@
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
 #   --vars        log each variable given along with its value
 
-source ~/.sh_bootstrap
-
 # Return true (0) if tick is not disabled AND/OR is enabled for this script ($1).
 .tick-enabled() {
   local scriptf="$1"
@@ -48,15 +46,15 @@ source ~/.sh_bootstrap
 
   # If delta is 10+ seconds, presume we've re-executed .tick in a new train of thought
   local datetime_ms="$(datetime-plus-ms 3 '%D %T')" epoch_ms="$(datetime-epoch-ms)" delta=0
-  if ((TICK__LAST_MS)); then
-    delta=$((epoch_ms - TICK__LAST_MS))
+  if ((_TICK_LAST_MS)); then
+    delta=$((epoch_ms - _TICK_LAST_MS))
     ((delta >= 10000)) && delta=0
   fi
   if ! ((delta)); then
     _TICK_INDENT=0
     printf "\n" >> ~/.tick.log
   fi
-  export TICK__LAST_MS=$epoch_ms
+  export _TICK_LAST_MS=$epoch_ms
 
   # unindent for [finish]
   if ((_TICK_INDENT >= 2)); then
@@ -88,8 +86,8 @@ datetime-epoch-ms() {
 }
 
 
-.ticklog-tail()  { qeval tail $@ ~/.tick.log; }
-.ticklog-less()  { qeval less $@ ~/.tick.log; }
-.ticklog-rm()    { qeval rm -v $@ ~/.tick.log; }
+.ticklog-tail()  { touch ~/.tick.log; eval-quiet tail $@ ~/.tick.log; }
+.ticklog-less()  { touch ~/.tick.log; eval-quiet less $@ ~/.tick.log; }
+.ticklog-rm()    { eval-quiet rm -v $@ ~/.tick.log; }
 
-alias .reload-tick='qeval . ~/.tick.sh'
+alias .reload-tick='eval-quiet . ~/.tick.sh'

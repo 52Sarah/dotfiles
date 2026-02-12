@@ -46,15 +46,17 @@
       ],
       "file_include_patterns": [
         ".*/*",
+        "*.sh", "*.bash", "*.zsh",
         ".alias",
-        ".bash_login*",
+        ".bash*",
         ".git*",
         ".pwr",
         ".secrets",
-        ".zsh*"
+        ".sh*",
+        ".z*"
       ],
       "file_exclude_patterns": [
-        ".zsh_history"
+        ".zcompdump", ".zsh_history"
       ],
     },    {
       "name": "/etc",
@@ -68,9 +70,8 @@
       ],
     },
     {
-      "name": "~/bin",
-      "path": "~/bin",
-      "folder_exclude_patterns": ["old"],
+      "name": "onyx-jvm/scripts/env",
+      "path": "~/Workspace/onyx-jvm/scripts/env",
     },
 	]
 }

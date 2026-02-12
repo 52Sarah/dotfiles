@@ -1,82 +1,87 @@
 #!/usr/bin/env bash
 
 # At startup, Bash reads from:
-# 1. Login shells: first of [~/.bash_profile, ~/.bash_login, ~/.profile]
-# 2. Interactive shells: ~/.bashrc
-# 3. Non-interactive shells: $BASH_ENV (~/.bashrc)
-# 4. Any shell invoked as 'sh': $ENV file (~/.profile)
-# See: https://stackoverflow.com/a/18187389/160955
+#   * login shells: first of ~/.bash_profile, ~/.bash_login, ~/.profile
+#   * interactive shells: ~/.bashrc
+#   * non-interactive shells: $BASH_ENV (set here to ~/.bashrc)
+#   * shells invoked as 'sh':
+#     - login shells: ~/.profile
+#     - interactive shells: $ENV file (set here to ~/.profile)
+# See: https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
 
 source ~/.sh_bootstrap
 
-safe-source ~/.sh_rc
+.bashrc-wrapper() {
+  local dot_fname='.bashrc'
 
-# Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-is-command .tick || source ~/.tick.sh
-.tick-bashrc() { .tick -s '.bashrc' $@; }
-.tick-bashrc "[START-FILE] (\$\$=$$, \$PATH=[$PATH]"
+  # Do not execute scripts if they have already been run this session and are not modified since.
+  dot-ok-to-skip ~/$dot_fname && return 
 
-bashrc-wrapper() {
+  .reload-bashrc() {
+    dot-reset-mtimes
+    eval-quiet source ~/.bashrc
+  }
+  alias .rlzrc='eval-verbose .reload-bashrc'
 
-  # Private env vars, etc. can be in the optional file ~/.secrets.
-  if [[ -e ~/.secrets ]]; then
-    source ~/.secrets
-    .tick-bashrc '... read ~/.secrets'
-  fi
+  .tick-bashrc() { .tick -s '.bashrc' $@; }
+  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.bashrc)" #, \$PATH=[$PATH]"
 
-  # Put my homemade scripts and other miscellany here at the start of the classpath.
-  if ! matches "$PATH" "$HOME/bin(:|$)"; then
-    export PATH="$HOME/bin:$PATH"
-    .tick-bashrc "... prepended ~/bin to PATH"
-  fi
+  safe-source ~/.sh_rc
+
 
   #
   ### ASDF
   #
-  if [[ -e ~/.asdf/asdf.sh ]]; then
+  if ! [[ -f ~/.asdf/asdf.sh ]]; then
+    .tick-bashrc '[skip] asdf: no .asdf/asdf.sh file to read'
+  else
     source ~/.asdf/asdf.sh
     .tick-bashrc '... read ~/.asdf/asdf.sh'
-    # _QUIET=1 safe-source ~/.asdf/plugins/java/set-java-home.bash
-    # PATH="/usr/local/opt/openjdk/bin:$PATH"
+  fi
+
+  #
+  ### ITERM shell integration and prompt/display helpers
+  #
+  if [[ ! -f "$HOME/.iterm2_shell_integration.bash" ]]; then
+    .tick-bashrc '[skip] ~/iterm2: no iterm2_shell_integration.zsh file to read'
+  elif [[ "$TERM_PROGRAM" != "iTerm.app" ]]; then
+    .tick-bashrc "[skip] iTerm2 not default terminal program"
+  else
+    .tick-bashrc ' ... loading iTerm2 bash shell integration'
+    source "$HOME/.iterm2_shell_integration.bash"
+    export ITERM_BADGE="$ITERM_PROFILE"
+    iterm2_print_user_vars() {
+      iterm2_set_user_var badge "$ITERM_BADGE"
+    }
+    # From https://superuser.com/a/344397/17666
+    # Note that tab and window take effect imediately; badge needs to wait for a prompt display
+    iterm-text() {
+      local USAGE="usage: iterm-text ${ITERM_BADGE:+--badge|}--tab|--window TEXT..."
+      local mode= do_tab= do_window= do_badge= obj="tab and window"
+      while [[ "$1" ]]; do case "$1" in
+        -t|--tab)   do_tab=1; shift 1;;
+        -w|--win*)  do_window=1; shift 1;;
+        -b|--badge) do_badge=1; shift 1;;
+        -*) echo-error "iterm-text: illegal option -- $1"
+            echo-error $USAGE
+            return 1;;
+        *) break;;
+      esac; done
+      [[ -z "$do_tab$do_window$do_badge" ]] && do_tab=1 do_window=1 do_badge=${+ITERM_BADGE}
+      local text="$@"
+      [[ -z "$text" ]] && echo-error "$USAGE" && return 1
+
+      ((do_tab))    && echo -ne "\e]1;$text\a"    && echo-verbose "Updated iTerm tab title to: $text"
+      ((do_window)) && echo -ne "\e]2;$text\a"    && echo-verbose "Updated iTerm window title to: $text"
+      ((do_badge))  && export ITERM_BADGE="$text" && echo-verbose "Updating iTerm badge to: $text"
+    }
+    alias itt='iterm-text'
   fi
 
 
-  #
-  ### PowerReviews-specific
-  #
-  setup-npm() {
-    .tick-bashrc '[start] setup npm/Node/Nexus'
+  source-extra-dot-files $dot_fname
+  dot-store-mtime ~/$dot_fname
 
-    local rootca_pem="$(mkcert -CAROOT)/rootCA.pem"
-    if [[ -e "$rootca_pem" ]]; then
-      export NODE_EXTRA_CA_CERTS="$rootca_pem"
-    else
-      .tick-bashrc "... $rootca_pem: No such file; cannot set NODE_EXTRA_CA_CERTS"
-    fi
-
-    for yarn_bin in ~/.yarn/bin ~/.config/yarn/global/node_modules/.bin; do
-      if [[ -e "$yarn_bin" ]]; then
-        path-append --prepend "$yarn_bin"
-      else
-        .tick-bashrc "... $yarn_bin: No such directory; cannot prepend to PATH"
-      fi
-    done
-    _QUIET=1 safe-source $HOME/.configure_nexus_npm_token.sh
-
-    .tick-bashrc '[end] setup npm/Node/Nexus'
-  }
-  setup-npm
-  #
-  ### PWR-JUMPER
-  #
-  if [[ -e ~/.pwrfunc.sh ]]; then
-    source ~/.pwrfunc.sh
-    .tick-bashrc '... read ~/.pwrfunc.sh'
-  fi
-
-  .tick-bashrc "[END-FILE] (\$\$=$$, \$PATH=[$PATH])"
+  .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }
-bashrc-wrapper $@
-
-alias .reload-bashrc='qeval source ~/.bashrc'
-alias .rlbrc='veval .reload-bashrc'
+.bashrc-wrapper && unset -f .bashrc-wrapper .tick-bashrc

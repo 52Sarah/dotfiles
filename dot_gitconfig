@@ -54,6 +54,7 @@
   st2 = status --column=nodense --show-stash
   # st3: Show files in columns, include ignored files; show diffs
   st3 = status --column=nodense --show-stash --ignored=traditional --verbose
+	whatchanged = log --raw --no-merges
 
 [blame]
   coloring = highlightRecent  # options: repeatedLines, highlightRecent, NONE
@@ -186,4 +187,4 @@
   email = todd.pierzina@group1001.com
 
 [http]
-  sslcainfo = /Users/todd.pierzina/.onyx-env/onyx-truststore.pem
+	sslcainfo = /Users/todd.pierzina/.onyx-env/onyx-truststore.pem

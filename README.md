@@ -1,5 +1,12 @@
 # dotfiles README
 
+At startup, standard Zsh reads in order from:
+  1. ~/.zshenv
+  2. ~/.zprofile for login shells
+  3. ~/.zshrc for interactive shells
+  4. ~/.zlogin for login shells
+See: https://zsh.sourceforge.io/Doc/Release/Files.html
+
 ## overview
 
 These startup files are intended to support Zsh or Bash, and to provide for easily enabling
@@ -25,27 +32,27 @@ Checked in ~/.sh_bootstrap:
   - `_DEBUG`, `_VERBOSE`, `_QUIET`: used to control echo/printf/eval helpers, set to 1 if enabled
 
 Checked in ~/.sh_bootstrap_login:
-  - `_SKIP_HOMEBREW_SETUP`
-  - `_SKIP_ITERM_SETUP`
-  - `_SKIP_SDKMAN_SETUP`
-  - `_SKIP_JENV_SETUP`
-  - `_SKIP_POSTGRES_SETUP`
-  - `_SKIP_SCHEMASPY_SETUP`
+  - `_DOT_SKIP_HOMEBREW_SETUP`
+  - `_DOT_SKIP_ITERM_SETUP`
+  - `_DOT_SKIP_JENV_SETUP`
+  - `_DOT_SKIP_PIPENV_SETUP`
+  - `_DOT_SKIP_POSTGRES_SETUP`
+  - `_DOT_SKIP_RANCHER_DESKTOP_SETUP`
+  - `_DOT_SKIP_SCHEMASPY_SETUP`
+  - `_DOT_SKIP_SDKMAN_SETUP`
 
 Used in multiple files:
   - `_DOT_MTIMES` is the associative array used to hold mtimes
+
+Used internally in .tick.sh:
+  - `_TICK_LAST_MS` - used to determine gap between calls to .tick
+  - `_TICK_INDENT` - indents at [start] lines, outdents at [end]/[finish] lines
+
 
 ### indicator files
 
 
 ## startup file loading
-
-At startup, standard Zsh reads in order from:
-  1. ~/.zshenv
-  2. ~/.zprofile for login shells
-  3. ~/.zshrc for interactive shells
-  4. ~/.zlogin for login shells
-See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
 The startup dotfiles are executed in this fashion, building on the standard startup files:
   
@@ -181,5 +188,11 @@ The .reload-* functions will always force a reload by removing the mtime for the
 
 ### "tick" logging
 
-To facilitate tracing and troubleshooting login without cluttering the console, the .tick subsystem
-provides configurable logging.
+To facilitate tracing and troubleshooting login without cluttering the console, the .tick subsystem provides configurable logging.
+
+It can be controlled with the following variables and/or marker files.
+As soon as the first match is found, .tick will stop looking.
+  - ~/.tick.disabled - globally disable
+  - ~/.tick.enabled - globally enable
+  - ~/.tick.stdout - globally enable and echo all lines to stdout
+  - ~/.tick.stderr - globally enable and echo all lines to stderr

@@ -4,12 +4,12 @@
 #   1. ~/.zshenv
 #   2. ~/.zprofile for login shells
 #   3. ~/.zshrc for interactive shells
-#   4. ~/.zlogin for login shells
+#   4. ~/.zlogin for login shells; should only include late-init items
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
 source ~/.sh_bootstrap
 
-zlogin-wrapper() {
+.zlogin-wrapper() {
   local dot_fname='.zlogin'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
@@ -17,17 +17,18 @@ zlogin-wrapper() {
 
   .reload-zlogin() {
     plugins=()
-    unset "_DOT_MTIMES[.zlogin]"
+    dot-reset-mtimes
     eval-quiet . ~/.zlogin
   }
   alias .rlzl='eval-verbose .reload-zlogin'
 
-  is-command .tick || source ~/.tick.sh
   .tick-zlogin() { .tick -s ".zlogin" $@; }
   .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.zlogin)"
 
   safe-source ~/.sh_login
 
+  # A non-interactive login shell requires the interactive environment setup.
+  safe-source ~/.zshrc
 
   # Shell scripts executed with sh will read this file.
   export ENV=~/.zlogin
@@ -156,39 +157,9 @@ zlogin-wrapper() {
   alias -g NERR='2> /dev/null'
 
 
-  #
-  ### pipenv
-  #
-  if [[ -e ~/.local ]]; then
-    path-prepend "$HOME/.local/bin"
-    .tick-zlogin '... prepended ~/.local/bin to PATH'
-  else
-    .tick-zlogin '... no ~/.local/bin to add to PATH'
-  fi
-  #
-  if is-command pipenv; then
-    export PIPENV_SHELL=/bin/zsh
-    # eval "$(_PIPENV_COMPLETE=zsh_source pipenv)"
-    .tick-zlogin '... initialized pipenv'
-  else
-    .tick-zlogin '... pipenv is not installed'
-  fi
-
-  #
-  ### rancher desktop
-  #
-  if [[ -e ~/.rd/bin ]]; then
-    path-prepend "$HOME/.rd/bin"
-    .tick-zlogin '... prepended ~/.rd/bin to PATH'
-  else
-    .tick-zlogin '... no ~/.rd/bin to add to PATH'
-  fi
-
-
   source-extra-dot-files $dot_fname
   dot-store-mtime ~/$dot_fname
 
   .tick-zlogin "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }
-zlogin-wrapper $@
-unset -f zlogin-wrapper .tick-zlogin
+.zlogin-wrapper && unset -f .zlogin-wrapper

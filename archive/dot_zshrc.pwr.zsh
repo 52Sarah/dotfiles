@@ -306,6 +306,42 @@ if [[ "$(sh-ok-to-skip ~/.zshrc.pwr)" != 'true' ]]; then
       local suffix="${1:-*}"
       qeval "echo 'ls /data/prod/80244/historical/active-Review-${suffix}' | sftp-tesco"
     }
+
+    #
+    ### PowerReviews-specific
+    #
+    setup-npm-nexus() {
+      .tick-bashrc '[start] setup npm/Node/Nexus'
+
+      local rootca_pem="$(mkcert -CAROOT)/rootCA.pem"
+      if [[ -e "$rootca_pem" ]]; then
+        export NODE_EXTRA_CA_CERTS="$rootca_pem"
+      else
+        .tick-bashrc "... $rootca_pem: No such file; cannot set NODE_EXTRA_CA_CERTS"
+      fi
+
+      for yarn_bin in ~/.yarn/bin ~/.config/yarn/global/node_modules/.bin; do
+        if [[ -e "$yarn_bin" ]]; then
+          path-append --prepend "$yarn_bin"
+        else
+          .tick-bashrc "... $yarn_bin: No such directory; cannot prepend to PATH"
+        fi
+      done
+      _QUIET=1 safe-source $HOME/.configure_nexus_npm_token.sh
+
+      .tick-bashrc '[end] setup npm/Node/Nexus'
+    }
+    setup-npm-nexus
+
+    #
+    ### PWR-JUMPER
+    #
+    if [[ -e ~/.pwrfunc.sh ]]; then
+      source ~/.pwrfunc.sh
+      .tick-bashrc '... read ~/.pwrfunc.sh'
+    fi
+
+
   }
   zshrc-pwr-wrapper
 

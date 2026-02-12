@@ -5,20 +5,26 @@
 # Do not execute this script if it has already been run this session and is not modified since.
 if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
 
-  # Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-  is-command .tick || safe-source ~/.tick.sh
-  .tick-login-git() { .tick -s ".sh_login" $@; }
-  .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.sh_login.git)"
-
   bootstrap-login-git-wrapper() {
-    .tick-login-git "[START-WRAPPER] (\$\$=$$)"
+    local dot_fname='.sh_login.git'
+
+    # Do not execute scripts if they have already been run this session and are not modified since.
+    dot-ok-to-skip ~/$dot_fname && return 
+
+    .reload-login-git() {
+      unset "_DOT_MTIMES[.sh_login.git]"
+      eval-quiet source ~/.sh_login.git
+    }
+
+    .tick-login-git() { .tick -s ".sh_login.git" $@; }
+    .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/$dot_fname)"
 
     .setup-git() {
-      .tick-login '[start] .setup-git'
       if ! is-command git; then
-        .tick-login "[end] .setup-git: git not installed"
+        .tick-login "[skip] .setup-git: git not installed"
         return 0
       fi
+      .tick-login '[start] .setup-git'
 
       # usage: git-alias [--max-count n] [patt]
       git-alias() {
@@ -335,12 +341,10 @@ if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
         
       .tick-login '[end] .setup-git'
     }
-    ! ((_SKIP_GIT_SETUP)) && .setup-git
+    .setup-git
 
-
-    .tick-login-git "[END-WRAPPER] (\$\$=$$)"
   }
-  bootstrap-login-git-wrapper
+  bootstrap-login-git-wrapper; unset -f bootstrap-login-git-wrapper
 
   .reload-bootstrap-login-git() {
     unset "_DOT_MTIMES[~/.sh_login.git]"

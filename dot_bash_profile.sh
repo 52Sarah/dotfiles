@@ -1,40 +1,53 @@
 #!/usr/bin/env bash
 
 # At startup, Bash reads from:
-# 1. Login shells: first of [~/.bash_rcprofile, ~/.bash_rclogin, ~/.profile]
-# 2. Interactive shells: ~/.bashrc
-# 3. Non-interactive shells: $BASH_ENV (~/.bashrc)
-# 4. Any shell invoked as 'sh': $ENV file (~/.profile)
-# See: https://stackoverflow.com/a/18187389/160955
+#   * login shells: first of ~/.bash_profile, ~/.bash_login, ~/.profile
+#   * interactive shells: ~/.bashrc
+#   * non-interactive shells: $BASH_ENV (set here to ~/.bashrc)
+#   * shells invoked as 'sh':
+#     - login shells: ~/.profile
+#     - interactive shells: $ENV file (set here to ~/.profile)
+# See: https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
 
 source ~/.sh_bootstrap
 
-# Don't show the 'zsh is the default shell' message.
-export BASH_SILENCE_DEPRECATION_WARNING=1
+.bash-profile-wrapper() {
+  local dot_fname='.bash_profile'
 
-[[ -e ~/.bashrc ]] && source ~/.bashrc
+  dot-ok-to-skip ~/$dot_fname && return 
 
-# Simple login file debugging to ~/.tick.log and/or stdout/stderr.
-is-command .tick || source ~/.tick.sh
-.tick-bash-profile() { .tick -s '.bash_rcprofile' $@; }
-.tick-bash-profile "[START-FILE] (\$\$=[$$], \$PATH=[$PATH], \$PS1=[$PS1])"
+  .reload-bash-profile() {
+    dot-reset-mtimes
+    eval-quiet . ~/.bash_profile
+  }
+  alias .rlpf='eval-verbose .reload-bash-profile'
+
+  .tick-bash-profile() { .tick -s ".bash_profile" $@; }
+  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.bash_profile)"
+
+  safe-source ~/.sh_profile
 
 
-# Shell scripts executed with Bash will read this file.
-export BASH_ENV=~/.bashrc
+  # A non-interactive login shell requires the interactive environment setup.
+  safe-source ~/.bashrc
 
-bash-profile-wrapper() {
+
+  # Don't show the 'zsh is the default shell' message.
+  export BASH_SILENCE_DEPRECATION_WARNING=1
+
+  # Shell scripts executed with Bash will read this file.
+  export BASH_ENV=~/.bashrc
 
   # Shell scripts executed with sh will read this file.
-  export ENV=~/.profile
+  export ENV=~/.bash_profile
 
   # Exclude from tab completion
   export FIGNORE='DS_Store:Icon?'
 
+
+  source-extra-dot-files $dot_fname
+  dot-store-mtime ~/$dot_fname
+
+  .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
 }
-bash-profile-wrapper $@
-
-alias .reload-bash-profile='qeval source ~/.bash_rcprofile'
-alias .rlbp='veval .reload-bash-profile'
-
-.tick-bash-profile "[END-FILE] (\$\$=[$$], \$PATH=[$PATH])"
+.bash-profile-wrapper && unset -f .bash-profile-wrapper

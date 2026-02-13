@@ -12,7 +12,7 @@ source ~/.sh_bootstrap
 .zprofile-wrapper() {
   local dot_fname='.zprofile'
 
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-zprofile() {
     unset "_DOT_MTIMES[.zprofile]"
@@ -21,7 +21,7 @@ source ~/.sh_bootstrap
   alias .rlzp='eval-verbose .reload-zprofile'
 
   .tick-zprofile() { .tick -s ".zprofile" $@; }
-  .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.zprofile)"
+  .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zprofile), \$SHELL=$SHELL"
 
   safe-source ~/.sh_profile
 
@@ -30,7 +30,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-zprofile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
 }

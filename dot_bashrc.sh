@@ -15,16 +15,16 @@ source ~/.sh_bootstrap
   local dot_fname='.bashrc'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-bashrc() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet source ~/.bashrc
   }
   alias .rlbrc='eval-verbose .reload-bashrc'
 
   .tick-bashrc() { .tick -s '.bashrc' $@; }
-  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.bashrc)" #, \$PATH=[$PATH]"
+  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.bashrc), \$SHELL=$SHELL"
 
   # Local overrides might be in ~.zshenv; since Bash has no equivalent, read that file here too.
   if [[ ! -f ~/.zshenv ]]; then
@@ -78,7 +78,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

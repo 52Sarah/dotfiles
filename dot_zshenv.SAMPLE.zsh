@@ -1,5 +1,6 @@
 #!/usr/bin/env zsh
 
+export _DOT_SKIP_OHMYZSH_SETUP=1
 export _DOT_SKIP_ITERM_SETUP=1
 export _DOT_SKIP_PIPENV_SETUP=1
 export _DOT_SKIP_RANCHER_DESKTOP_SETUP=1

@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 # Executes with Zsh or Bash.
 # If .tick-enabled(), .tick logs to ~/.tick.log.
@@ -90,4 +90,4 @@ datetime-epoch-ms() {
 .ticklog-less()  { touch ~/.tick.log; eval-quiet less $@ ~/.tick.log; }
 .ticklog-rm()    { eval-quiet rm -v $@ ~/.tick.log; }
 
-alias .reload-tick='eval-quiet . ~/.tick.sh'
+alias .reload-tick='eval-quiet . ~/.tick'

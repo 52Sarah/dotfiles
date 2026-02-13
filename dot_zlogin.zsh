@@ -13,17 +13,17 @@ source ~/.sh_bootstrap
   local dot_fname='.zlogin'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-zlogin() {
     plugins=()
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet . ~/.zlogin
   }
   alias .rlzl='eval-verbose .reload-zlogin'
 
   .tick-zlogin() { .tick -s ".zlogin" $@; }
-  .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.zlogin)"
+  .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zlogin), \$SHELL=$SHELL"
 
   safe-source ~/.sh_login
 
@@ -33,52 +33,62 @@ source ~/.sh_bootstrap
   # Shell scripts executed with sh will read this file.
   export ENV=~/.zlogin
 
-  ### START: Zsh-specific settings [mostly from zshrc.zsh-template]
+
   #
-  zstyle ':omz:update' mode auto
-  zstyle ':omz:update' verbosity minimal
-
-  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
-  ZSH_THEME=robbyrussell
-
-  CASE_SENSITIVE=false
-  HYPHEN_SENSITIVE=true
-  ENABLE_CORRECTION=true
-  COMPLETION_WAITING_DOTS="%F{white}waiting...%f"
-  DISABLE_UNTRACKED_FILES_DIRTY=true
-  HIST_STAMPS="%m/%d %H:%M:%S"
-
-  # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
-  # plugins+=(alias-finder)
-  plugins+=(asdf)
-  plugins+=(autojump)
-  plugins+=(colored-man-pages)
-  plugins+=(gh)
-  plugins+=(git-prompt)
-  plugins+=(pipenv)
-  plugins+=(vi-mode)
-  
-  # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode/README.md
-  VI_MODE_SET_CURSOR=true
-  # VI_MODE_CURSOR_VISUAL=5 # blinking line
-  # VI_MODE_CURSOR_INSERT=5 # blinking line
-
-  if [[ -e "$HOME/.oh-my-zsh" ]]; then
-    .tick-zlogin "... loading oh-my-zsh, plugins=[$plugins]"
-    export ZSH="$HOME/.oh-my-zsh"
-    source "$ZSH/oh-my-zsh.sh"
-    .tick-zlogin "... loaded oh-my-zsh, ZSH=$ZSH, plugins=[$plugins]"
+  ### OH-MY-ZSH
+  #
+  if ((_DOT_SKIP_OHMYZSH_SETUP)); then
+    .tick-zlogin "[skip] Oh My Zsh: _DOT_SKIP_OHMYZSH_SETUP"
+  elif [[ ! -e "$HOME/.oh-my-zsh" ]]; then
+    .tick-zlogin "[skip] Oh My Zsh: no ~/.oh-my-zsh directory found"
   else
-    .tick-zlogin "... not loading oh-my-zsh, not present in $HOME/.oh-my-zsh"
+    .setup-oh-my-zsh() {
+      .tick-zlogin "[start] .setup-oh-my-zsh"
+      
+      export ZSH="$HOME/.oh-my-zsh"
+      plugins=()
+
+      zstyle ':omz:update' mode auto
+      zstyle ':omz:update' verbosity minimal
+
+      # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+      ZSH_THEME=robbyrussell
+
+      CASE_SENSITIVE=false
+      HYPHEN_SENSITIVE=true
+      ENABLE_CORRECTION=true
+      COMPLETION_WAITING_DOTS="%F{white}waiting...%f"
+      DISABLE_UNTRACKED_FILES_DIRTY=true
+      HIST_STAMPS="%m/%d %H:%M:%S"
+
+      # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
+      # plugins+=(alias-finder)
+      # plugins+=(autojump)
+      # plugins+=(colored-man-pages)
+      # plugins+=(gh)
+      # plugins+=(git-prompt)
+      # plugins+=(vi-mode)
+      
+      # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode/README.md
+      VI_MODE_SET_CURSOR=true
+      # VI_MODE_CURSOR_VISUAL=5 # blinking line
+      # VI_MODE_CURSOR_INSERT=5 # blinking line
+
+      .tick-zlogin " ... sourcing ~/oh-my-zsh.sh"
+      source "$ZSH/oh-my-zsh.sh"
+      .tick-zlogin " ... sourced ~/oh-my-zsh.sh"
+      
+      ZSH_THEME_GIT_PROMPT_PREFIX='('
+      ZSH_THEME_GIT_PROMPT_SUFFIX=')'
+      ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[green]%}%{✔%G%}"
+      # ZSH_THEME_GIT_SHOW_UPSTREAM=1
+      # ZSH_THEME_GIT_PROMPT_UPSTREAM_SEPARATOR="%{$reset_color%}|%{$fg[cyan]%}"
+
+      .tick-zlogin "[end] .setup-oh-my-zsh, plugins=$plugins"
+    }
+    .setup-oh-my-zsh
   fi
-  
-  ZSH_THEME_GIT_PROMPT_PREFIX='('
-  ZSH_THEME_GIT_PROMPT_SUFFIX=')'
-  ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[green]%}%{✔%G%}"
-  # ZSH_THEME_GIT_SHOW_UPSTREAM=1
-  # ZSH_THEME_GIT_PROMPT_UPSTREAM_SEPARATOR="%{$reset_color%}|%{$fg[cyan]%}"
-  #
-  ### FINISH: Zsh-specific settings from zshrc.zsh-template
+
 
   ### See: https://zsh.sourceforge.io/Doc/Release/Options.html
   #
@@ -158,7 +168,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-zlogin "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

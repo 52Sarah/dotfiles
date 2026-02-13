@@ -14,16 +14,16 @@ source ~/.sh_bootstrap
 .bash-profile-wrapper() {
   local dot_fname='.bash_profile'
 
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-bash-profile() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet . ~/.bash_profile
   }
   alias .rlbp='eval-verbose .reload-bash-profile'
 
   .tick-bash-profile() { .tick -s ".bash_profile" $@; }
-  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.bash_profile)"
+  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.bash_profile), \$SHELL=$SHELL"
 
   safe-source ~/.sh_profile
 
@@ -46,7 +46,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
 }

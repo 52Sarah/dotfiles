@@ -13,16 +13,16 @@ source ~/.sh_bootstrap
   local dot_fname='.zshrc'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-zshrc() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet source ~/.zshrc
   }
   alias .rlzrc='eval-verbose .reload-zshrc'
 
   .tick-zshrc() { .tick -s '.zshrc' $@; }
-  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.zshrc)" #, \$PATH=[$PATH]"
+  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zshrc), \$SHELL=$SHELL"
 
   safe-source ~/.sh_rc
 
@@ -41,7 +41,7 @@ source ~/.sh_bootstrap
 
   
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

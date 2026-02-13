@@ -17,7 +17,7 @@ if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
     }
 
     .tick-login-git() { .tick -s ".sh_login.git" $@; }
-    .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/$dot_fname)"
+    .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
     .setup-git() {
       if ! is-command git; then

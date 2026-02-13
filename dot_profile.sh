@@ -23,7 +23,7 @@ source ~/.sh_bootstrap
   alias .rlp='eval-verbose .reload-profile'
 
   .tick-profile() { .tick -s ".profile" $@; }
-  .tick-profile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.profile)"
+  .tick-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.profile), \$SHELL=$SHELL"
 
 
   safe-source ~/.bash_profile

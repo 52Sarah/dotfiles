@@ -20,15 +20,15 @@ source ~/.sh_bootstrap
   local dot_fname='.sh_rc'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-rc() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet source ~/.sh_rc
   }
 
   .tick-shrc() { .tick -s ".sh_rc" $@; }
-  .tick-shrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.sh_rc)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
+  .tick-shrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_rc), \$SHELL=$SHELL"
 
 
    # Private env vars, etc. can be in the optional file ~/.secrets.
@@ -141,7 +141,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-shrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

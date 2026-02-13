@@ -1,18 +1,18 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 .sh-rc-group1001-wrapper() {
   local dot_fname='.sh_rc.group1001'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-sh-rc-group1001() {
-    dot-reset-mtimes
+  .reload-rc-group1001() {
+    .dot-reset-mtimes
     eval-quiet source ~/.sh_rc.group1001
   }
 
   .tick-sh-rc-group1001() { .tick -s '.sh_rc.group1001' $@; }
-  .tick-sh-rc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_rc.group1001)"
+  .tick-sh-rc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_rc.group1001), \$SHELL=$SHELL"
 
 
   if ((_DOT_SKIP_ONYX_SETUP)); then
@@ -69,7 +69,7 @@
   fi
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-sh-rc-group1001 "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

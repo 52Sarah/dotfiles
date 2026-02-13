@@ -12,7 +12,7 @@
 #   4. ~/.zlogin for login shells; should only include late-init items
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
-[[ -f ~/.tick.sh ]] && source ~/.tick.sh
+[[ -f ~/.tick ]] && source ~/.tick
 
 is-zsh() {
   [[ "$0" =~ zsh ]]
@@ -28,45 +28,43 @@ file-mtime() {
   [[ -z "$1" || -n "$2" ]] && echo >&2 'usage: file-mtime path' && return 1
   stat -L -f '%m' "$1" # epoch seconds
 }
-dot-ok-to-skip() {
-  [[ -z "$1" ]] && echo >&2 'usage: dot-ok-to-skip dot_file' && return 1
+.dot-ok-to-skip() {
+  [[ -z "$1" ]] && echo >&2 'usage: .dot-ok-to-skip dot_file' && return 1
   local dot_file="$1"
-  [[ ! -e "$dot_file" ]] && echo >&2 "dot-ok-to-skip: $dot_file: No such file" && return 1
+  [[ ! -e "$dot_file" ]] && echo >&2 ".dot-ok-to-skip: $dot_file: No such file" && return 1
 
   (( _DOT_MTIMES_IGNORE )) && return 1
 
-  # TODO: figure out bash map handling here and in dot-store-mtime
+  # TODO: figure out bash map handling here and in .dot-store-mtime
   is-zsh || return 1
 
-  local dot_fname=$(basename "$dot_file")
-  local cached_mtime="$_DOT_MTIMES[$dot_fname]"
+  local cached_mtime="$_DOT_MTIMES[$dot_file]"
   [[ -z "$cached_mtime" ]] && return 1
-  (( $(file-mtime "$dot_fname") == $cached_mtime ))
+  (( $(file-mtime "$dot_file") == $cached_mtime ))
 }
 #
-dot-store-mtime() {
-  [[ -z "$1" ]] && echo >&2 'usage: dot-store-mtime dot_file' && return 1
+.dot-store-mtime() {
+  [[ -z "$1" ]] && echo >&2 'usage: .dot-store-mtime dot_file' && return 1
   local dot_file="$1"
-  [[ ! -e "$dot_file" ]] && echo >&2 "dot-store-mtime: $dot_file: No such file" && return 1
+  [[ ! -e "$dot_file" ]] && echo >&2 ".dot-store-mtime: $dot_file: No such file" && return 1
 
-  # TODO: figure out bash map handling here and in dot-store-mtime
+  # TODO: figure out bash map handling here and in .dot-store-mtime
   is-zsh || return 1
 
-  local dot_fname="$(basename "$dot_file")"
-  _DOT_MTIMES+=($dot_fname $(file-mtime "$dot_fname"))
+  _DOT_MTIMES+=($dot_file $(file-mtime "$dot_file"))
 }
 #
-dot-reset-mtimes() {
+.dot-reset-mtimes() {
   typeset -g -A _DOT_MTIMES=()
 }
-[[ -z "$_DOT_MTIMES" ]] && dot-reset-mtimes
+[[ -z "$_DOT_MTIMES" ]] && .dot-reset-mtimes
 
 
 .sh-bootstrap-wrapper() {
   local dot_fname='.sh_bootstrap'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-bootstrap() {
     unset "_DOT_MTIMES[.sh_bootstrap]"
@@ -736,13 +734,13 @@ dot-reset-mtimes() {
   }
 
   .reload-shell() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet exec $SHELL -l
   }
   alias .rs='eval-verbose .reload-shell'
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 }
 .sh-bootstrap-wrapper && unset -f .sh-bootstrap-wrapper

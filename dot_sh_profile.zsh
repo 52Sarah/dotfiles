@@ -15,20 +15,20 @@ source ~/.sh_bootstrap
 sh-profile-wrapper() {
   local dot_fname='.sh_profile'
 
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-profile() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet source ~/.sh_profile
   }
 
   export _TICK_INDENT=
   .tick-sh-profile() { .tick -s ".sh_profile" $@; }
-  .tick-sh-profile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.sh_profile)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
+  .tick-sh-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_profile), \$SHELL=$SHELL"
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-sh-profile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

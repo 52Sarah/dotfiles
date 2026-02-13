@@ -20,10 +20,10 @@ source ~/.sh_bootstrap
   local dot_fname='.sh_login'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-login() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet source ~/.sh_login
   }
 
@@ -32,7 +32,7 @@ source ~/.sh_bootstrap
 
   export _TICK_INDENT=
   .tick-sh-login() { .tick -s ".sh_login" $@; }
-  .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.sh_login)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
+  .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_login), \$SHELL=$SHELL"
 
 
   # See: https://ss64.com/bash/less.html
@@ -185,7 +185,7 @@ source ~/.sh_bootstrap
 
 
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
   .tick-sh-login "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
 }

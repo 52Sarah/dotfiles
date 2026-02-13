@@ -28,7 +28,7 @@ use cases. Generally this is done by setting environment files and creating indi
 ### environment variables
 
 Checked in ~/.sh_bootstrap:
-  - `_DOT_MTIMES_IGNORE`: if 1 then `dot-ok-to-skip` will always return false
+  - `_DOT_MTIMES_IGNORE`: if 1 then `.dot-ok-to-skip` will always return false
   - `_DEBUG`, `_VERBOSE`, `_QUIET`: used to control echo/printf/eval helpers, set to 1 if enabled
 
 Checked in ~/.sh_bootstrap_login:
@@ -44,7 +44,7 @@ Checked in ~/.sh_bootstrap_login:
 Used in multiple files:
   - `_DOT_MTIMES` is the associative array used to hold mtimes
 
-Used internally in .tick.sh:
+Used internally in .tick:
   - `_TICK_LAST_MS` - used to determine gap between calls to .tick
   - `_TICK_INDENT` - indents at [start] lines, outdents at [end]/[finish] lines
 
@@ -97,7 +97,7 @@ Shell-agnostic pre-bootstrap functions for all login shells.
 Functions defined here should not depend on any other startup files.
 No references to tick logging in this file.
 
-  - initializes mtime staleness map and related functions: `dot-ok-to-skip` and `dot-store-mtime`
+  - initializes mtime staleness map and related functions: `.dot-ok-to-skip` and `.dot-store-mtime`
   - checks its own mtime staleness
   - defines following shell functions:
       - is-zsh

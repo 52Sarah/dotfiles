@@ -3,13 +3,13 @@
 # Shell-agnostic git-related functions and aliases for login shells.
 
 # Do not execute this script if it has already been run this session and is not modified since.
-if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
+if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
 
   bootstrap-login-git-wrapper() {
     local dot_fname='.sh_login.git'
 
     # Do not execute scripts if they have already been run this session and are not modified since.
-    dot-ok-to-skip ~/$dot_fname && return 
+    .dot-ok-to-skip ~/$dot_fname && return 
 
     .reload-login-git() {
       unset "_DOT_MTIMES[.sh_login.git]"
@@ -351,6 +351,6 @@ if [[ "$(dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
     eval-quiet source ~/.sh_login.git
   }
 
-  dot-store-mtime ~/.sh_login.git
-  .tick-login-git "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[sh_login.git]"
+  .dot-store-mtime ~/.sh_login.git
+  .tick-login-git "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 fi

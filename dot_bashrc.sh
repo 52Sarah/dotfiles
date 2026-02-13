@@ -24,7 +24,7 @@ source ~/.sh_bootstrap
   alias .rlbrc='eval-verbose .reload-bashrc'
 
   .tick-bashrc() { .tick -s '.bashrc' $@; }
-  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.bashrc), \$SHELL=$SHELL"
+  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   # Local overrides might be in ~.zshenv; since Bash has no equivalent, read that file here too.
   if [[ ! -f ~/.zshenv ]]; then
@@ -80,6 +80,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .bashrc-wrapper && unset -f .bashrc-wrapper .tick-bashrc

@@ -14,24 +14,24 @@ source ~/.sh_bootstrap
 .profile-wrapper() {
   local dot_fname='.profile'
 
-  dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-profile() {
-    dot-reset-mtimes
+    .dot-reset-mtimes
     eval-quiet . ~/.profile
   }
   alias .rlp='eval-verbose .reload-profile'
 
   .tick-profile() { .tick -s ".profile" $@; }
-  .tick-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.profile), \$SHELL=$SHELL"
+  .tick-profile "[START-FILE] (\$\$=$$),mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
 
   safe-source ~/.bash_profile
 
   
   source-extra-dot-files $dot_fname
-  dot-store-mtime ~/$dot_fname
+  .dot-store-mtime ~/$dot_fname
 
-  .tick-profile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
+  .tick-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .profile-wrapper && unset -f .profile-wrapper .tick-profile

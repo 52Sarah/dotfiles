@@ -21,7 +21,7 @@ source ~/.sh_bootstrap
   alias .rlzp='eval-verbose .reload-zprofile'
 
   .tick-zprofile() { .tick -s ".zprofile" $@; }
-  .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zprofile), \$SHELL=$SHELL"
+  .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   safe-source ~/.sh_profile
 
@@ -32,6 +32,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zprofile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
+  .tick-zprofile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .zprofile-wrapper && unset -f .zprofile-wrapper

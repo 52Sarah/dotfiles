@@ -23,7 +23,7 @@ source ~/.sh_bootstrap
   alias .rlzl='eval-verbose .reload-zlogin'
 
   .tick-zlogin() { .tick -s ".zlogin" $@; }
-  .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zlogin), \$SHELL=$SHELL"
+  .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   safe-source ~/.sh_login
 
@@ -62,27 +62,24 @@ source ~/.sh_bootstrap
       HIST_STAMPS="%m/%d %H:%M:%S"
 
       # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
-      # plugins+=(alias-finder)
-      # plugins+=(autojump)
-      # plugins+=(colored-man-pages)
-      # plugins+=(gh)
-      # plugins+=(git-prompt)
-      # plugins+=(vi-mode)
+      plugins+=(colored-man-pages)
+      plugins+=(git-extras)
+      plugins+=(git-prompt)
+      plugins+=(vi-mode)
       
-      # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode/README.md
-      VI_MODE_SET_CURSOR=true
-      # VI_MODE_CURSOR_VISUAL=5 # blinking line
-      # VI_MODE_CURSOR_INSERT=5 # blinking line
-
       .tick-zlogin " ... sourcing ~/oh-my-zsh.sh"
       source "$ZSH/oh-my-zsh.sh"
       .tick-zlogin " ... sourced ~/oh-my-zsh.sh"
       
+      # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode
+      VI_MODE_SET_CURSOR=true
+
+      # See: https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git-prompt
       ZSH_THEME_GIT_PROMPT_PREFIX='('
       ZSH_THEME_GIT_PROMPT_SUFFIX=')'
       ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[green]%}%{✔%G%}"
-      # ZSH_THEME_GIT_SHOW_UPSTREAM=1
-      # ZSH_THEME_GIT_PROMPT_UPSTREAM_SEPARATOR="%{$reset_color%}|%{$fg[cyan]%}"
+      ZSH_THEME_GIT_SHOW_UPSTREAM=1
+      ZSH_THEME_GIT_PROMPT_UPSTREAM_SEPARATOR="%{$reset_color%}|%{$fg[cyan]%}"
 
       .tick-zlogin "[end] .setup-oh-my-zsh, plugins=$plugins"
     }
@@ -170,6 +167,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zlogin "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-zlogin "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .zlogin-wrapper && unset -f .zlogin-wrapper

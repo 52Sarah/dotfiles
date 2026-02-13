@@ -12,7 +12,7 @@
   }
 
   .tick-sh-rc-group1001() { .tick -s '.sh_rc.group1001' $@; }
-  .tick-sh-rc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_rc.group1001), \$SHELL=$SHELL"
+  .tick-sh-rc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
 
   if ((_DOT_SKIP_ONYX_SETUP)); then
@@ -71,7 +71,7 @@
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-sh-rc-group1001 "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-sh-rc-group1001 "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .sh-rc-group1001-wrapper && unset -f .sh-rc-group1001-wrapper
 

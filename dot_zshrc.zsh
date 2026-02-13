@@ -22,7 +22,7 @@ source ~/.sh_bootstrap
   alias .rlzrc='eval-verbose .reload-zshrc'
 
   .tick-zshrc() { .tick -s '.zshrc' $@; }
-  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.zshrc), \$SHELL=$SHELL"
+  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   safe-source ~/.sh_rc
 
@@ -43,6 +43,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .zshrc-wrapper && unset -f .zshrc-wrapper

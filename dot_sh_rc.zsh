@@ -77,9 +77,7 @@ source ~/.sh_bootstrap
   ###  HOMEBREW
   #
   .setup-homebrew() {
-    .tick-shrc '[start] .setup-homebrew'
-    .tick-shrc "... \$INTELLIJ_ENVIRONMENT_READER=$INTELLIJ_ENVIRONMENT_READER"
-    .tick-shrc "... \$SHELL=$SHELL"
+    .tick-shrc "[start] .setup-homebrew, INTELLIJ_ENVIRONMENT_READER=$INTELLIJ_ENVIRONMENT_READER"
 
     local brew_binary="$(glob-path-first /usr/local/bin/brew /opt/homebrew/bin/brew)"
     if [[ -n "$brew_binary" ]]; then
@@ -93,26 +91,16 @@ source ~/.sh_bootstrap
 
     eval "$($brew_binary shellenv $SHELL 2>/dev/null)"
     if [[ -d "$HOMEBREW_PREFIX" ]]; then
-      .tick-shrc "... homebrew shellenv set \$HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
+      .tick-shrc "... homebrew shellenv properly set HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
     else
       .tick-shrc "... homebrew shellenv did not properly set \$HOMEBREW_PREFIX"
       .tick-shrc "[end] .setup-homebrew"
       return 1
     fi
 
-    .tick-shrc "... computing brew_bin from \$brew_binary=$brew_binary"
     local brew_bin="$(substring-before-last $brew_binary '/')"
     path-prepend "$brew_bin"
     .tick-shrc "... prepended $brew_bin to PATH"
-
-    local gnu_getopt_home="$HOMEBREW_PREFIX/opt/gnu-getopt"
-    .tick-shrc "... checking gnu_getopt_home=$gnu_getopt_home"
-    if [[ -e "$gnu_getopt_home" ]]; then
-      path-prepend "$gnu_getopt_home/bin"
-      .tick-shrc "... prepended $gnu_getopt_home/bin to PATH"
-    else
-      .tick-shrc "... gnu-getopt not installed via brew"
-    fi
 
     local openssl_home="$HOMEBREW_PREFIX/opt/openssl@3"
     if [[ -e "$openssl_home" ]]; then
@@ -143,6 +131,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-shrc "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-shrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .shrc-wrapper && unset -f .shrc-wrapper

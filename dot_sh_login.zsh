@@ -32,7 +32,7 @@ source ~/.sh_bootstrap
 
   export _TICK_INDENT=
   .tick-sh-login() { .tick -s ".sh_login" $@; }
-  .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_login), \$SHELL=$SHELL"
+  .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
 
   # See: https://ss64.com/bash/less.html
@@ -187,6 +187,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-sh-login "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]" #, \$PATH=[$PATH])"
+  .tick-sh-login "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .sh-login-wrapper && unset -f .sh-login-wrapper

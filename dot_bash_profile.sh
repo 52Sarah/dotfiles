@@ -23,7 +23,7 @@ source ~/.sh_bootstrap
   alias .rlbp='eval-verbose .reload-bash-profile'
 
   .tick-bash-profile() { .tick -s ".bash_profile" $@; }
-  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.bash_profile), \$SHELL=$SHELL"
+  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   safe-source ~/.sh_profile
 
@@ -48,6 +48,6 @@ source ~/.sh_bootstrap
   source-extra-dot-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname], PROMPT=[$PROMPT]"
+  .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .bash-profile-wrapper && unset -f .bash-profile-wrapper

@@ -12,7 +12,7 @@
   }
 
   .tick-bashrc-group1001() { .tick -s '.bashrc.group1001' $@; }
-  .tick-bashrc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.bashrc.group1001), \$SHELL=$SHELL"
+  .tick-bashrc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
   .tick-bashrc-group1001 "\$0=$0 BASH_SOURCE=$BASH_SOURCE)"
 
@@ -24,7 +24,7 @@
 
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bashrc-group1001 "[END-FILE] (\$\$=$$), mtime=$_DOT_MTIMES[$dot_fname]"
+  .tick-bashrc-group1001 "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
 }
 .bashrc-group1001-wrapper && unset -f .bashrc-group1001-wrapper
 

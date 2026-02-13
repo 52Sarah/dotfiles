@@ -25,7 +25,8 @@ is-bash() {
 ### Minimize redundant startup file execution, based on whether script modified since last run.
 #
 file-mtime() {
-  stat -L -f '%m' "$dot_file" # epoch seconds
+  [[ -z "$1" || -n "$2" ]] && echo >&2 'usage: file-mtime path' && return 1
+  stat -L -f '%m' "$1" # epoch seconds
 }
 dot-ok-to-skip() {
   [[ -z "$1" ]] && echo >&2 'usage: dot-ok-to-skip dot_file' && return 1
@@ -56,7 +57,7 @@ dot-store-mtime() {
 }
 #
 dot-reset-mtimes() {
-  typeset -g -A _DOT_MTIMES
+  typeset -g -A _DOT_MTIMES=()
 }
 [[ -z "$_DOT_MTIMES" ]] && dot-reset-mtimes
 
@@ -267,30 +268,26 @@ dot-reset-mtimes() {
     echo-unescape <<< $@
   }
   #
+  # Bash-friendly substitute for typeset -m name*; print variables (with globbing) and values.
   echo-variables() {
-    [[ -z "$1" ]] && echo-stderr 'usage: echo-variables name [...]'
-    local var value
+    [[ -z "$1" ]] && echo-stderr 'usage: echo-variables name[*] [...]'
+    local name vars var
     while [[ -n "$1" ]]; do
-      var="$1"; shift 1
-      is-zsh && value="${(P)var}" || value="${!var}"
-      echo "$var: [$value]"
+      name="$1"; shift 1
+      [[ "$name" =~ [^*?]$ ]] && name="${name}*"
+      if is-zsh; then
+        typeset -m $name
+      else
+        eval $(echo vars="\${!$name}")
+        for var in $vars; do
+          value="${!var}"
+          echo "$var=${!var}"
+        done
+      fi
     done
   }
-  alias echo-variable=echo-variables echo-vars=echo-variables echo-var=echo-variables
-  #
-  # List all variables matching $1 (globbing *, etc.) and their values.
-  echo-glob() {
-    local patt="$1"; [[ -z "$patt" ]] && echo-stderr "usage: echo-glob patt" && return 1
-    [[ ! "$patt" =~ [*?]$ ]] && patt="${patt}*"
-    if is-zsh; then
-      typeset -m "$patt"
-    else
-      echo ${!patt}
-    fi | sort
-  }
-  gecho() { echo-glob "$@"; }
-  alias ge='gecho'
-
+  alias ev=echo-variables echo-variable=echo-variables echo-vars=echo-variables echo-var=echo-variables
+  alias eg=echo-variables echo-glob=echo-variables
 
   #
   ### du helpers

@@ -21,23 +21,21 @@ source ~/.sh_bootstrap
     dot-reset-mtimes
     eval-quiet source ~/.bashrc
   }
-  alias .rlzrc='eval-verbose .reload-bashrc'
+  alias .rlbrc='eval-verbose .reload-bashrc'
 
   .tick-bashrc() { .tick -s '.bashrc' $@; }
   .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.bashrc)" #, \$PATH=[$PATH]"
 
+  # Local overrides might be in ~.zshenv; since Bash has no equivalent, read that file here too.
+  if [[ ! -f ~/.zshenv ]]; then
+    .tick-bashrc '... no ~/.zshenv file to read'
+  else
+    source ~/.zshenv
+    .tick-bashrc '... read ~/.zshenv file'
+  fi
+
   safe-source ~/.sh_rc
 
-
-  #
-  ### ASDF
-  #
-  if ! [[ -f ~/.asdf/asdf.sh ]]; then
-    .tick-bashrc '[skip] asdf: no .asdf/asdf.sh file to read'
-  else
-    source ~/.asdf/asdf.sh
-    .tick-bashrc '... read ~/.asdf/asdf.sh'
-  fi
 
   #
   ### ITERM shell integration and prompt/display helpers

@@ -20,7 +20,7 @@ source ~/.sh_bootstrap
     dot-reset-mtimes
     eval-quiet . ~/.bash_profile
   }
-  alias .rlpf='eval-verbose .reload-bash-profile'
+  alias .rlbp='eval-verbose .reload-bash-profile'
 
   .tick-bash-profile() { .tick -s ".bash_profile" $@; }
   .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' $HOME/.bash_profile)"

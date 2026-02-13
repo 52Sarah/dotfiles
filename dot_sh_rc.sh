@@ -31,7 +31,7 @@ source ~/.sh_bootstrap
   .tick-shrc "[START-FILE] (\$\$=$$), mtime=$(stat -L -f '%m' ~/.sh_rc)" #, \$PATH=[$PATH], \$PS1=[$PS1])"
 
 
-  # Private env vars, etc. can be in the optional file ~/.secrets.
+   # Private env vars, etc. can be in the optional file ~/.secrets.
   if [[ ! -f ~/.secrets ]]; then
     .tick-shrc '... no ~/.secrets file to read'
   else
@@ -55,15 +55,23 @@ source ~/.sh_bootstrap
     .tick-shrc '... prepended ~/bin to PATH'
   fi
 
+
   # added to .zshrc by Snowflake SnowSQL installer v1.2
   local SNOWSQL_PKG="/Applications/SnowSQL.app/Contents/MacOS"
   if [[ ! -d "$SNOWSQL_PKG" ]]; then
-    .tick-shrc "[skip] SnowSQL: no $SNOWSQL_PKG directory to add to PATH"
+    .tick-shrc " ... [skip] SnowSQL: no $SNOWSQL_PKG directory to add to PATH"
   else
     path-prepend "$SNOWSQL_PKG"
     .tick-shrc " ... prepended $SNOWSQL_PKG to PATH"
   fi
 
+  #
+  ### ASDF
+  #
+  if [[ -f ~/.asdf/asdf.sh ]]; then
+    source ~/.asdf/asdf.sh
+    .tick-bashrc '... read ~/.asdf/asdf.sh'
+  fi
 
   #
   ###  HOMEBREW

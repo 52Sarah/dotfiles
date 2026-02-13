@@ -26,7 +26,7 @@ source ~/.sh_bootstrap
   safe-source ~/.sh_profile
 
 
-  # Insert additional .zprofile handling here.
+  # Insert initialization here.
 
 
   source-extra-dot-files $dot_fname

@@ -26,16 +26,6 @@ source ~/.sh_bootstrap
 
   safe-source ~/.sh_rc
 
-  #
-  ### ITERM shell integration and prompt/display helpers
-  #
-  if [[ ! -f "$HOME/.iterm2_shell_integration.zsh" ]]; then
-    .tick-zshrc ' ... ~/iterm2: no iterm2_shell_integration.zsh file to read'
-  else
-    source "$HOME/.iterm2_shell_integration.zsh"
-    .tick-zshrc ' ... ~/iterm2: read iterm2_shell_integration.zsh file'
-  fi
-
 
   # Insert initialization here.
 

@@ -696,11 +696,16 @@ file-mtime() {
   ### symlink/ln helpers
   #
   ln-valid() {
-    local files="${@:-*}"
-    local ret=0
-    for link in ${~files}; do
-      local target=
-      local ln_status="OK"
+    local ret=0 files
+    if is-zsh; then
+      files=(${@:-*})
+    else
+      files=${@:-*}
+    fi
+    _debug && echo-variables files
+    for link in $files; do
+      _debug && echo-variables link
+      local target= ln_status="OK"
       if [[ ! -L "$link" ]]; then
         ! _verbose && continue
         ln_status="NON-LINK"

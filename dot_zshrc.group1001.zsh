@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/usr/bin/env zsh
 
 .zshrc-group1001-wrapper() {
   local dot_fname='.zshrc.group1001'
@@ -14,7 +14,7 @@
   .tick-zshrc-group1001() { .tick -s '.zshrc.group1001' $@; }
   .tick-zshrc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
-  .tick-zshrc-group1001 "\$0=$0 BASH_SOURCE=$BASH_SOURCE"
+  .tick-zshrc-group1001 "\$0=$0"
 
   safe-source ~/.sh_rc.group1001
 

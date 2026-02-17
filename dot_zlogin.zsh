@@ -27,12 +27,22 @@ source ~/.sh_bootstrap
 
   safe-source ~/.sh_login
 
+
   # A non-interactive login shell requires the interactive environment setup.
   safe-source ~/.zshrc
 
   # Shell scripts executed with sh will read this file.
   export ENV=~/.zlogin
 
+  #
+  ### ITERM shell integration and prompt/display helpers
+  #
+  if [[ ! -f "$HOME/.iterm2_shell_integration.zsh" ]]; then
+    .tick-zshrc ' ... ~/iterm2: no iterm2_shell_integration.zsh file to read'
+  else
+    source "$HOME/.iterm2_shell_integration.zsh"
+    .tick-zshrc ' ... ~/iterm2: read iterm2_shell_integration.zsh file'
+  fi
 
   #
   ### OH-MY-ZSH
@@ -85,7 +95,6 @@ source ~/.sh_bootstrap
     }
     .setup-oh-my-zsh
   fi
-
 
   ### See: https://zsh.sourceforge.io/Doc/Release/Options.html
   #

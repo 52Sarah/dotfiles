@@ -20,16 +20,19 @@ source ~/.sh_bootstrap
     .dot-reset-mtimes
     eval-quiet . ~/.bash_profile
   }
-  alias .rlbp='eval-verbose .reload-bash-profile'
 
   .tick-bash-profile() { .tick -s ".bash_profile" $@; }
   .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
+  .tick-bash-profile ' ... reading ~/.sh_profile'
   safe-source ~/.sh_profile
+  .tick-bash-profile ' ... done reading ~/.sh_profile'
 
 
   # A non-interactive login shell requires the interactive environment setup.
+  .tick-bash-profile ' ... reading ~/.bashrc'
   safe-source ~/.bashrc
+  .tick-bash-profile ' ... done reading ~/.bashrc'
 
 
   # Don't show the 'zsh is the default shell' message.
@@ -81,8 +84,14 @@ source ~/.sh_bootstrap
     alias itt='iterm-text'
   fi
 
+  # Zsh supports early (profile) and late (login) scripts; emulate this for Bash by calling agnostic login script.
+  .tick-bash-profile ' ... reading ~/.sh_login'
+  safe-source ~/.sh_login
+  .tick-bash-profile ' ... done reading ~/.sh_login'
 
-  source-extra-dot-files $dot_fname
+
+
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

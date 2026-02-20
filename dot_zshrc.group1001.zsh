@@ -16,8 +16,6 @@
 
   .tick-zshrc-group1001 "\$0=$0"
 
-  safe-source ~/.sh_rc.group1001
-
 
   # Insert initialization here.
 

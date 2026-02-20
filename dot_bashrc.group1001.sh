@@ -16,8 +16,6 @@
 
   .tick-bashrc-group1001 "\$0=$0 BASH_SOURCE=$BASH_SOURCE)"
 
-  safe-source ~/.sh_rc.group1001
-
 
   # Insert initialization here.
 

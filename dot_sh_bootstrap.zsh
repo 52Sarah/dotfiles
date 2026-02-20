@@ -12,6 +12,13 @@
 #   4. ~/.zlogin for login shells; should only include late-init items
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
+# At startup, Bash reads from:
+#   * login shells: first of ~/.bash_profile, ~/.bash_login, ~/.profile
+#   * interactive shells: ~/.bashrc
+#   * non-interactive shells: $BASH_ENV (set here to ~/.bashrc)
+# See: https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
+
+
 [[ -f ~/.tick ]] && source ~/.tick
 
 is-zsh() {
@@ -32,32 +39,44 @@ file-mtime() {
   [[ -z "$1" ]] && echo >&2 'usage: .dot-ok-to-skip dot_file' && return 1
   local dot_file="$1"
   [[ ! -e "$dot_file" ]] && echo >&2 ".dot-ok-to-skip: $dot_file: No such file" && return 1
-
   (( _DOT_MTIMES_IGNORE )) && return 1
+  
+  local dot_file_mtime=$(file-mtime $dot_file)
+  local dot_file_key="${dot_file//./_}"
+  dot_file_key="${dot_file_key//\//_}"
 
-  # TODO: figure out bash map handling here and in .dot-store-mtime
-  is-zsh || return 1
-
-  local cached_mtime="$_DOT_MTIMES[$dot_file]"
+  local cached_mtime=${_DOT_MTIMES[$dot_file_key]}
   [[ -z "$cached_mtime" ]] && return 1
-  (( $(file-mtime "$dot_file") == $cached_mtime ))
+  # echo >&2 '$dot_file: (( $dot_file_mtime == $cached_mtime ))'
+  # echo >&2 "$dot_file: (( $dot_file_mtime == $cached_mtime ))"
+  # echo >&2 "$dot_file: $(( $dot_file_mtime == $cached_mtime ))"
+  (( $dot_file_mtime == $cached_mtime ))
 }
 #
 .dot-store-mtime() {
   [[ -z "$1" ]] && echo >&2 'usage: .dot-store-mtime dot_file' && return 1
   local dot_file="$1"
   [[ ! -e "$dot_file" ]] && echo >&2 ".dot-store-mtime: $dot_file: No such file" && return 1
+  (( _DOT_MTIMES_IGNORE )) && return 1
 
-  # TODO: figure out bash map handling here and in .dot-store-mtime
-  is-zsh || return 1
+  local dot_file_mtime=$(file-mtime $dot_file)
+  local dot_file_key="${dot_file//./_}"
+  dot_file_key="${dot_file_key//\//_}"
 
-  _DOT_MTIMES+=($dot_file $(file-mtime "$dot_file"))
+  _DOT_MTIMES[$dot_file_key]=$dot_file_mtime
+  # echo >&2 "${!}_DOT_MTIMES"
+  export _DOT_MTIMES
 }
 #
 .dot-reset-mtimes() {
-  typeset -g -A _DOT_MTIMES=()
+  if is-zsh; then
+    typeset -g -A _DOT_MTIMES
+  else
+    declare -A _DOT_MTIMES
+    export _DOT_MTIMES
+  fi
 }
-[[ -z "$_DOT_MTIMES" ]] && .dot-reset-mtimes
+[[ -z "$_DOT_MTIMES" || -z "${_DOT_MTIMES[*]}" ]] && .dot-reset-mtimes
 
 
 .sh-bootstrap-wrapper() {
@@ -66,7 +85,7 @@ file-mtime() {
   # Do not execute scripts if they have already been run this session and are not modified since.
   .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-bootstrap() {
+  .reload-sh-bootstrap() {
     unset "_DOT_MTIMES[.sh_bootstrap]"
     eval-quiet source ~/.sh_bootstrap
   }
@@ -179,11 +198,14 @@ file-mtime() {
   }
 
   #
-  # Add given path element to the end of the PATH variable, or move it there if already present.
-  # usage: path-append [--prepend] elem
+  # Add given path element to the end of the path variable (defaults to PATH), or move it 
+  # there if already present.
+  # usage: path-append [--prepend] [--variable path_var] elem
   path-append() {
-    local opt_prepend=; [[ "$1" =~ ^(-p|--prepend)$ ]] && opt_prepend=1 && shift
-    [[ -z "$1" ]] && echo-stderr "usage: path-append [--prepend] elem" && return 1
+    local opt_prepend=0 path_var='PATH'
+    [[ "$1" =~ ^(-p|--prepend)$ ]] && opt_prepend=1 && shift 1
+    [[ "$1" =~ ^(-v|--variable)$ ]] && path_var="$2" && shift 2
+    [[ -z "$1" ]] && echo-stderr "usage: path-append [--prepend] [--variable path_var] elem" && return 1
     
     local elem="$1" && shift
     local elements="$PATH"
@@ -356,11 +378,11 @@ file-mtime() {
   #
   ### path helpers
   #
-  # List path variable's elements, 1 per line. Defaults to PATH.
+  # List path variable's elements, 1 per line. Defaults to PATH, delimiter ':'.
   path-list() {
-    local var=${1:-PATH} elems
+    local var="${1:-PATH}" delim="${2:-:}" elems
     is-zsh && elems="${(P)var}" || elems="${!var}"
-    split-lines ':' <<< "${elems}"
+    split-lines "$delim" <<< "$elems"
   }
   alias path-echo=path-list
 
@@ -405,12 +427,14 @@ file-mtime() {
     lower <<< $@
   }
   #
-  # Expand '~' to value of $HOME, or compress value of $HOME to ~
-  tilde-compress() {
-    [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde-compress' '${path//$HOME/\~}' $@ && return 0
-    [[ -z "$1" ]] && echo-stderr "usage: tilde-compress path [...]" && return 1
-    tilde-compress <<< $@
+  # Compress value of $HOME to ~
+  tilde() {
+    [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde' '${path//$HOME/\~}' $@ && return 0
+    [[ -z "$1" ]] && echo-stderr "usage: tilde path [...]" && return 1
+    tilde <<< $@
   }
+  alias tilde-compress=tilde
+  # Expand '~' to value of $HOME
   tilde-expand() {
     [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde-expand' '${path//\~/$HOME}' && return 0
     [[ -z "$1" ]] && echo-stderr "usage: tilde-expand path [...]" && return 1
@@ -728,11 +752,11 @@ file-mtime() {
 
 
   # Source any files starting with the given prefix, excluding backup files.
-  source-extra-dot-files() {
-    [[ -z "$1" ]] && echo-stderr "usage: source-extra-dot-files PREFIX" && return 1
+  .dot-source-extra-files() {
+    [[ -z "$1" ]] && echo-stderr "usage: .dot-source-extra-files PREFIX" && return 1
     if glob-path-exists "$HOME/$1.*"; then
       for f in $HOME/$1.*; do
-        _verbose && echo-stderr "source-extra-dot-files: reading $f"
+        _verbose && echo-stderr ".dot-source-extra-files: reading $f"
         [[ "$f" =~ \.(bck|bak|BAK)$ ]] || source "$f"
       done
     fi
@@ -745,7 +769,7 @@ file-mtime() {
   alias .rs='eval-verbose .reload-shell'
 
 
-  source-extra-dot-files $dot_fname
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 }
 .sh-bootstrap-wrapper && unset -f .sh-bootstrap-wrapper

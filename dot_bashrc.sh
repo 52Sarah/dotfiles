@@ -21,7 +21,6 @@ source ~/.sh_bootstrap
     .dot-reset-mtimes
     eval-quiet source ~/.bashrc
   }
-  alias .rlbrc='eval-verbose .reload-bashrc'
 
   .tick-bashrc() { .tick -s '.bashrc' $@; }
   .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
@@ -30,17 +29,31 @@ source ~/.sh_bootstrap
   if [[ ! -f ~/.zshenv ]]; then
     .tick-bashrc '... no ~/.zshenv file to read'
   else
+    .tick-bashrc '... reading ~/.zshenv file'
     source ~/.zshenv
-    .tick-bashrc '... read ~/.zshenv file'
+    .tick-bashrc '... done reading ~/.zshenv file'
   fi
 
+  .tick-bashrc ' ... reading ~/.sh_rc'
   safe-source ~/.sh_rc
+  .tick-bashrc ' ... done reading ~/.sh_rc'
 
 
-  # Insert initialization here.
+  #
+  ### GCLOUD-SDK
+  #
+  if [[ -z $HOMEBREW_PREFIX ]]; then
+    .tick-bashrc '[skip] gcloud-sdk: HOMEBREW_PREFIX not defined'
+  elif [[ ! -d $HOMEBREW_PREFIX/share/google-cloud-sdk/bin ]]; then
+    .tick-bashrc '[skip] gcloud-sdk: no $HOMEBREW_PREFIX/share/google-cloud-sdk/bin directory'
+  else
+    source "$HOMEBREW_PREFIX/share/google-cloud-sdk/path.bash.inc"
+    source "$HOMEBREW_PREFIX/share/google-cloud-sdk/completion.bash.inc"
+    .tick-bashrc '... added gcloud to PATH and loaded gcloud bash completion'
+  fi
 
 
-  source-extra-dot-files $dot_fname
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

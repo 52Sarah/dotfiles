@@ -405,7 +405,7 @@ printf "========\nnfails: %d\n" $nfails
 
 # # Expand '~' to value of $HOME, or compress value of $HOME to ~
 # tilde-compress() {
-#   [[ -z "$1" ]] && eecho "usage: tilde-compress path [...]" && return 1
+#   [[ -z "$1" ]] && eecho "usage: tilde path [...]" && return 1
 #   tilde-home-compress-expand 'tilde-compress' '${path/$HOME/\~}' $@
 # }
 # tilde-expand() {
@@ -445,11 +445,11 @@ printf "========\nnfails: %d\n" $nfails
 
 # #? # Load over-engineered shell functions and aliases.
 # #? if ls $HOME/.bashrc__* >& /dev/null; then
-# #?   __echo "[.bashrc] sourcing files: $(tilde-compress $HOME/.bashrc__*)"
+# #?   __echo "[.bashrc] sourcing files: $(tilde $HOME/.bashrc__*)"
 # #?   for dotpath in $HOME/.bashrc__*; do
-# #?   __echo "[.bashrc] sourcing $(tilde-compress $dotpath)"
+# #?   __echo "[.bashrc] sourcing $(tilde $dotpath)"
 # #?   . "$dotpath"
 # #?   done
 # #? else
-# #?   __echo "[.bashrc] no $(tilde-compress $HOME)/.bashrc__* files to parse"
+# #?   __echo "[.bashrc] no $(tilde $HOME)/.bashrc__* files to parse"
 # #? fi

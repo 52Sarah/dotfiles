@@ -28,17 +28,19 @@
       "path": "~",
       "folder_include_patterns": [".*", ".*/*"],
       "folder_exclude_patterns": [
-        ".android",
+        ".android", ".ansible",
         ".asdf",
         ".bash_sessions",
         ".config/gcloud/virtenv",
         ".cups",
-        ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
+        ".gradle",
+        // ".gradle/caches", ".gradle/daemon", ".gradle/jdks", ".gradle/native", ".gradle/.tmp", ".gradle/workers", ".gradle/wrapper",
+        ".hawtjni",
         ".m2",
         ".npm",
-        // ".oh-my-zsh",
+        ".oh-my-zsh",
         ".sdkman/libexec", ".sdkman/tmp",
-        ".snowsql/1.3.3",
+        ".snowsql/1.3.3", ".soapuios",
         ".Trash",
         ".vmware",
         ".yarn",
@@ -56,7 +58,7 @@
         ".z*"
       ],
       "file_exclude_patterns": [
-        ".zcompdump", ".zsh_history"
+        ".zcompdump*", ".zsh_history"
       ],
     },    {
       "name": "/etc",
@@ -72,6 +74,10 @@
     {
       "name": "onyx-jvm/scripts/env",
       "path": "~/Workspace/onyx-jvm/scripts/env",
+    },
+    {
+      "name": "onyx-zendesk-connector/scripts/env",
+      "path": "~/Workspace/onyx-zendesk-connector/scripts/env",
     },
 	]
 }

@@ -11,7 +11,7 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
     # Do not execute scripts if they have already been run this session and are not modified since.
     .dot-ok-to-skip ~/$dot_fname && return 
 
-    .reload-login-git() {
+    .reload-sh-login-git() {
       unset "_DOT_MTIMES[.sh_login.git]"
       eval-quiet source ~/.sh_login.git
     }

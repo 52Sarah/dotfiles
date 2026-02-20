@@ -20,16 +20,20 @@ source ~/.sh_bootstrap
     .dot-reset-mtimes
     eval-quiet . ~/.profile
   }
-  alias .rlp='eval-verbose .reload-profile'
 
   .tick-profile() { .tick -s ".profile" $@; }
   .tick-profile "[START-FILE] (\$\$=$$),mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
-
+  .tick-profile ' ... reading ~/.bash_profile'
   safe-source ~/.bash_profile
+  .tick-profile ' ... done reading ~/.bash_profile'
+
+
+  # Insert initialization here.
+  .tick-profile "... nothing to initialize in ~/$dot_fname"
 
   
-  source-extra-dot-files $dot_fname
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

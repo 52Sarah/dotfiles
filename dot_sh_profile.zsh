@@ -10,6 +10,12 @@
 #   4. ~/.zlogin for login shells; should only include late-init items
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
+# At startup, Bash reads from:
+#   * login shells: first of ~/.bash_profile, ~/.bash_login, ~/.profile
+#   * interactive shells: ~/.bashrc
+#   * non-interactive shells: $BASH_ENV (set here to ~/.bashrc)
+# See: https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
+
 source ~/.sh_bootstrap
 
 sh-profile-wrapper() {
@@ -17,7 +23,7 @@ sh-profile-wrapper() {
 
   .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-profile() {
+  .reload-sh-profile() {
     .dot-reset-mtimes
     eval-quiet source ~/.sh_profile
   }
@@ -27,7 +33,11 @@ sh-profile-wrapper() {
   .tick-sh-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
 
-  source-extra-dot-files $dot_fname
+  # Insert initialization here.
+  .tick-sh-profile "... nothing to initialize in ~/$dot_fname"
+
+
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-sh-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

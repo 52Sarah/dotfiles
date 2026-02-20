@@ -24,13 +24,16 @@ source ~/.sh_bootstrap
   .tick-zshrc() { .tick -s '.zshrc' $@; }
   .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
+  .tick-zshrc ' ... reading ~/.sh_hrc'
   safe-source ~/.sh_rc
+  .tick-zshrc ' ... done reading ~/.sh_rc'
 
 
   # Insert initialization here.
+  .tick-zshrc "... nothing to initialize in ~/$dot_fname"
 
   
-  source-extra-dot-files $dot_fname
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

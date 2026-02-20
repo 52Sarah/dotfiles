@@ -14,6 +14,12 @@
 #   4. ~/.zlogin for login shells; should only include late-init items
 # See: https://zsh.sourceforge.io/Doc/Release/Files.html
 
+# At startup, Bash reads from:
+#   * login shells: first of ~/.bash_profile, ~/.bash_login, ~/.profile
+#   * interactive shells: ~/.bashrc
+#   * non-interactive shells: $BASH_ENV (set here to ~/.bashrc)
+# See: https://www.gnu.org/software/bash/manual/html_node/Bash-Startup-Files.html
+
 source ~/.sh_bootstrap
 
 .sh-login-wrapper() {
@@ -22,19 +28,38 @@ source ~/.sh_bootstrap
   # Do not execute scripts if they have already been run this session and are not modified since.
   .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-login() {
+  .reload-sh-login() {
     .dot-reset-mtimes
     eval-quiet source ~/.sh_login
   }
-
-  # A non-interactive login shell requires the interactive environment setup.
-  safe-source ~/.sh_rc
 
   export _TICK_INDENT=
   .tick-sh-login() { .tick -s ".sh_login" $@; }
   .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
 
+  # # A non-interactive login shell requires the interactive environment setup.
+  # .tick-sh-login ' ... reading ~/.sh_rc'
+  # safe-source ~/.sh_rc
+  # .tick-sh-login ' ... done reading ~/.sh_rc'
+  .tick-sh-login ' ... NOT reading ~/.sh_rc'
+
+
+  #
+  ### terminal setup
+  #
+  export HISTCONTROL=ignoreboth
+  export HISTSIZE=100000
+  export HISTFILESIZE=$HISTSIZE
+  #
+  export EDITOR=vi
+  #
+  # Note: CLICOLOR_FORCE has an adverse interaction with a few tools.
+  export CLICOLOR=1 CLICOLOR_FORCE=1
+
+  #
+  ### 'less' setup
+  #
   # See: https://ss64.com/bash/less.html
   # -#, --shift               Percent of screen to scroll right and left for wide files
   # -A, --SEARCH-SKIP-SCREEN  Search just after current line, not visible page
@@ -53,15 +78,6 @@ source ~/.sh_bootstrap
   # -X, --no-init             Do not clear screen when loading
   export LESS='--shift=.33 --SEARCH-SKIP --quit-if-one --status-column --LONG-PR --quit-at-eof --raw --squeeze --HILITE-UNREAD --no-init'
   export LESSEDIT='subl --new-window --wait --stay %f\:%lm'
-
-  export HISTCONTROL=ignoreboth
-  export HISTSIZE=100000
-  export HISTFILESIZE=$HISTSIZE
-
-  export EDITOR=vi
-
-  # Note: CLICOLOR_FORCE has an adverse interaction with a few tools.
-  export CLICOLOR=1 CLICOLOR_FORCE=1
 
   #
   ### 'ack' helpers
@@ -103,7 +119,7 @@ source ~/.sh_bootstrap
         export JAVA_HOME="$javahome"
       fi
 
-      .tick-sh-login -e tilde-compress "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
+      .tick-sh-login -e tilde "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
     }
     .setup-java-jenv
   fi
@@ -170,7 +186,6 @@ source ~/.sh_bootstrap
     .tick-sh-login '... initialized pipenv'
   fi
 
-
   #
   ### RANCHER DESKTOP
   #
@@ -184,7 +199,7 @@ source ~/.sh_bootstrap
   fi
 
 
-  source-extra-dot-files $dot_fname
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-sh-login "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

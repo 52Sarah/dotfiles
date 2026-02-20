@@ -114,7 +114,7 @@ No references to tick logging in this file.
       - path-append, path-prepend
       - glob-path-count, glob-path-exists, glob-path-first
       - .reload-shell (first clears mtimes)
-      - source-extra-dot-files (sources any files with given prefix)
+      - .dot-source-extra-files (sources any files with given prefix)
   - at end: loads any ~/.sh_bootstrap.* files, saves mtime
 
 ### ~/.sh_rcprofile

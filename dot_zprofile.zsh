@@ -18,18 +18,78 @@ source ~/.sh_bootstrap
     unset "_DOT_MTIMES[.zprofile]"
     eval-quiet source ~/.zprofile
   }
-  alias .rlzp='eval-verbose .reload-zprofile'
 
   .tick-zprofile() { .tick -s ".zprofile" $@; }
   .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
 
+  .tick-zprofile ' ... reading ~/.sh_profile'
   safe-source ~/.sh_profile
+  .tick-zprofile ' ... done reading ~/.sh_profile'
 
 
-  # Insert initialization here.
+  #
+  ### OH-MY-ZSH
+  # Initialized here in ~/.zprofile (early) since some of the plugins (e.g., gcloud) 
+  # impact PATH and other settings that ~/.zshrc and ~/.zlogin depend on.
+  #
+  if ((_DOT_SKIP_OHMYZSH_SETUP)); then
+    .tick-zprofile "[skip] Oh My Zsh: _DOT_SKIP_OHMYZSH_SETUP"
+  elif [[ ! -e "$HOME/.oh-my-zsh" ]]; then
+    .tick-zprofile "[skip] Oh My Zsh: no ~/.oh-my-zsh directory found"
+  else
+    .setup-oh-my-zsh() {
+      .tick-zprofile "[start] .setup-oh-my-zsh"
+      
+      export ZSH="$HOME/.oh-my-zsh"
+      plugins=()
 
+      zstyle ':omz:update' mode auto
+      zstyle ':omz:update' verbosity minimal
 
-  source-extra-dot-files $dot_fname
+      # Initialize zsh completion system
+      export FPATH="$HOMEBREW_PREFIX/share/zsh/site-functions:$FPATH"
+      [[ -d ~/.zfunc ]] && export FPATH="$FPATH:~/.zfunc"
+      zstyle ':completion:*' menu select
+  
+      # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Themes
+      ZSH_THEME=robbyrussell
+
+      CASE_SENSITIVE=false
+      HYPHEN_SENSITIVE=true
+      ENABLE_CORRECTION=true
+      COMPLETION_WAITING_DOTS="%F{white}waiting...%f"
+      DISABLE_UNTRACKED_FILES_DIRTY=true
+      HIST_STAMPS="%m/%d %H:%M:%S"
+
+      # See: https://github.com/ohmyzsh/ohmyzsh/wiki/Plugins
+      plugins+=(colored-man-pages)
+      # plugins+=(dotenv)
+      plugins+=(gcloud)
+      plugins+=(git-extras)
+      plugins+=(git-prompt)
+      # plugins+=(iterm2)
+      plugins+=(vi-mode)
+      
+      .tick-zprofile " ... sourcing ~/oh-my-zsh.sh"
+      source "$ZSH/oh-my-zsh.sh"
+      .tick-zprofile " ... sourced ~/oh-my-zsh.sh"
+      
+      # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode
+      VI_MODE_SET_CURSOR=true
+
+      # See: https://github.com/ohmyzsh/ohmyzsh/tree/master/plugins/git-prompt
+      ZSH_THEME_GIT_PROMPT_PREFIX='('
+      ZSH_THEME_GIT_PROMPT_SUFFIX=')'
+      ZSH_THEME_GIT_PROMPT_CLEAN="%{$fg_bold[green]%}%{✔%G%}"
+      # ZSH_THEME_GIT_SHOW_UPSTREAM=1
+      # ZSH_THEME_GIT_PROMPT_UPSTREAM_SEPARATOR="%{$reset_color%}|%{$fg[cyan]%}"
+
+      .tick-zprofile "[end] .setup-oh-my-zsh, plugins=$plugins"
+    }
+    .setup-oh-my-zsh
+  fi
+
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-zprofile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

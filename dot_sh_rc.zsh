@@ -22,7 +22,7 @@ source ~/.sh_bootstrap
   # Do not execute scripts if they have already been run this session and are not modified since.
   .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-rc() {
+  .reload-shrc() {
     .dot-reset-mtimes
     eval-quiet source ~/.sh_rc
   }
@@ -69,8 +69,9 @@ source ~/.sh_bootstrap
   ### ASDF
   #
   if [[ -f ~/.asdf/asdf.sh ]]; then
+    .tick-shrc '... reading ~/.asdf/asdf.sh'
     source ~/.asdf/asdf.sh
-    .tick-bashrc '... read ~/.asdf/asdf.sh'
+    .tick-shrc '... done reading ~/.asdf/asdf.sh'
   fi
 
   #
@@ -127,8 +128,11 @@ source ~/.sh_bootstrap
     .tick-shrc '... initialized SDKMAN'
   fi
 
+  # Make PATH available to UI apps, esp. IntelliJ
+  launchctl setenv PATH "$PATH"
 
-  source-extra-dot-files $dot_fname
+
+  .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
   .tick-shrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"

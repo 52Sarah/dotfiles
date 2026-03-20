@@ -11,18 +11,18 @@
     eval-quiet source ~/.bashrc.group1001
   }
 
-  .tick-bashrc-group1001() { .tick -s '.bashrc.group1001' $@; }
-  .tick-bashrc-group1001 "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-bashrc-group1001() { .tick -s '.bashrc.group1001' "\$\$=$$ $@"; }
+  .tick-bashrc-group1001 "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, \$\$=$$, mtime=$(file-mtime ~/$dot_fname)"
 
   .tick-bashrc-group1001 "\$0=$0 BASH_SOURCE=$BASH_SOURCE)"
 
 
   # Insert initialization here.
-
+  .tick-bashrc-group1001 "... nothing to initialize in ~/$dot_fname"
 
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bashrc-group1001 "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-bashrc-group1001 "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .bashrc-group1001-wrapper && unset -f .bashrc-group1001-wrapper
 

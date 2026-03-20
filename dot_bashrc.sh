@@ -22,40 +22,31 @@ source ~/.sh_bootstrap
     eval-quiet source ~/.bashrc
   }
 
-  .tick-bashrc() { .tick -s '.bashrc' $@; }
-  .tick-bashrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-bashrc() { .tick -s '.bashrc' "\$\$=$$ $@"; }
+  .tick-bashrc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, PCMD='$(ps -o "command" -p $PPID)', mtime=$(file-mtime ~/$dot_fname)"
 
   # Local overrides might be in ~.zshenv; since Bash has no equivalent, read that file here too.
-  if [[ ! -f ~/.zshenv ]]; then
-    .tick-bashrc '... no ~/.zshenv file to read'
-  else
-    .tick-bashrc '... reading ~/.zshenv file'
-    source ~/.zshenv
-    .tick-bashrc '... done reading ~/.zshenv file'
-  fi
+  .tick-and-source .tick-bashrc ~/.zshenv
 
-  .tick-bashrc ' ... reading ~/.sh_rc'
-  safe-source ~/.sh_rc
-  .tick-bashrc ' ... done reading ~/.sh_rc'
+  .tick-and-source .tick-bashrc ~/.sh_rc
 
-
+  
   #
-  ### GCLOUD-SDK
+  ### GCLOUD-SDK (replicate what Zsh's gcloud plugin takes care of)
   #
   if [[ -z $HOMEBREW_PREFIX ]]; then
     .tick-bashrc '[skip] gcloud-sdk: HOMEBREW_PREFIX not defined'
   elif [[ ! -d $HOMEBREW_PREFIX/share/google-cloud-sdk/bin ]]; then
     .tick-bashrc '[skip] gcloud-sdk: no $HOMEBREW_PREFIX/share/google-cloud-sdk/bin directory'
   else
-    source "$HOMEBREW_PREFIX/share/google-cloud-sdk/path.bash.inc"
-    source "$HOMEBREW_PREFIX/share/google-cloud-sdk/completion.bash.inc"
-    .tick-bashrc '... added gcloud to PATH and loaded gcloud bash completion'
+    .tick-and-source .tick-bashrc "$HOMEBREW_PREFIX/share/google-cloud-sdk/path.bash.inc"
+    .tick-and-source .tick-bashrc "$HOMEBREW_PREFIX/share/google-cloud-sdk/completion.bash.inc"
   fi
 
 
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bashrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-bashrc "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .bashrc-wrapper && unset -f .bashrc-wrapper .tick-bashrc

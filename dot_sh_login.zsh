@@ -34,15 +34,8 @@ source ~/.sh_bootstrap
   }
 
   export _TICK_INDENT=
-  .tick-sh-login() { .tick -s ".sh_login" $@; }
-  .tick-sh-login "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
-
-
-  # # A non-interactive login shell requires the interactive environment setup.
-  # .tick-sh-login ' ... reading ~/.sh_rc'
-  # safe-source ~/.sh_rc
-  # .tick-sh-login ' ... done reading ~/.sh_rc'
-  .tick-sh-login ' ... NOT reading ~/.sh_rc'
+  .tick-sh-login() { .tick -s ".sh_login" "\$\$=$$ $@"; }
+  .tick-sh-login "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
 
   #
@@ -84,7 +77,8 @@ source ~/.sh_bootstrap
   #
   if is-command ack; then
     alias ack-help-types='eval-quiet ack --help-types'
-    alias ack-java='eval-quiet ack --type=java'; alias ackj='ack-java'
+    alias ack-java='ack --type=java' ackj='ack-java'
+    alias ack-kotlin='ack --type=kotlin' ackk='ack-kotlin'
   fi
 
   #
@@ -128,27 +122,22 @@ source ~/.sh_bootstrap
   ### POSTGRESQL (via HOMEBREW)
   #
   if ((_DOT_SKIP_POSTGRES_SETUP)); then
-    .tick-sh-login '[skip] .setup-pg: _DOT_SKIP_POSTGRES_SETUP'
+    .tick-sh-login '[skip] pg: _DOT_SKIP_POSTGRES_SETUP'
   elif [[ -z "$HOMEBREW_PREFIX" ]]; then
-    .tick-sh-login '[skip] .setup-pg: HOMEBREW_PREFIX not defined'
+    .tick-sh-login '[skip] pg: HOMEBREW_PREFIX not defined'
   elif ! is-command brew; then
-    .tick-sh-login '[skip] .setup-pg: brew  command not installed'
+    .tick-sh-login '[skip] pg: brew command not installed'
   else
     .setup-pg() {
-      .tick-sh-login '[start] .setup-pg'
       export HOMEBREW_POSTGRESQL_SERVICE='postgresql@17'
-      if [[ -e "$HOMEBREW_PREFIX/Cellar/$HOMEBREW_POSTGRESQL_SERVICE" ]]; then
-        .tick-sh-login "... found HOMEBREW_POSTGRESQL_SERVICE=$HOMEBREW_POSTGRESQL_SERVICE"
-      else
-        .tick-sh-login "[end] .setup-pg, invalid HOMEBREW_POSTGRESQL_SERVICE=$HOMEBREW_POSTGRESQL_SERVICE"
+      if [[ ! -e "$HOMEBREW_PREFIX/Cellar/$HOMEBREW_POSTGRESQL_SERVICE" ]]; then
+        .tick-sh-login "[skip] .setup-pg, invalid HOMEBREW_POSTGRESQL_SERVICE=$HOMEBREW_POSTGRESQL_SERVICE"
         return 1
       fi
-      # path-append '/usr/local/opt/postgresql/bin'
       alias pg-restart='eval-quiet brew services restart $HOMEBREW_POSTGRESQL_SERVICE'
       alias pg-start='eval-quiet brew services start $HOMEBREW_POSTGRESQL_SERVICE'
       alias pg-stop='eval-quiet brew services stop $HOMEBREW_POSTGRESQL_SERVICE'
       alias pg-info='eval-quiet brew services info -v $HOMEBREW_POSTGRESQL_SERVICE'
-      .tick-sh-login '[end] .setup-pg'
     }
    .setup-pg
   fi  
@@ -157,7 +146,7 @@ source ~/.sh_bootstrap
   ### SCHEMASPY
   #
   if [[ ! -f "$HOME/lib/schemaspy.jar" ]]; then
-    .tick-sh-login '[skip] .setup-schemaspy: ~/lib/schemaspy.jar file not found'
+    .tick-sh-login '[skip] schemaspy: ~/lib/schemaspy.jar file not found'
   else
     schemaspy() {
       local driver_path="$HOME/lib"
@@ -183,25 +172,24 @@ source ~/.sh_bootstrap
     .tick-sh-login '... pipenv is not installed'
   else
     export PIPENV_SHELL="$SHELL"
-    .tick-sh-login '... initialized pipenv'
   fi
 
   #
   ### RANCHER DESKTOP
   #
   if ((_DOT_SKIP_RANCHER_DESKTOP_SETUP)); then
-    .tick-sh-login '[skip] Rancher Desktop setup: _DOT_SKIP_RANCHER_DESKTOP_SETUP'
+    # .tick-sh-login '[skip] Rancher Desktop: _DOT_SKIP_RANCHER_DESKTOP_SETUP'
   elif [[ ! -d ~/.rd/bin ]]; then
-    .tick-sh-login '... Rancher Desktop: no ~/.rd/bin to add to PATH'
+    # .tick-sh-login '[skip] Rancher Desktop: no ~/.rd/bin to add to PATH'
   else
-    path-prepend "$HOME/.rd/bin"
-    .tick-sh-login '... Rancher Desktop: prepended ~/.rd/bin to PATH'
+    path-apppend "$HOME/.rd/bin"
+    .tick-sh-login 'appended ~/.rd/bin to PATH'
   fi
 
 
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-sh-login "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-login "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .sh-login-wrapper && unset -f .sh-login-wrapper

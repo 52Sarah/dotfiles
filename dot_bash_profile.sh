@@ -21,18 +21,13 @@ source ~/.sh_bootstrap
     eval-quiet . ~/.bash_profile
   }
 
-  .tick-bash-profile() { .tick -s ".bash_profile" $@; }
-  .tick-bash-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-bash-profile() { .tick -s ".bash_profile" "\$\$=$$ $@"; }
+  .tick-bash-profile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
-  .tick-bash-profile ' ... reading ~/.sh_profile'
-  safe-source ~/.sh_profile
-  .tick-bash-profile ' ... done reading ~/.sh_profile'
-
+  .tick-and-source .tick-bash-profile ~/.sh_profile
 
   # A non-interactive login shell requires the interactive environment setup.
-  .tick-bash-profile ' ... reading ~/.bashrc'
-  safe-source ~/.bashrc
-  .tick-bash-profile ' ... done reading ~/.bashrc'
+  .tick-and-source .tick-bash-profile ~/.bashrc
 
 
   # Don't show the 'zsh is the default shell' message.
@@ -47,14 +42,16 @@ source ~/.sh_bootstrap
   # Exclude from tab completion
   export FIGNORE='DS_Store:Icon?'
 
+  # Set prompt: . ~/pwd $
+  export PS1=' \w \$ '
+
   #
   ### ITERM shell integration and prompt/display helpers
   #
   if [[ ! -f "$HOME/.iterm2_shell_integration.bash" ]]; then
-    .tick-bash-profile '[skip] ~/iterm2: no iterm2_shell_integration.zsh file to read'
+    .tick-bash-profile '[skip] ~/iterm2: no iterm2_shell_integration.bash file to read'
   else
-    .tick-bash-profile ' ... loading iTerm2 bash shell integration'
-    source "$HOME/.iterm2_shell_integration.bash"
+    .tick-and-source .tick-bash-profile ~/.iterm2_shell_integration.zsh
     export ITERM_BADGE="$ITERM_PROFILE"
     iterm2_print_user_vars() {
       iterm2_set_user_var badge "$ITERM_BADGE"
@@ -85,15 +82,12 @@ source ~/.sh_bootstrap
   fi
 
   # Zsh supports early (profile) and late (login) scripts; emulate this for Bash by calling agnostic login script.
-  .tick-bash-profile ' ... reading ~/.sh_login'
-  safe-source ~/.sh_login
-  .tick-bash-profile ' ... done reading ~/.sh_login'
-
+  .tick-and-source .tick-bash-profile ~/.sh_login
 
 
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-bash-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-bash-profile "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .bash-profile-wrapper && unset -f .bash-profile-wrapper

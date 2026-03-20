@@ -21,32 +21,21 @@ source ~/.sh_bootstrap
     eval-quiet . ~/.zlogin
   }
 
-  .tick-zlogin() { .tick -s ".zlogin" $@; }
-  .tick-zlogin "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-zlogin() { .tick -s ".zlogin" "\$\$=$$ $@"; }
+  .tick-zlogin "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
   # A non-interactive login shell requires the interactive environment setup.
-  .tick-zlogin ' ... reading ~/.zshrc'
-  safe-source ~/.zshrc
-  .tick-zlogin ' ... done reading ~/.zshrc'
-  # .tick-zlogin ' ... NOT reading ~/.zshrc'
+  .tick-and-source .tick-zlogin ~/.zshrc
 
-  .tick-zlogin ' ... reading ~/.sh_login'
-  safe-source ~/.sh_login
-  .tick-zlogin ' ... done reading ~/.sh_login'
+  .tick-and-source .tick-zlogin ~/.sh_login
+
 
   # Shell scripts executed with sh will read this file.
   export ENV=~/.zlogin
 
-  #
-  ### ITERM shell integration and prompt/display helpers
-  #
-  if [[ ! -f "$HOME/.iterm2_shell_integration.zsh" ]]; then
-    .tick-zlogin ' ... ~/iterm2: no iterm2_shell_integration.zsh file to read'
-  else
-    source "$HOME/.iterm2_shell_integration.zsh"
-    .tick-zlogin ' ... ~/iterm2: read iterm2_shell_integration.zsh file'
-  fi
-
+  # iTerm2 shell integration
+  .tick-and-source .tick-zlogin ~/.iterm2_shell_integration.zsh
+  
   ### See: https://zsh.sourceforge.io/Doc/Release/Options.html
   #
   # ## changing directories
@@ -124,6 +113,6 @@ source ~/.sh_bootstrap
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zlogin "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zlogin "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .zlogin-wrapper && unset -f .zlogin-wrapper

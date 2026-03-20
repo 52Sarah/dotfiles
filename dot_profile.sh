@@ -21,12 +21,10 @@ source ~/.sh_bootstrap
     eval-quiet . ~/.profile
   }
 
-  .tick-profile() { .tick -s ".profile" $@; }
-  .tick-profile "[START-FILE] (\$\$=$$),mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-profile() { .tick -s '.profile' "\$\$=$$ $@"; }
+  .tick-profile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
-  .tick-profile ' ... reading ~/.bash_profile'
-  safe-source ~/.bash_profile
-  .tick-profile ' ... done reading ~/.bash_profile'
+  .tick-and-source .tick-profile ~/.bash_profile
 
 
   # Insert initialization here.
@@ -36,6 +34,6 @@ source ~/.sh_bootstrap
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-profile "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .profile-wrapper && unset -f .profile-wrapper .tick-profile

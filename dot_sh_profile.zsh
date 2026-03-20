@@ -29,8 +29,8 @@ sh-profile-wrapper() {
   }
 
   export _TICK_INDENT=
-  .tick-sh-profile() { .tick -s ".sh_profile" $@; }
-  .tick-sh-profile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-sh-profile() { .tick -s ".sh_profile" "\$\$=$$ $@"; }
+  .tick-sh-profile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
 
   # Insert initialization here.
@@ -40,7 +40,7 @@ sh-profile-wrapper() {
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-sh-profile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-profile "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 sh-profile-wrapper $@
 unset -f sh-profile-wrapper .tick-sh-profile

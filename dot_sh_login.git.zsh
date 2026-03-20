@@ -5,19 +5,19 @@
 # Do not execute this script if it has already been run this session and is not modified since.
 if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
 
-  bootstrap-login-git-wrapper() {
+  sh-login-git-wrapper() {
     local dot_fname='.sh_login.git'
 
     # Do not execute scripts if they have already been run this session and are not modified since.
     .dot-ok-to-skip ~/$dot_fname && return 
 
     .reload-sh-login-git() {
-      unset "_DOT_MTIMES[.sh_login.git]"
+      .dot-reset-mtimes
       eval-quiet source ~/.sh_login.git
     }
 
-    .tick-login-git() { .tick -s ".sh_login.git" $@; }
-    .tick-login-git "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+    .tick-login-git() { .tick -s ".sh_login.git" "\$\$=$$ $@"; }
+    .tick-login-git "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
     .setup-git() {
       if ! is-command git; then
@@ -26,82 +26,125 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
       fi
       .tick-login '[start] .setup-git'
 
-      # usage: git-alias [--max-count n] [patt]
-      git-alias() {
-        local USAGE="usage: git-alias [[--max-count] n] [patt]"
-        local opt_patt='.+' opt_maxcount=999
-        while [[ -n "$1" ]]; do case "$1" in
-          -n | --max-count) shift 1; 
-                            if [[ -n "$1" ]]; then
-                              opt_maxcount=$1
-                              shift
-                            else
-                              echo-error "usage: $USAGE"
-                              return 1
-                            fi;;
-          *) break;;
-        esac; done
-        [[ "$1" =~ ^[0-9]+$ ]] && opt_maxcount=$1 && shift
-        opt_patt="$@"
+      # Many of these items are better implemented by git-extras. so are disabled.
 
-        git config --get-regexp "^alias\.${opt_patt}" \
-          | head -n $opt_maxcount \
-          | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
-      }
+      # # usage: git-alias [--max-count n] [patt]
+      # git-alias() {
+      #   local USAGE="usage: git-alias [[--max-count] n] [patt]"
+      #   local opt_patt='.+' opt_maxcount=999
+      #   while [[ -n "$1" ]]; do case "$1" in
+      #     -n | --max-count) shift 1; 
+      #                       if [[ -n "$1" ]]; then
+      #                         opt_maxcount=$1
+      #                         shift
+      #                       else
+      #                         echo-error "usage: $USAGE"
+      #                         return 1
+      #                       fi;;
+      #     *) break;;
+      #   esac; done
+      #   [[ "$1" =~ ^[0-9]+$ ]] && opt_maxcount=$1 && shift
+      #   opt_patt="$@"
+
+      #   git config --get-regexp "^alias\.${opt_patt}" \
+      #     | head -n $opt_maxcount \
+      #     | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
+      # }
     
-      # usage: git-branch [detail_level:0]
-      # detail_level:
-      #   0 - local branches, brief
-      #   1 - 
-      git-branch() {
-        local branch_level=1; while [[ "$1" =~ [012] ]]; do branch_level="$1" && shift 1; done
-        git branch --show-current 1>/dev/null || return 1
+      # UGH - Friday afternoon boondoggle, 3/6/26. Maybe salvage some of this.
+      # # Builds atop git-extras' `git brv` command, which lists fields in this order:
+      # #   - committerdate (%F, or yyyy-mm-dd)
+      # #   - refname:short (branch name)
+      # #   - upstream:short (remote)
+      # #   - objectname:short (sha)
+      # #   - contents:subject (comment)
+      # # usage: git-branch [detail_level:0]
+      # # detail_level:
+      # #   0 - local branches, brief
+      # #   1 - 
+      # git-branch() {
+      #   local branch_level=1; [[ "$1" =~ '^[0-9]$' ]] && branch_level="$1" && shift 1
+      #   git branch --show-current 1>/dev/null || return 1
 
-        c_br_remote="$(git config --get-color color.branch.remote)"
-        c_br_current="$(git config --get-color color.branch.current)"
-        c_commit="$(git config --get-color color.diff.commit)"
+      #   c_normal="$(git config get --type=color --default=normal '')"
+      #   c_br_remote="$(git config get --type=color color.branch.remote)"
+      #   c_br_current="$(git config get --type=color color.branch.current)"
+      #   c_commit="$(git config get --type=color color.diff.commit)"
 
-        c_br_upstream="$(git config --get-color color.branch.upstream)"
-        c_stash="$(git config --get-color color.decorate.stash)"
-        c_untracked="$(git config --get-color color.status.untracked)"
-        c_reset="%(color:reset)"
+      #   c_br_upstream="$(git config get --type=color color.branch.upstream)"
+      #   c_stash="$(git config get --type=color color.decorate.stash)"
+      #   c_untracked="$(git config get --type=color color.status.untracked)"
+      #   c_reset="$(git config get --type=color --default=reset '')"
 
-        f_sha="%(if)%(HEAD)%(then)$c_br_current*%(else)$c_commit %(end)%(objectname:short)$c_reset"
-        f_track="$c_untracked%(if)%(upstream)%(then)%(upstream:track)%(end)$c_reset"
-        f_track_short="$c_untracked%(if)%(upstream)%(then)[%(upstream:trackshort)]%(end)$c_reset"
-        f_date="$c_stash%(align:14,left)%(committerdate:format:%F %T)%(end)$c_reset"
-        f_date_relative="$c_stash%(align:20,left)%(committerdate:relative)%(end)$c_reset"
-        f_date_short="$c_stash%(align:14,left)%(committerdate:format:%D %H:%M)%(end)$c_reset"
-        f_authorname="%(align:20,left)%(authorname)%(end)"
-        f_branch="%(if)%(HEAD)%(then)$c_br_current%(refname:short)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remote%(else)$c_stash%(end)%(refname:short)%(end)$c_reset"
-        f_upstream="%(if)%(upstream)%(then)$c_br_upstream(%(upstream:short)$c_reset) %(end)"
-        f_comment="%(contents:subject)"
-        f_branch_and_track_short="%(align:60,left)$f_branch $f_track_short%(end)%(if)%(HEAD)%(then)  %(end)"
-        f_upstream_and_comment="$f_upstream$f_comment"
+      #   # f_sha="%(if)%(HEAD)%(then)$c_br_current*%(else)$c_commit %(end)%(objectname:short)$c_reset"
+      #   # f_track="$c_untracked%(align:6,left)%(if)%(upstream)%(then)%(upstream:track)%(end)%(end)$c_reset"              # [gone], [=] (6)
+      #   # f_track_short="$c_untracked%(align:5,left)%(if)%(upstream)%(then)[%(upstream:trackshort)]%(end)%(end)$c_reset" # [], [=], [<nn] (5)
+      #   # f_date="$c_stash%(align:10,left)%(committerdate:format:%F)%(end)$c_reset"                 # yyyy-mm-dd (10)
+      #   # f_date_short="$c_stash%(align:8,left)%(committerdate:format:%D)%(end)$c_reset"            # mm/dd/yy (8)
+      #   # f_datetime="$c_stash%(align:20,left)%(committerdate:format:%F %T)%(end)$c_reset"          # yyyy-mm-dd hh:mm:ss(19)
+      #   # f_datetime_relative="$c_stash%(align:20,left)%(committerdate:relative)%(end)$c_reset"
+      #   # f_datetime_short="$c_stash%(align:14,left)%(committerdate:format:%D %H:%M)%(end)$c_reset" # mm/dd/yy hh:mm (14)
+      #   # f_authorname="%(align:20,left)%(authorname)%(end)"
+      #   # f_branch="%(if)%(HEAD)%(then)$c_br_current%(refname:short)%(else)%(if:equals=refs/remotes)%(refname:rstrip=-2)%(then)$c_br_remote%(else)$c_stash%(end)%(refname:short)%(end)$c_reset"
+      #   # f_upstream="%(if)%(upstream)%(then)$c_br_upstream(%(upstream:short)$c_reset) %(end)"
+      #   # f_comment="%(contents:subject)"
+      #   # f_branch_and_track="%(align:60,left)$f_branch $f_track%(end)"
+      #   # f_branch_and_track_short="%(align:60,left)$f_branch $f_track_short%(end)"
+      #   # f_upstream_and_comment="$f_upstream$f_comment"
+      #   f_head="%(if)%(HEAD)%(then)*%(else) %(end)"
+      #   f_date="%(committerdate:format:%F)"                 # yyyy-mm-dd (10)
+      #   f_date_short="%(committerdate:format:%D)"            # mm/dd/yy (8)
+      #   f_datetime="%(committerdate:format:%F %T)"          # yyyy-mm-dd hh:mm:ss(19)
+      #   f_datetime_relative="%(committerdate:relative)"
+      #   f_datetime_short="%(committerdate:format:%D %H:%M)" # mm/dd/yy hh:mm (14)
+      #   f_authorname="%(authorname)"
+      #   f_branch="%(if)%(HEAD)%(then)%(refname:short)%(else)%(refname:short)%(end)"
+      #   f_track="%(if)%(upstream)%(then)%(upstream:track)%(end)"              # [gone], [=] (6)
+      #   f_track_short="%(if)%(upstream)%(then)[%(upstream:trackshort)]%(end)" # [], [=], [<nn] (5)
+      #   f_upstream="%(if)%(upstream)%(then)%(upstream:short)%(else) %(end)" 
+      #   f_sha="%(objectname:short)"
+      #   f_comment="%(contents:subject)"
+      #   f_branch_and_track="$f_branch $f_track"
+      #   f_branch_and_track_short="$f_branch $f_track_short"
+      #   f_upstream_and_comment="$f_upstream $f_comment"
 
-        case "$branch_level" in
-          0)  eval-verbose git branch --list --ignore-case --sort='-committerdate' \
-                --format="\"$f_sha  $f_date_relative $f_branch $f_track_short\"" \
-                $@ | less
-              ;;
-          1)  eval-verbose git branch --list --ignore-case --sort='-committerdate' --column=never \
-                --format="\"$f_sha  %(align:left,80)$f_date_short  $f_authorname $f_branch_and_track_short%(end) $f_upstream_and_comment\"" $@ \
-                | awk -v MAXW=$((COLUMNS-8)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | less
-              ;;
-          2)  eval-verbose git branch --list --ignore-case --sort='-committerdate' --column=never \
-                --format="\"$f_sha  %(align:left,90)$f_date  $f_authorname $f_branch_and_track_short%(end) $f_upstream_and_comment $f_track \"" $@ \
-                | awk -v MAXW=$((COLUMNS-8)) '{ if (MAXW<=0 || length()<=MAXW) {print $0} else {printf("%-" MAXW "." MAXW "s...\n"), $0} }' \
-                | less
-              ;;
-          *)  echo-error "git-branch: unexpected level: $branch_level"
-              return 1
-              ;;
-        esac
-      }
-      alias gbr='eval-verbose git-branch 0'
-      alias gbra='eval-verbose git-branch 1'
-      alias gbran='eval-verbose git-branch 2' gbranc='gbran' gbranch='gbran'
+      #   .git-branch-println() {
+      #     local head="$1" date="$2" branch="$3" upstream="$4" sha="$5" comment="$6"
+      #     local branch_len=50 upstream_len=50
+      #     if matches "$branch" '.+\[.*\]$'; then
+      #       (( branch_len += $(string-length "${c_untracked}${c_reset}") ))
+      #       branch="$(substring-before-last "$branch" '[')${c_untracked}[$(substring-after-last "${branch}" '[')${c_reset}"
+      #     fi
+      #     if [[ "$head" = "*" ]]; then
+      #       (( branch_len += $(string-length "${c_br_current}${c_reset}") ))
+      #       branch="${c_br_current}${branch}${c_reset}"
+      #     fi
+      #     if [[ "$upstream" != " " ]]; then
+      #       (( upstream_len += $(string-length "${c_br_upstream}${c_reset}") ))
+      #       upstream="${c_br_upstream}${upstream}${c_reset}"
+      #     fi
+      #     sha="${c_commit}${sha}${c_reset}"
+      #     printf "%-s %-s %-${branch_len}.${branch_len}s %-${upstream_len}.${upstream_len}s %-s %-s\n" \
+      #         "$head" "$date" "$branch" "$upstream" "$sha" "$comment"
+      #   }
+
+      #   local format
+      #   case "$branch_level" in
+      #     0)  format="$f_head%09$f_date_short%09$f_branch_and_track_short%09$f_upstream%09$f_sha%09$f_comment";;
+      #     1)  format="$f_head%09$f_datetime_short%09$f_branch_and_track_short%09$f_upstream%09$f_sha%09$f_comment";;
+      #     2)  format="$f_head%09$f_datetime%09$f_branch_and_track%09$f_upstream%09$f_sha%09$f_comment";;
+      #     *)  echo-error "git-branch: unexpected level: $branch_level"; return 1;;
+      #   esac
+
+      #   git for-each-ref --sort='-*committerdate' --format="$format" $@ 'refs/heads' | \
+      #   while IFS=$'\t' read head date branch upstream sha comment; do
+      #     .git-branch-println "$head" "$date" "$branch" "$upstream" "$sha" "$comment"
+      #   done \
+      #   | less
+      # }
+      # alias gbr='eval-verbose git-branch 0'
+      # alias gbra='eval-verbose git-branch 1'
+      # alias gbran='eval-verbose git-branch 2' gbranc='gbran' gbranch='gbran'
       
       alias gbr-rm='eval-quiet git brrm'
       alias gbr-mv='eval-quiet git brmv'
@@ -140,14 +183,6 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
           | uniq
       }
       
-      alias gco='eval-quiet git checkout'
-      alias gcod='eval-quiet git checkout develop'
-      alias gcom='eval-quiet git checkout master'
-    
-      alias gds='eval-quiet git ds'
-      alias gdss='eval-quiet git dss'
-      alias gdds='eval-quiet git dds'
-
       # LOG/PRETTY FORMAT FIELDS
       # %h  - abbrev hash
       # %C  - color or reset
@@ -235,7 +270,7 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
       alias gpff='eval-quiet git pff'
       
       alias gr-dev='eval-quiet git rebase develop'
-      alias gr-mas='eval-quiet git rebase master'
+      alias gr-main='eval-quiet git rebase main'
       alias gr-ab='eval-quiet git rebase --abort'
       
       alias gs='eval-quiet git stash'
@@ -310,8 +345,9 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
         done      
       }
 
-      if is-command git-flow; then
-        .tick-login '... git-flow is installed'
+      if ! is-command git-flow; then
+        .tick-login '[skip] git-flow: not installed'
+      else
         # https://github.com/aleksandr-m/gitflow-maven-plugin
 
         .tick-login "... checking for ~/.git-flow-completion"
@@ -344,13 +380,8 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
     .setup-git
 
   }
-  bootstrap-login-git-wrapper; unset -f bootstrap-login-git-wrapper
-
-  .reload-bootstrap-login-git() {
-    unset "_DOT_MTIMES[~/.sh_login.git]"
-    eval-quiet source ~/.sh_login.git
-  }
+  sh-login-git-wrapper; unset -f sh-login-git-wrapper
 
   .dot-store-mtime ~/.sh_login.git
-  .tick-login-git "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-login-git "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 fi

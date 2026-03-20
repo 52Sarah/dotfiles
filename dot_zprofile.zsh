@@ -15,16 +15,14 @@ source ~/.sh_bootstrap
   .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-zprofile() {
-    unset "_DOT_MTIMES[.zprofile]"
+    .dot-reset-mtimes
     eval-quiet source ~/.zprofile
   }
 
-  .tick-zprofile() { .tick -s ".zprofile" $@; }
-  .tick-zprofile "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-zprofile() { .tick -s ".zprofile" "\$\$=$$ $@"; }
+  .tick-zprofile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
-  .tick-zprofile ' ... reading ~/.sh_profile'
-  safe-source ~/.sh_profile
-  .tick-zprofile ' ... done reading ~/.sh_profile'
+  .tick-and-source .tick-zprofile ~/.sh_profile
 
 
   #
@@ -70,9 +68,7 @@ source ~/.sh_bootstrap
       # plugins+=(iterm2)
       plugins+=(vi-mode)
       
-      .tick-zprofile " ... sourcing ~/oh-my-zsh.sh"
-      source "$ZSH/oh-my-zsh.sh"
-      .tick-zprofile " ... sourced ~/oh-my-zsh.sh"
+      .tick-and-source .tick-zprofile "$ZSH/oh-my-zsh.sh"
       
       # See: https://github.com/ohmyzsh/ohmyzsh/blob/master/plugins/vi-mode
       VI_MODE_SET_CURSOR=true
@@ -92,6 +88,6 @@ source ~/.sh_bootstrap
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zprofile "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zprofile "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .zprofile-wrapper && unset -f .zprofile-wrapper

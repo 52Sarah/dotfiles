@@ -1,8 +1,11 @@
 #!/usr/bin/env zsh
 
-# Executes with Zsh or Bash.
 # If .tick-enabled(), .tick logs to ~/.tick.log.
 # Then it also echoes to stdout/stderr if .tick.stdout/err-enabled()
+#
+# Executes with Zsh or Bash.
+# Dependencies are ONLY on .sh_bootstrap.
+#
 # Other .tick options:
 #   --scriptname  used with '.tick' to determine whether this script's ticks should fire
 #   --eval        evaluate expression before echoing it (good for potentially expensive messages)
@@ -31,7 +34,7 @@
     -s|--script) script_name="$2"; shift 2;;
     -e|--eval) opt_eval=1; shift;;
     -v|--vars) opt_vars=1; shift;;
-    *) >&2 echo ".tick: $1: invalid option" && return 1;;
+    *) echo-error ".tick: $1: invalid option" && return 1;;
   esac; done
   .tick-enabled "$script_name" || return 0
 
@@ -63,8 +66,8 @@
 
   local tick_line="$(printf "%s +%4d %-6s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
   echo "$tick_line" >> ~/.tick.log
-  .tick.stdout-enabled &&  echo "$tick_line"
-  .tick.stderr-enabled && >&2 echo "$tick_line"
+  .tick.stdout-enabled && echo "$tick_line"
+  .tick.stderr-enabled && echo-stderr "$tick_line"
 
   # indent for [start]
   matches "$msg" '^\[(start|START)' >&/dev/null && ((_TICK_INDENT += 2))
@@ -72,6 +75,17 @@
   return 0
 }
 
+# Source the given file if it exists, logging before and after using the given .tick-* function.
+.tick-and-source() {
+  [[ -z "$2" ]] && echo-error "usage: .tick-and-source tick_fn sh_file"
+  local tick_fn="$1"
+  local sh_file="$(tilde-expand $2)" sh_file_tilde="$(tilde $2)"
+  if [[ -e $sh_file ]]; then
+    $tick_fn " ... reading $sh_file_tilde"
+    source $sh_file
+    $tick_fn " ... done reading $sh_file_tilde"
+  fi
+}
 
 # usage: [ms places] [format]
 datetime-plus-ms() {

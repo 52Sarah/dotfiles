@@ -86,7 +86,7 @@ file-mtime() {
   .dot-ok-to-skip ~/$dot_fname && return 
 
   .reload-sh-bootstrap() {
-    unset "_DOT_MTIMES[.sh_bootstrap]"
+    .dot-reset-mtimes
     eval-quiet source ~/.sh_bootstrap
   }
 
@@ -151,6 +151,12 @@ file-mtime() {
   #
   # Modeled after jakarta-commons-lang's human-readable function names.
   # See: https://commons.apache.org/proper/commons-lang/apidocs/org/apache/commons/lang3/StringUtils.html
+  #
+  #
+  string-length() {
+    local s="$*"
+    echo ${#s}
+  }
   #
   substring() {
     [[ -z "$2" ]] && >&2 echo "usage: substring text start_inclusive [end_exclusive]" && return 1
@@ -360,7 +366,7 @@ file-mtime() {
       local delim="$1"
       local is_first=1
       sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do 
-        if ((!is_first)) then
+        if ((!is_first)); then
           printf "%s" "$delim"
         else
           unset is_first
@@ -430,7 +436,7 @@ file-mtime() {
   # Compress value of $HOME to ~
   tilde() {
     [[ ! -t 0 ]] && _tilde-home-compress-expand 'tilde' '${path//$HOME/\~}' $@ && return 0
-    [[ -z "$1" ]] && echo-stderr "usage: tilde path [...]" && return 1
+    [[ -z "$1" ]] && printf '\n' && return 0
     tilde <<< $@
   }
   alias tilde-compress=tilde
@@ -753,11 +759,17 @@ file-mtime() {
 
   # Source any files starting with the given prefix, excluding backup files.
   .dot-source-extra-files() {
-    [[ -z "$1" ]] && echo-stderr "usage: .dot-source-extra-files PREFIX" && return 1
+    [[ -z "$1" ]] && echo-stderr "usage: .dot-source-extra-files PREFIX [tick_fn]" && return 1
+    local tick_fn="$2"
     if glob-path-exists "$HOME/$1.*"; then
       for f in $HOME/$1.*; do
-        _verbose && echo-stderr ".dot-source-extra-files: reading $f"
-        [[ "$f" =~ \.(bck|bak|BAK)$ ]] || source "$f"
+        if [[ ! "$f" =~ \.(bck|bak|BAK)$ ]]; then
+          if is-command $tick_fn; then
+            .tick-and-source $tick_fn $f
+          else
+            source $f
+          fi
+        fi
       done
     fi
   }

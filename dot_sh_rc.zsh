@@ -16,116 +16,91 @@
 
 source ~/.sh_bootstrap
 
-.shrc-wrapper() {
+.sh-rc-wrapper() {
   local dot_fname='.sh_rc'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
   .dot-ok-to-skip ~/$dot_fname && return 
 
-  .reload-shrc() {
+  .reload-sh-rc() {
     .dot-reset-mtimes
     eval-quiet source ~/.sh_rc
   }
 
-  .tick-shrc() { .tick -s ".sh_rc" $@; }
-  .tick-shrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/.sh_rc), \$SHELL=$SHELL"
+  .tick-sh-rc() { .tick -s ".sh_rc" "\$\$=$$ $@"; }
+  .tick-sh-rc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
 
    # Private env vars, etc. can be in the optional file ~/.secrets.
-  if [[ ! -f ~/.secrets ]]; then
-    .tick-shrc '... no ~/.secrets file to read'
-  else
-    source ~/.secrets
-    .tick-shrc '... read ~/.secrets file'
-  fi
+   .tick-and-source .tick-sh-rc ~/.secrets
 
   # Put homemade scripts and other miscellany here at the start of the classpath.
-  if [[ ! -d ~/.local/bin ]]; then
-    .tick-shrc '... no ~/.local/bin directory to add to PATH'
-  else
+  if [[ -d ~/.local/bin ]]; then
     path-prepend "$HOME/.local/bin"
-    .tick-shrc '... prepended ~/.local/bin to PATH'
+    .tick-sh-rc '... prepended ~/.local/bin to PATH'
   fi
-  if [[ ! -d ~/bin ]]; then
-    .tick-shrc ' ... no ~/bin directory to add to PATH'
-  elif matches "$PATH" "$HOME/bin(:|$)"; then
-    .tick-shrc '... ~/bin already in PATH'
-  else
+  if [[ -d ~/bin ]]; then
     path-prepend "$HOME/bin"
-    .tick-shrc '... prepended ~/bin to PATH'
+    .tick-sh-rc '... prepended ~/bin to PATH'
   fi
 
 
   # added to .zshrc by Snowflake SnowSQL installer v1.2
   local SNOWSQL_PKG="/Applications/SnowSQL.app/Contents/MacOS"
-  if [[ ! -d "$SNOWSQL_PKG" ]]; then
-    .tick-shrc " ... [skip] SnowSQL: no $SNOWSQL_PKG directory to add to PATH"
-  else
+  if [[ -d "$SNOWSQL_PKG" ]]; then
     path-prepend "$SNOWSQL_PKG"
-    .tick-shrc " ... prepended $SNOWSQL_PKG to PATH"
+    .tick-sh-rc " ... prepended $SNOWSQL_PKG to PATH"
   fi
 
   #
   ### ASDF
   #
-  if [[ -f ~/.asdf/asdf.sh ]]; then
-    .tick-shrc '... reading ~/.asdf/asdf.sh'
-    source ~/.asdf/asdf.sh
-    .tick-shrc '... done reading ~/.asdf/asdf.sh'
-  fi
+  .tick-and-source .tick-sh-rc ~/.asdf/asdf.sh
 
   #
   ###  HOMEBREW
   #
   .setup-homebrew() {
-    .tick-shrc "[start] .setup-homebrew, INTELLIJ_ENVIRONMENT_READER=$INTELLIJ_ENVIRONMENT_READER"
+    .tick-sh-rc "[start] .setup-homebrew, INTELLIJ_ENVIRONMENT_READER=$INTELLIJ_ENVIRONMENT_READER"
 
     local brew_binary="$(glob-path-first /usr/local/bin/brew /opt/homebrew/bin/brew)"
-    if [[ -n "$brew_binary" ]]; then
-      .tick-shrc "... using homebrew binary: $brew_binary"
-    else
-      .tick-shrc "... homebrew not installed"
-      .tick-shrc "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-      .tick-shrc "[end] .setup-homebrew"
+    if [[ ! -e "$brew_binary" ]]; then
+      .tick-sh-rc "... homebrew not installed"
+      .tick-sh-rc "... execute: /bin/bash -c \"$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
+      .tick-sh-rc "[end] .setup-homebrew"
       return 1
     fi
 
     eval "$($brew_binary shellenv $SHELL 2>/dev/null)"
     if [[ -d "$HOMEBREW_PREFIX" ]]; then
-      .tick-shrc "... homebrew shellenv properly set HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
+      .tick-sh-rc "... homebrew shellenv properly set HOMEBREW_PREFIX=$HOMEBREW_PREFIX"
     else
-      .tick-shrc "... homebrew shellenv did not properly set \$HOMEBREW_PREFIX"
-      .tick-shrc "[end] .setup-homebrew"
+      .tick-sh-rc "... homebrew shellenv did not properly set \$HOMEBREW_PREFIX"
+      .tick-sh-rc "[end] .setup-homebrew"
       return 1
     fi
 
     local brew_bin="$(substring-before-last $brew_binary '/')"
     path-prepend "$brew_bin"
-    .tick-shrc "... prepended $brew_bin to PATH"
+    .tick-sh-rc "... prepended $brew_bin to PATH"
 
     local openssl_home="$HOMEBREW_PREFIX/opt/openssl@3"
     if [[ -e "$openssl_home" ]]; then
       path-prepend "$openssl_home/bin"
-      .tick-shrc "... prepended $openssl_home/bin to PATH"
-    else
-      .tick-shrc '... openssl@3 not installed via brew'
+      .tick-sh-rc "... prepended $openssl_home/bin to PATH"
     fi
 
-    .tick-shrc "[end] .setup-homebrew"
+    .tick-sh-rc "[end] .setup-homebrew"
   }
   .setup-homebrew
 
   #
   ### SDKMAN
   #
-  if [[ ! -d "$HOME/.sdkman" ]]; then
-    .tick-shrc '[skip] SDKMAN: no ~/.sdkman directory'
-  elif [[ ! -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
-    .tick-shrc '[skip] SDKMAN: no ~/.sdkman/bin/sdkman-init.sh file'
-  else
+  if [[ -f "$HOME/.sdkman/bin/sdkman-init.sh" ]]; then
     export SDKMAN_DIR="$HOME/.sdkman"
     source "$SDKMAN_DIR/bin/sdkman-init.sh"
-    .tick-shrc '... initialized SDKMAN'
+    .tick-sh-rc '... initialized SDKMAN'
   fi
 
   # Make PATH available to UI apps, esp. IntelliJ
@@ -135,6 +110,6 @@ source ~/.sh_bootstrap
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-shrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-rc "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
-.shrc-wrapper && unset -f .shrc-wrapper
+.sh-rc-wrapper && unset -f .sh-rc-wrapper

@@ -21,14 +21,11 @@ source ~/.sh_bootstrap
   }
   alias .rlzrc='eval-verbose .reload-zshrc'
 
-  .tick-zshrc() { .tick -s '.zshrc' $@; }
-  .tick-zshrc "[START-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname), \$SHELL=$SHELL"
+  .tick-zshrc() { .tick -s '.zshrc' "\$\$=$$ $@"; }
+  .tick-zshrc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
 
-  .tick-zshrc ' ... reading ~/.sh_hrc'
-  safe-source ~/.sh_rc
-  .tick-zshrc ' ... done reading ~/.sh_rc'
-
-
+  .tick-and-source .tick-zshrc ~/.sh_rc
+  
   # Insert initialization here.
   .tick-zshrc "... nothing to initialize in ~/$dot_fname"
 
@@ -36,6 +33,7 @@ source ~/.sh_bootstrap
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
 
-  .tick-zshrc "[END-FILE] (\$\$=$$), mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zshrc "[END-FILE] mtime=$(file-mtime ~/$dot_fname)"
 }
 .zshrc-wrapper && unset -f .zshrc-wrapper
+

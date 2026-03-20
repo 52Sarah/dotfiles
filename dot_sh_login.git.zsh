@@ -16,8 +16,8 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
       eval-quiet source ~/.sh_login.git
     }
 
-    .tick-login-git() { .tick -s ".sh_login.git" "\$\$=$$ $@"; }
-    .tick-login-git "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+    .tick-login-git() { .tick -s ".sh_login.git" "$SHELL \$\$=$$ $@"; }
+    .tick-start-line .tick-login-git $dot_fname
 
     .setup-git() {
       if ! is-command git; then

@@ -27,7 +27,7 @@
 #
 .tick.stdout-enabled() { [[ -e ~/.tick.stdout ]]; }
 .tick.stderr-enabled() { [[ -e ~/.tick.stderr ]]; }
-
+#
 .tick() {
   local script_name= opt_eval= opt_vars=
   while [[ "${1:0:1}" = '-' ]]; do case "$1" in
@@ -61,29 +61,35 @@
 
   # unindent for [finish]
   if ((_TICK_INDENT >= 2)); then
-    matches "$msg" '^\[(finish|end|FINISH|END)' >&/dev/null && ((_TICK_INDENT -= 2))
+    matches "$msg" '\[(finish|end|FINISH|END).*\]' >&/dev/null && ((_TICK_INDENT -= 2))
   fi
 
-  local tick_line="$(printf "%s +%4d %-6s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" "" "$msg")"
+  local tick_line="$(printf "%s +%4d %-16s %${_TICK_INDENT}s%s" "$datetime_ms" "$delta" "$script_name" " " "$msg")"
   echo "$tick_line" >> ~/.tick.log
   .tick.stdout-enabled && echo "$tick_line"
   .tick.stderr-enabled && echo-stderr "$tick_line"
 
   # indent for [start]
-  matches "$msg" '^\[(start|START)' >&/dev/null && ((_TICK_INDENT += 2))
-
+  if matches "$msg" '\[(start|START).*\]'; then
+     ((_TICK_INDENT += 2))
+  fi
   return 0
 }
-
+#
+.tick-start-line() {
+  [[ -z "$2" ]] && echo-error "usage: .tick-start-line tick_fn dot_fname"
+  local tick_fn=$1 dot_fname=$2
+  $tick_fn "[START-FILE] shell:[$SHELL, $(shell-types)], \$PPID=$PPID, CMD='$(ps -o "command" -p $PPID | tail -1), mtime=$(file-mtime ~/$dot_fname)"
+}
+#
 # Source the given file if it exists, logging before and after using the given .tick-* function.
 .tick-and-source() {
   [[ -z "$2" ]] && echo-error "usage: .tick-and-source tick_fn sh_file"
-  local tick_fn="$1"
-  local sh_file="$(tilde-expand $2)" sh_file_tilde="$(tilde $2)"
+  local tick_fn="$1" sh_file="$2"
   if [[ -e $sh_file ]]; then
-    $tick_fn " ... reading $sh_file_tilde"
+    $tick_fn " ... reading $sh_file"
     source $sh_file
-    $tick_fn " ... done reading $sh_file_tilde"
+    $tick_fn " ... done reading $sh_file"
   fi
 }
 

@@ -11,8 +11,8 @@
     eval-quiet source ~/.zshrc.group1001
   }
 
-  .tick-zshrc-group1001() { .tick -s '.zshrc.group1001' "\$\$=$$ $@"; }
-  .tick-zshrc-group1001 "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, \$\$=$$, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zshrc-group1001() { .tick -s '.zshrc.group1001' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-zshrc-group1001 $dot_fname
 
   .tick-zshrc-group1001 "\$0=$0"
 

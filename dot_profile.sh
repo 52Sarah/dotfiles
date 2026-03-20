@@ -21,8 +21,8 @@ source ~/.sh_bootstrap
     eval-quiet . ~/.profile
   }
 
-  .tick-profile() { .tick -s '.profile' "\$\$=$$ $@"; }
-  .tick-profile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-profile() { .tick -s '.profile' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-profile $dot_fname
 
   .tick-and-source .tick-profile ~/.bash_profile
 

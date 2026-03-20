@@ -11,8 +11,8 @@
     eval-quiet source ~/.sh_rc.group1001
   }
 
-  .tick-sh-rc-group1001() { .tick -s '.sh_rc.group1001' "\$\$=$$ $@"; }
-  .tick-sh-rc-group1001 "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-rc-group1001() { .tick -s '.sh_rc.group1001' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-sh-rc-group1001 $dot_fname
 
 
   #
@@ -56,13 +56,21 @@
   #
   if ((_DOT_SKIP_ONYX_SETUP)); then
     .tick-sh-rc-group1001 "[skip] Onyx: _DOT_SKIP_ONYX_SETUP"
+  elif ! is-shell-interactive; then
+    .tick-sh-rc-group1001 "[skip] Onyx: shell is not interactive"
   else
     .setup-onyx() {
       .tick-sh-rc-group1001 "[start] Onyx initialization"
 
       export ONYX_DEBUG=true; [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]] && export ONYX_DEBUG=false
       export ONYX_TRACE=false
-      export ONYX_NO_PROFILE=true 
+      export ONYX_NO_PROFILE=true
+      export LOAD_PARALLEL=true
+
+      .tick-sh-rc-group1001 " ... ONYX_ENV=$ONYX_ENV"
+      .tick-sh-rc-group1001 " ... SCRIPT_ENV_DIR=$SCRIPT_ENV_DIR"
+      .tick-sh-rc-group1001 " ... SCRIPT_DIR=$SCRIPT_DIR"
+      .tick-sh-rc-group1001 " ... ONYX_DEBUG=$ONYX_DEBUG ONYX_TRACE=$ONYX_TRACE ONYX_NO_PROFILE=$ONYX_NO_PROFILE LOAD_PARALLEL=$LOAD_PARALLEL"
 
       local ONYX_SETUP_PROJECT_ROOT="$HOME/Workspace/onyx-zendesk-connector"
       local ONYX_SETUP_EXT=zshrc; is-zsh || ONYX_SETUP_EXT=bashrc
@@ -79,20 +87,21 @@
       elif [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]]; then
         .tick-sh-rc-group1001 " ... skipping setup-onyx.zshrc, \$INTELLIJ_ENVIRONMENT_READER='$INTELLIJ_ENVIRONMENT_READER'"
       else
-        .tick-sh-rc-group1001 " ... reading $(tilde $ONYX_SETUP)"
+        .tick-sh-rc-group1001 " ... reading $ONYX_SETUP"
         if [[ "$ONYX_DEBUG" == "true" ]]; then
           source $ONYX_SETUP "$ONYX_ENV"
         else
           source $ONYX_SETUP "$ONYX_ENV" &>/dev/null
         fi
-        .tick-sh-rc-group1001 " ... done reading $(tilde $ONYX_SETUP)"
+        .tick-sh-rc-group1001 " ... done reading $ONYX_SETUP"
 
         .tick-sh-rc-group1001 " ... ONYX_ENV=$ONYX_ENV"
         .tick-sh-rc-group1001 " ... POSTGRES_IP=$POSTGRES_IP"
-        .tick-sh-rc-group1001 " ... ONYX_DEBUG=$ONYX_DEBUG ONYX_NO_PROFILE=$ONYX_NO_PROFILE LOAD_PARALLEL=$LOAD_PARALLEL"
-        .tick-sh-rc-group1001 " ... SCRIPT_ENV_DIR=$(tilde $SCRIPT_ENV_DIR) SCRIPT_DIR=$(tilde $SCRIPT_DIR)"
-        .tick-sh-rc-group1001 " ... ONYX_JVM_DIR=$(tilde $ONYX_JVM_DIR)"
-        .tick-sh-rc-group1001 " ... TMP_EXPORT=$(tilde $TMP_EXPORT)"
+        .tick-sh-rc-group1001 " ... ONYX_DEBUG=$ONYX_DEBUG ONYX_TRACE=$ONYX_TRACE ONYX_NO_PROFILE=$ONYX_NO_PROFILE LOAD_PARALLEL=$LOAD_PARALLEL"
+        .tick-sh-rc-group1001 " ... SCRIPT_ENV_DIR=$SCRIPT_ENV_DIR"
+        .tick-sh-rc-group1001 " ... SCRIPT_DIR=$SCRIPT_DIR"
+        # .tick-sh-rc-group1001 " ... ONYX_JVM_DIR=$ONYX_JVM_DIR"
+        # .tick-sh-rc-group1001 " ... TMP_EXPORT=$TMP_EXPORT"
 
         for s in dump-env encrypt reset-env setup-env setup-local-user-env; do
           alias onyx-$s="$SHELL $SCRIPT_ENV_DIR/$s.sh"

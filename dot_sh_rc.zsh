@@ -27,8 +27,8 @@ source ~/.sh_bootstrap
     eval-quiet source ~/.sh_rc
   }
 
-  .tick-sh-rc() { .tick -s ".sh_rc" "\$\$=$$ $@"; }
-  .tick-sh-rc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-rc() { .tick -s '.sh_rc' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-sh-rc $dot_fname
 
 
    # Private env vars, etc. can be in the optional file ~/.secrets.
@@ -103,8 +103,9 @@ source ~/.sh_bootstrap
     .tick-sh-rc '... initialized SDKMAN'
   fi
 
-  # Make PATH available to UI apps, esp. IntelliJ
+  # Make key env vars available to UI apps, esp. IntelliJ
   launchctl setenv PATH "$PATH"
+  launchctl setenv JAVA_HOME "$JAVA_HOME"
 
 
   .dot-source-extra-files $dot_fname

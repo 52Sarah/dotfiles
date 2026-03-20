@@ -21,8 +21,8 @@ source ~/.sh_bootstrap
     eval-quiet . ~/.zlogin
   }
 
-  .tick-zlogin() { .tick -s ".zlogin" "\$\$=$$ $@"; }
-  .tick-zlogin "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zlogin() { .tick -s ".zlogin" "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-zlogin $dot_fname
 
   # A non-interactive login shell requires the interactive environment setup.
   .tick-and-source .tick-zlogin ~/.zshrc

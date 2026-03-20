@@ -34,8 +34,8 @@ source ~/.sh_bootstrap
   }
 
   export _TICK_INDENT=
-  .tick-sh-login() { .tick -s ".sh_login" "\$\$=$$ $@"; }
-  .tick-sh-login "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-login() { .tick -s ".sh_login" "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-sh-login $dot_fname
 
 
   #
@@ -84,12 +84,13 @@ source ~/.sh_bootstrap
   #
   ### JENV
   #
-  if ! is-command jenv; then
-    .tick-sh-login '[skip] .setup-java-jenv: jenv command not installed'
-  else
+  if is-command jenv; then
     .setup-java-jenv() {
       .tick-sh-login '[start] .setup-java-jenv'
-      if [[ "$(whence -w jenv)" == "jenv: function" ]]; then
+
+      if is-zsh && [[ "$(whence -w jenv)" == "jenv: function" ]]; then
+        .tick-sh-login 'jenv already initialized'
+      elif ! is-zsh && [[ "$(type -t)" == "function" ]]; then
         .tick-sh-login 'jenv already initialized'
       else
         .tick-sh-login '... initializing jenv'
@@ -102,15 +103,15 @@ source ~/.sh_bootstrap
       # .tick-sh-login -e 'echo "... $ which javac: $(2>&1 which javac)"'
       # .tick-sh-login -e 'echo "... $ javac -version: $(2>&1 javac -version)"'
       
-      local javahome="$(jenv javahome)"
-      if [[ -z "$javahome" ]]; then
+      local jenv_javahome="$(jenv javahome)"
+      if [[ -z "$jenv_javahome" ]]; then
         .tick-sh-login "jenv reports a blank JAVA_HOME"
-      elif [[ ! -d "$javahome" ]]; then
-        .tick-sh-login "jenv reports a non-directory JAVA_HOME: $javahome"
-      elif [[ ! -d "$javahome/bin" ]]; then
-        .tick-sh-login "jenv non-directory JAVA_HOME/bin: $javahome/bin"
+      elif [[ ! -d "$jenv_javahome" ]]; then
+        .tick-sh-login "jenv reports a non-directory JAVA_HOME: $jenv_javahome"
+      elif [[ ! -d "$jenv_javahome/bin" ]]; then
+        .tick-sh-login "jenv non-directory JAVA_HOME/bin: $jenv_javahome/bin"
       else
-        export JAVA_HOME="$javahome"
+        export JAVA_HOME="$jenv_javahome"
       fi
 
       .tick-sh-login -e tilde "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
@@ -145,9 +146,7 @@ source ~/.sh_bootstrap
   #
   ### SCHEMASPY
   #
-  if [[ ! -f "$HOME/lib/schemaspy.jar" ]]; then
-    .tick-sh-login '[skip] schemaspy: ~/lib/schemaspy.jar file not found'
-  else
+  if [[ -f "$HOME/lib/schemaspy.jar" ]]; then
     schemaspy() {
       local driver_path="$HOME/lib"
       local spy_output="schemaspy-out"
@@ -163,28 +162,31 @@ source ~/.sh_bootstrap
         -noviews -noimplied -nopages -maxdet 9999 \
         $@
     }
+    .tick-sh-login 'schemaspy command defined'
   fi
 
   #
   ### PIPENV
   #
-  if ! is-command pipenv; then
-    .tick-sh-login '... pipenv is not installed'
-  else
+  if is-command pipenv; then
     export PIPENV_SHELL="$SHELL"
+    .tick-sh-login "pipenv: set PIPENV_SHELL=$PIPENV_SHELL"
   fi
 
   #
   ### RANCHER DESKTOP
   #
-  if ((_DOT_SKIP_RANCHER_DESKTOP_SETUP)); then
-    # .tick-sh-login '[skip] Rancher Desktop: _DOT_SKIP_RANCHER_DESKTOP_SETUP'
-  elif [[ ! -d ~/.rd/bin ]]; then
-    # .tick-sh-login '[skip] Rancher Desktop: no ~/.rd/bin to add to PATH'
-  else
-    path-apppend "$HOME/.rd/bin"
-    .tick-sh-login 'appended ~/.rd/bin to PATH'
-  fi
+  .setup-rancher-desktop() {
+    if ((_DOT_SKIP_RANCHER_DESKTOP_SETUP)); then
+      return 1
+    elif [[ ! -d ~/.rd/bin ]]; then
+      return 1
+    else
+      path-apppend "$HOME/.rd/bin"
+      .tick-sh-login 'Rancher Desktop: appended ~/.rd/bin to PATH'
+    fi
+  }
+  .setup-rancher-desktop
 
 
   .dot-source-extra-files $dot_fname

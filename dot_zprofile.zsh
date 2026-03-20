@@ -19,11 +19,10 @@ source ~/.sh_bootstrap
     eval-quiet source ~/.zprofile
   }
 
-  .tick-zprofile() { .tick -s ".zprofile" "\$\$=$$ $@"; }
-  .tick-zprofile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zprofile() { .tick -s ".zprofile" "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-zprofile $dot_fname
 
   .tick-and-source .tick-zprofile ~/.sh_profile
-
 
   #
   ### OH-MY-ZSH

@@ -21,8 +21,8 @@ source ~/.sh_bootstrap
   }
   alias .rlzrc='eval-verbose .reload-zshrc'
 
-  .tick-zshrc() { .tick -s '.zshrc' "\$\$=$$ $@"; }
-  .tick-zshrc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-zshrc() { .tick -s '.zshrc' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-zshrc $dot_fname
 
   .tick-and-source .tick-zshrc ~/.sh_rc
   

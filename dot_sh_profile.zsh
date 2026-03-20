@@ -29,8 +29,8 @@ sh-profile-wrapper() {
   }
 
   export _TICK_INDENT=
-  .tick-sh-profile() { .tick -s ".sh_profile" "\$\$=$$ $@"; }
-  .tick-sh-profile "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-sh-profile() { .tick -s ".sh_profile" "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-sh-profile $dot_fname
 
 
   # Insert initialization here.

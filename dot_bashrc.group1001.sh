@@ -11,8 +11,8 @@
     eval-quiet source ~/.bashrc.group1001
   }
 
-  .tick-bashrc-group1001() { .tick -s '.bashrc.group1001' "\$\$=$$ $@"; }
-  .tick-bashrc-group1001 "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, \$\$=$$, mtime=$(file-mtime ~/$dot_fname)"
+  .tick-bashrc-group1001() { .tick -s '.bashrc.group1001' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-bashrc-group1001 $dot_fname
 
   .tick-bashrc-group1001 "\$0=$0 BASH_SOURCE=$BASH_SOURCE)"
 

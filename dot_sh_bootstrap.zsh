@@ -27,63 +27,96 @@ is-zsh() {
 is-bash() {
   [[ "$0" =~ bash ]]
 }
+is-bash-3() {
+  [[ "$BASH_VERSION" =~ ^3 ]]
+}
+
+is-shell-interactive() {
+  [[ "$-" =~ i ]]
+}
+is-shell-login() {
+  [[ "$0" =~ ^-.+ ]]
+}
+shell-types() {
+  local login="login" interactive="interactive"
+  is-shell-login || login="!login"
+  is-shell-interactive || interactive="!interactive"
+  echo "$login $interactive"
+}
 
 #
 ### Minimize redundant startup file execution, based on whether script modified since last run.
+#
+if is-bash-3; then
+  # echo >&2 ".sh_bootstrap: bash version is $BASH_VERSION, no associative arrays"
+  export _DOT_MTIMES_IGNORE=1
+fi
 #
 file-mtime() {
   [[ -z "$1" || -n "$2" ]] && echo >&2 'usage: file-mtime path' && return 1
   stat -L -f '%m' "$1" # epoch seconds
 }
 .dot-ok-to-skip() {
+  # echo >&2 ".dot-ok-to-skip: [$1] START _DOT_MTIMES: $(declare -p _DOT_MTIMES 2> /dev/null)"
   [[ -z "$1" ]] && echo >&2 'usage: .dot-ok-to-skip dot_file' && return 1
   local dot_file="$1"
   [[ ! -e "$dot_file" ]] && echo >&2 ".dot-ok-to-skip: $dot_file: No such file" && return 1
   (( _DOT_MTIMES_IGNORE )) && return 1
-  
+
   local dot_file_mtime=$(file-mtime $dot_file)
   local dot_file_key="${dot_file//./_}"
   dot_file_key="${dot_file_key//\//_}"
 
   local cached_mtime=${_DOT_MTIMES[$dot_file_key]}
   [[ -z "$cached_mtime" ]] && return 1
-  # echo >&2 '$dot_file: (( $dot_file_mtime == $cached_mtime ))'
-  # echo >&2 "$dot_file: (( $dot_file_mtime == $cached_mtime ))"
-  # echo >&2 "$dot_file: $(( $dot_file_mtime == $cached_mtime ))"
   (( $dot_file_mtime == $cached_mtime ))
 }
 #
 .dot-store-mtime() {
+  # echo >&2 ".dot-store-mtime: [$1] START _DOT_MTIMES: $(declare -p _DOT_MTIMES 2> /dev/null)"
   [[ -z "$1" ]] && echo >&2 'usage: .dot-store-mtime dot_file' && return 1
   local dot_file="$1"
   [[ ! -e "$dot_file" ]] && echo >&2 ".dot-store-mtime: $dot_file: No such file" && return 1
   (( _DOT_MTIMES_IGNORE )) && return 1
 
+  [[ -z "${_DOT_MTIMES[@]}" ]] && .dot-reset-mtimes
+
   local dot_file_mtime=$(file-mtime $dot_file)
   local dot_file_key="${dot_file//./_}"
   dot_file_key="${dot_file_key//\//_}"
 
-  _DOT_MTIMES[$dot_file_key]=$dot_file_mtime
-  # echo >&2 "${!}_DOT_MTIMES"
-  export _DOT_MTIMES
+  if is-zsh; then
+    _DOT_MTIMES[$dot_file_key]=$dot_file_mtime
+    # echo >&2 ".dot-store-mtime: END ... (kv)_DOT_MTIMES[@]=${(kv)_DOT_MTIMES[@]}"
+  else
+    # echo >&2 ".dot-store-mtime: ... executing _DOT_MTIMES+=([$dot_file_key]=$dot_file_mtime)"
+    export _DOT_MTIMES+=([$dot_file_key]=$dot_file_mtime)
+    # echo >&2 ".dot-store-mtime: END ... !_DOT_MTIMES[@] keys=${!_DOT_MTIMES[@]}"
+    # echo >&2 ".dot-store-mtime: END ... _DOT_MTIMES[@] values=${_DOT_MTIMES[@]}"
+  fi
 }
 #
 .dot-reset-mtimes() {
+  # echo >&2 ".dot-reset-mtimes: START _DOT_MTIMES: $(declare -p _DOT_MTIMES 2> /dev/null)"
+  (( _DOT_MTIMES_IGNORE )) && return 1
   if is-zsh; then
-    typeset -g -A _DOT_MTIMES
+    typeset -g -A _DOT_MTIMES=([foo]=bar)
+    # echo >&2 ".dot-reset-mtimes: ... typeset -g -A _DOT_MTIMES[@]=\${_DOT_MTIMES[@]} type: $(declare -p _DOT_MTIMES 2> /dev/null)"
   else
-    declare -A _DOT_MTIMES
-    export _DOT_MTIMES
+    export -A _DOT_MTIMES=([foo]=bar)
+    # echo >&2 ".dot-reset-mtimes: ... export -A _DOT_MTIMES[@]=\${_DOT_MTIMES[@]} type: $(declare -p _DOT_MTIMES 2> /dev/null)"
   fi
 }
-[[ -z "$_DOT_MTIMES" || -z "${_DOT_MTIMES[*]}" ]] && .dot-reset-mtimes
+[[ -z "${_DOT_MTIMES[@]}" ]] && .dot-reset-mtimes
 
+# echo >&2 ".sh_bootstrap: _DOT_MTIMES: $(declare -p _DOT_MTIMES 2> /dev/null)"
 
 .sh-bootstrap-wrapper() {
+  # echo >&2 ".sh-bootstrap-wrapper: START $SHELL $- _DOT_MTIMES: $(declare -p _DOT_MTIMES 2> /dev/null)"
   local dot_fname='.sh_bootstrap'
 
   # Do not execute scripts if they have already been run this session and are not modified since.
-  .dot-ok-to-skip ~/$dot_fname && return 
+  .dot-ok-to-skip ~/$dot_fname && return 0
 
   .reload-sh-bootstrap() {
     .dot-reset-mtimes
@@ -107,7 +140,7 @@ file-mtime() {
   #
   echo-stderr()   { >&2 echo $@; }
   echo-error()    { >&2 echo $@; }
-  alias eecho=echo-stderr 
+  alias eecho=echo-stderr
   #
   echo-debug()    { _debug && echo-stderr $@; }
   echo-verbose()  { _verbose && echo-stderr $@; }
@@ -133,7 +166,7 @@ file-mtime() {
   #
   # Conditionally echo the expression to stderr before executing it, using
   # similar logic as echo-* and printf-*.
-  eval-echo() { 
+  eval-echo() {
     local prefix='>$ '
     matches "$1" '^-p|--prefix$' ]] && prefix="$2 " && shift 2
     echo-stderr "$prefix$@"
@@ -187,7 +220,21 @@ file-mtime() {
   # True if $1 is any kind of executable command: alias, keyword, function, builtin, file
   is-command() {
     [[ -z "$1" ]] && echo-stderr "usage: is-command name" && return 1
-    whence $1 >&/dev/null
+    if is-zsh; then
+      whence $1 >& /dev/null
+    else
+      type $1 >& /dev/null
+    fi
+  }
+
+  # True if $1 is a shell function
+  is-function() {
+    [[ -z "$1" ]] && echo-stderr "usage: is-function name" && return 1
+    if is-zsh; then
+      [[ "$(whence -w $1)" == "$1: function" ]]
+    else
+      [[ "$(type -t $1)" == "function" ]]
+    fi
   }
 
   # Source given file(s). If a file does not exist, echo a non-quiet warning but ignore the error.
@@ -204,7 +251,7 @@ file-mtime() {
   }
 
   #
-  # Add given path element to the end of the path variable (defaults to PATH), or move it 
+  # Add given path element to the end of the path variable (defaults to PATH), or move it
   # there if already present.
   # usage: path-append [--prepend] [--variable path_var] elem
   path-append() {
@@ -212,7 +259,7 @@ file-mtime() {
     [[ "$1" =~ ^(-p|--prepend)$ ]] && opt_prepend=1 && shift 1
     [[ "$1" =~ ^(-v|--variable)$ ]] && path_var="$2" && shift 2
     [[ -z "$1" ]] && echo-stderr "usage: path-append [--prepend] [--variable path_var] elem" && return 1
-    
+
     local elem="$1" && shift
     local elements="$PATH"
     if [[ -z "$elements" ]]; then
@@ -365,7 +412,7 @@ file-mtime() {
   join-lines() {
       local delim="$1"
       local is_first=1
-      sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do 
+      sed -E -n -e 's/^[[:space:]]*(.+)[[:space:]]*$/\1/p' | while read -r ln; do
         if ((!is_first)); then
           printf "%s" "$delim"
         else
@@ -500,7 +547,7 @@ file-mtime() {
 
   #
   ### 'less' helpers:
-  # 
+  #
   alias l='less'
   #
   # Lines will NOT wrap, but CTRL-C, arrow keys can scroll left and right. Press 'F' to resume "tailing".
@@ -552,7 +599,7 @@ file-mtime() {
 
   #
   ### 'nc' helpers:
-  # 
+  #
   ncz() {
     [[ -z "$1" ]] && echo-error "Usage: ncz [host] port" && return 1
     local host= port=
@@ -565,9 +612,9 @@ file-mtime() {
       port=$1
       shift 1
     fi
-    
+
     eval-verbose nc -z $host $port $@
-    
+
     local ret=$?
     if ! _quiet; then
       ((!ret)) && echo "Active" || echo "Inactive"
@@ -703,7 +750,7 @@ file-mtime() {
         # touch -h will update link's target instead of link
         eval-quiet touch -r "$dir/$newest" "$dir"
         [[ -L "$dir" ]] && eval-quiet touch -h -r "$dir/$newest" "$dir"
-        
+
         ((count++))
     done
     ((!count)) && return 1
@@ -764,7 +811,7 @@ file-mtime() {
     if glob-path-exists "$HOME/$1.*"; then
       for f in $HOME/$1.*; do
         if [[ ! "$f" =~ \.(bck|bak|BAK)$ ]]; then
-          if is-command $tick_fn; then
+          if [[ -n "$tick_fn" ]] && is-command $tick_fn; then
             .tick-and-source $tick_fn $f
           else
             source $f
@@ -783,5 +830,6 @@ file-mtime() {
 
   .dot-source-extra-files $dot_fname
   .dot-store-mtime ~/$dot_fname
+  # echo >&2 ".sh-bootstrap-wrapper: END"
 }
 .sh-bootstrap-wrapper && unset -f .sh-bootstrap-wrapper

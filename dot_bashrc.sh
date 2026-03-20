@@ -22,8 +22,8 @@ source ~/.sh_bootstrap
     eval-quiet source ~/.bashrc
   }
 
-  .tick-bashrc() { .tick -s '.bashrc' "\$\$=$$ $@"; }
-  .tick-bashrc "[START-FILE] \$SHELL=$SHELL, \$PPID=$PPID, PCMD='$(ps -o "command" -p $PPID)', mtime=$(file-mtime ~/$dot_fname)"
+  .tick-bashrc() { .tick -s '.bashrc' "$SHELL \$\$=$$ $@"; }
+  .tick-start-line .tick-bashrc $dot_fname
 
   # Local overrides might be in ~.zshenv; since Bash has no equivalent, read that file here too.
   .tick-and-source .tick-bashrc ~/.zshenv

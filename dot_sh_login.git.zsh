@@ -28,29 +28,6 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
 
       # Many of these items are better implemented by git-extras. so are disabled.
 
-      # # usage: git-alias [--max-count n] [patt]
-      # git-alias() {
-      #   local USAGE="usage: git-alias [[--max-count] n] [patt]"
-      #   local opt_patt='.+' opt_maxcount=999
-      #   while [[ -n "$1" ]]; do case "$1" in
-      #     -n | --max-count) shift 1; 
-      #                       if [[ -n "$1" ]]; then
-      #                         opt_maxcount=$1
-      #                         shift
-      #                       else
-      #                         echo-error "usage: $USAGE"
-      #                         return 1
-      #                       fi;;
-      #     *) break;;
-      #   esac; done
-      #   [[ "$1" =~ ^[0-9]+$ ]] && opt_maxcount=$1 && shift
-      #   opt_patt="$@"
-
-      #   git config --get-regexp "^alias\.${opt_patt}" \
-      #     | head -n $opt_maxcount \
-      #     | sed -E 's/^alias\.([^ ]+) +(.*)/\1\t\2/;'
-      # }
-    
       # UGH - Friday afternoon boondoggle, 3/6/26. Maybe salvage some of this.
       # # Builds atop git-extras' `git brv` command, which lists fields in this order:
       # #   - committerdate (%F, or yyyy-mm-dd)
@@ -145,22 +122,6 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
       # alias gbr='eval-verbose git-branch 0'
       # alias gbra='eval-verbose git-branch 1'
       # alias gbran='eval-verbose git-branch 2' gbranc='gbran' gbranch='gbran'
-      
-      alias gbr-rm='eval-quiet git brrm'
-      alias gbr-mv='eval-quiet git brmv'
-      alias gbr-cp='eval-quiet git brcp'
-      
-      # make a backup copy of current branch using timestamp 'mmdd' as default suffix
-      git-branch-bak() {
-        [[ -z "$GIT_BRANCH" ]] && echo-error "No current branch" && return 1
-        [[ -n "$1" ]] && mmdd="$1" || mmdd="$(date +'%m%d')"
-        eval-quiet git brcp \"$GIT_BRANCH\" \"XXX.${GIT_BRANCH}.$mmdd\"
-      }
-      alias gbr-bak='eval-quiet git-branch-bak'
-      
-      git-branch-set-upstream()     { eval-quiet git branch --set-upstream-to "origin/$GIT_BRANCH" $@; }
-      git-branch-set-upstream-to()  { eval-quiet git branch --set-upstream-to "${@:-origin/$GIT_BRANCH}"; }
-      git-branch-unset-upstream()   { eval-quiet git branch --unset-upstream; }
       
       git-branches-with() {
         local _QUIET=$! _quiet_on _VERBOSE=$((_VERBOSE))
@@ -267,19 +228,6 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
         done
       }
       
-      alias gpff='eval-quiet git pff'
-      
-      alias gr-dev='eval-quiet git rebase develop'
-      alias gr-main='eval-quiet git rebase main'
-      alias gr-ab='eval-quiet git rebase --abort'
-      
-      alias gs='eval-quiet git stash'
-      alias gsh='eval-quiet git stash -h'
-      alias gsl='eval-quiet git stash list' 
-      alias gsld='eval-quiet git stash list --date=short' 
-      alias gsa='eval-quiet git stash apply' 
-      alias gss='eval-quiet git stash show'
-      #
       git-stash-diff() {
         local index=0; [[ -n "$1" ]] && index=$1 && shift
         local index2=; [[ "$1" =~ ^[[:digit:]]+$ ]] && index2=$1 && shift
@@ -330,24 +278,7 @@ if [[ "$(.dot-ok-to-skip ~/.sh_login.git)" != 'true' ]]; then
       alias gstat='eval-quiet git-status 2'
       alias gstatu='eval-quiet git-status 3' gstatus='gstatu'
 
-      # update local mtime based on git log
-      # from: https://stackoverflow.com/a/2038768/160955
-      git-touch() {
-        [[ -z "$1" ]] && echo-error "usage: git-touch file [...]" && return 1
-        while [[ -n "$1" ]]; do
-          local f="$1"; shift
-          local rev="$(git rev-list -n 1 "HEAD" "$f")"
-          local commit_sec="$(git show --pretty=format:%at --abbrev-commit "$rev" | head -n 1)"
-          local commit_ts="$(date -r $commit_sec '+%Y%m%d%H%M.%S')"
-          qprintf 'before: ' && ls -oghF "$f"
-          eval-quiet touch -h -t "$commit_ts" "$f"
-          qprintf 'after:  ' && ls -oghF "$f"
-        done      
-      }
-
-      if ! is-command git-flow; then
-        .tick-login '[skip] git-flow: not installed'
-      else
+      if is-command git-flow; then
         # https://github.com/aleksandr-m/gitflow-maven-plugin
 
         .tick-login "... checking for ~/.git-flow-completion"

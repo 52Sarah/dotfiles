@@ -21,6 +21,8 @@
   alias gcp='gcloud'
   alias gcp-projects-list='eval-quiet gcloud projects list'
   alias gcp-config-list='eval-quiet gcloud config list'
+  alias gcp-config-set-project-sandbox-devl='eval-quiet gcloud config set project sandbox-devl-3470794309'
+  alias gcp-config-set-project-dlic-np-dev='eval-quiet gcloud config set project dlic-np-dev-3824380783'
 
   #
   ### GRADLE aliases
@@ -62,7 +64,7 @@
     .setup-onyx() {
       .tick-sh-rc-group1001 "[start] Onyx initialization"
 
-      export ONYX_DEBUG=true; [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]] && export ONYX_DEBUG=false
+      export ONYX_DEBUG=false; [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]] && export ONYX_DEBUG=false
       export ONYX_TRACE=false
       export ONYX_NO_PROFILE=true
       export LOAD_PARALLEL=true
@@ -84,8 +86,8 @@
       #   .tick-sh-rc-group1001 " ... skipping setup-onyx.zshrc, ONYX_TMP already exists: $(tilde $ONYX_TMP)"
       # elif [[ -n "$ONYX_ENV" ]]; then
       #   .tick-sh-rc-group1001 " ... skipping setup-onyx.zshrc, ONYX_ENV already initialized: $(tilde $ONYX_ENV)"
-      elif [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]]; then
-        .tick-sh-rc-group1001 " ... skipping setup-onyx.zshrc, \$INTELLIJ_ENVIRONMENT_READER='$INTELLIJ_ENVIRONMENT_READER'"
+      # elif [[ -n "$INTELLIJ_ENVIRONMENT_READER" ]]; then
+      #   .tick-sh-rc-group1001 " ... skipping setup-onyx.zshrc, \$INTELLIJ_ENVIRONMENT_READER='$INTELLIJ_ENVIRONMENT_READER'"
       else
         .tick-sh-rc-group1001 " ... reading $ONYX_SETUP"
         if [[ "$ONYX_DEBUG" == "true" ]]; then
@@ -103,8 +105,11 @@
         # .tick-sh-rc-group1001 " ... ONYX_JVM_DIR=$ONYX_JVM_DIR"
         # .tick-sh-rc-group1001 " ... TMP_EXPORT=$TMP_EXPORT"
 
+        # May want to add: KAFKA_ NIPR_ PM_ ZENDESK_
+        launchctl-copyenvs ONYX_ GCLOUD_ CI_ GOOGLE_ GCP_ SP_ POSTGRES_
+
         for s in dump-env encrypt reset-env setup-env setup-local-user-env; do
-          alias onyx-$s="$SHELL $SCRIPT_ENV_DIR/$s.sh"
+          alias onyx-$s="ONYX_DEBUG=true . $SCRIPT_ENV_DIR/$s.sh"
         done
         alias onyx-env-scripts="less $SCRIPT_ENV_DIR/env-scripts.md"
       fi

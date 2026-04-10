@@ -82,6 +82,46 @@ source ~/.sh_bootstrap
   fi
 
   #
+  ### GIT (basic aliases and functions)
+  #
+  alias gbr='eval-quiet git branch'
+  alias gbrv='eval-quiet git brv' # git-extras
+  alias gbr-rm='eval-quiet git br-rm'
+  alias gbr-mv='eval-quiet git br-mv'
+  alias gbr-cp='eval-quiet git br-cp'
+  #
+  # make a backup copy of current branch using timestamp 'mmdd' as default suffix
+  git-branch-bak() {
+    [[ -n "$1" ]] && mmdd="$1" || mmdd="$(date +'%m%d')"
+    local mmdd="${1:-$(date +'%m%d')}"
+    eval-quiet git br-cp \"$GIT_BRANCH\" \"${GIT_BRANCH}.BAK.${mmdd}\"
+  }
+  alias gbr-bak='eval-quiet git-branch-bak'
+  #
+  git-branch-set-upstream() {
+    eval-quiet git branch --set-upstream-to "origin/$GIT_BRANCH"
+  }
+  git-branch-set-upstream-to() { 
+    eval-quiet git branch --set-upstream-to "${@:-origin/$GIT_BRANCH}"
+  }
+  git-branch-unset-upstream() { 
+    eval-quiet git branch --unset-upstream
+  }
+  #
+  alias gpff='eval-quiet git pff'
+  #
+  alias gr-dev='eval-quiet git rebase develop'
+  alias gr-main='eval-quiet git rebase main'
+  alias gr-ab='eval-quiet git rebase --abort'
+  #
+  alias gs='eval-quiet git stash'
+  alias gsh='eval-quiet git stash -h'
+  alias gsl='eval-quiet git stash list' 
+  alias gsld='eval-quiet git stash list --date=short' 
+  alias gsa='eval-quiet git stash apply' 
+  alias gss='eval-quiet git stash show'
+
+  #
   ### JENV
   #
   if is-command jenv; then

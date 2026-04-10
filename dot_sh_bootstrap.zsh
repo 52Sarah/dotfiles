@@ -546,6 +546,45 @@ file-mtime() {
   }
 
   #
+  ### 'launchctl' helpers:
+  #
+  launchctl-listenv() {
+    local patt="${1:-.*}"
+    launchctl dumpstate \
+      | egrep '^\s*[A-Z0-9_]+ => ' \
+      | sort \
+      | uniq \
+      | egrep -v '\s(__CF_USER_TEXT_ENCODING|CUPS|DEBUGSCOPE|HOME|TMPDIR|VSCODE_|XPC_)' \
+      | egrep --color=never "$patt"
+  }
+  launchctl-unsetenvs() {
+    launchctl-listenv "$1" \
+      | while read line; do
+        eval-quiet launchctl unsetenv $(substring-before-first "$line" ' =>')
+      done
+  }
+  launchctl-copyenvs() {
+    [[ -z "$1" ]] && echo-error 'usage: launchctl-copyenvs prefix [...]' && return 1
+    local name vars var value
+    for name in $@; do
+      name="${name}*"
+      if is-zsh; then
+        typeset -m $name | while read line; do
+          var="$(substring-before-first "$line" '=')"
+          value="$(substring-after-first "$line" '=')"
+          launchctl setenv $var "$value"
+        done
+      else
+        eval $(echo vars="\${!$name}")
+        for var in $vars; do
+          value="${!var}"
+          launchctl setenv $var "$value"
+        done
+      fi
+    done
+  }
+
+  #
   ### 'less' helpers:
   #
   alias l='less'

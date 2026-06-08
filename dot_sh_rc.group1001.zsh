@@ -35,8 +35,8 @@
   alias gwh='eval-quiet ./gradlew help'
   alias gwh-task='eval-quiet ./gradlew help --task'
   #
-  alias gw-ktlint-check='eval-quiet ./gradlew ktlintCheck'
   alias gw-ktlint-format='eval-quiet ./gradlew ktlintFormat'
+  alias gwkf='eval-quiet gw-ktlint-format'
   #
   alias gw-onyx-generate-graphql-code='eval-quiet ./gradlew generateGraphQLCode'
   #
@@ -46,12 +46,18 @@
   alias gw-liquibase-rollback-1-sql='eval-quiet ./gradlew liquibaseRollbackCountSql -PliquibaseCommandValue=1'
   alias gw-liquibase-status='eval-quiet ./gradlew liquibaseStatus'
   alias gw-liquibase-update='eval-quiet ./gradlew liquibaseUpdate'
-
+  alias gwlu='eval-quiet gw-liquibase-update'
   #
-  ### Windsurf
-  if [[ -d "$HOME/.codeium/windsurf/bin" ]]; then
-    path-append "$HOME/.codeium/windsurf/bin"
-  fi
+  alias gw-publish-to-maven-local='eval-quiet ./gradlew publishToMavenLocal'
+  #
+  alias gw-integrationTest='eval-quiet ./gradlew :server:integrationTest'
+  alias gw-unitTest='eval-quiet ./gradlew :server:test'
+
+  # #
+  # ### Windsurf
+  # if [[ -d "$HOME/.codeium/windsurf/bin" ]]; then
+  #   path-append "$HOME/.codeium/windsurf/bin"
+  # fi
 
   #
   ### ONYX environment initialization

@@ -53,6 +53,7 @@
         ".alias",
         ".bash*",
         ".git*",
+        ".mailmap",
         ".pwr",
         ".secrets",
         ".sh*",

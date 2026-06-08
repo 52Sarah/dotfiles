@@ -33,11 +33,16 @@
   fet =   fetch --progress --verbose
   fett =  fetch --progress --verbose --tags
 
-  lo =   log -20 --abbrev=6 --date='format:%D'
-  lo0 =  lo
-  lo1 =  log -20 --abbrev=short --date=human --use-mailmap
-  lo2 =  log -20 --abbrev=short --date=human --use-mailmap --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%<(8)%ad %C(white)%<(12)%ar %C(bold cyan)%d%n  %C(reset)%s%C(reset)'
-  lo3 =  log -20 --abbrev=short --date=human --no-use-mailmap --stat --format='%<(7)%C(yellow)%h  %C(reset)%<(22)%aN  %C(white)%ad  %C(white)%<(12)%ar%C(bold cyan)%d%n  %C(white)%s%n  %C(reset)%b%C(reset)'
+  # log format directives:
+  #   %C    bold | red/cyan/... | reset
+  #   %h    hash
+  #   %d    refs
+  #   %aN   author
+  #   %ar   commit date
+  #   $s    subject
+
+  log1 = log --format='%n%C(yellow)commit %C(bold yellow)%h%Creset%C(bold cyan)%d%Creset%n%C(white)Author: %C(bold white)%aN%n%Creset%C(white)Date:   %C(bold white)%ar%Creset%n  %s'
+  log2 = log --format='%n%C(dim)---------------%Creset%n%C(yellow)commit %C(bold yellow)%h%Creset%C(bold cyan)%d%Creset%n%C(white)Author: %C(bold white)%aN%n%Creset%C(white)Date:   %C(bold white)%ar%Creset%n  %s' --stat
 
   pff = pull --ff-only --progress
   prb = pull --rebase --progress
@@ -48,7 +53,6 @@
   rco = rebase --continue
 
   st =  status --short
-  st0 = st
   st1 = status --column=dense --no-show-stash
   # st2: Show files in columns
   st2 = status --column=nodense --show-stash
@@ -117,10 +121,13 @@
 [log]
   abbrevCommit = true  #! false
   #! conflictStyle = merge
-  date = human #!iso
-  decorate = short     # none|short|full|AUTO
+  date = human-local #!iso
+  decorate = full     # none|short|full|AUTO
   follow = true
   #! mailmap = true
+
+[mailmap]
+  file = ~/.mailmap
 
 [merge]
   #! autoStash = false
@@ -160,6 +167,7 @@
 
 [stash]
   #! showStat = true
+  #! showPatch = false
 
 # by default, full "status" command is complete; "s" alias is terse
 [status]

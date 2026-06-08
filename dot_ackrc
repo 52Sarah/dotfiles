@@ -49,6 +49,8 @@
     style:ext:css,js,less,sass,ts
 --type-set
     styled:ext:htm,html,js,jsp
+--type-set
+    mutation:match:/.*Mutation\.(kt|java)$/
 
 --type-del=actionscript
 --type-del=ada

@@ -79,6 +79,7 @@ source ~/.sh_bootstrap
     alias ack-help-types='eval-quiet ack --help-types'
     alias ack-java='ack --type=java' ackj='ack-java'
     alias ack-kotlin='ack --type=kotlin' ackk='ack-kotlin'
+    alias ack-mutation='ack --type=mutation'
   fi
 
   #
@@ -108,18 +109,43 @@ source ~/.sh_bootstrap
     eval-quiet git branch --unset-upstream
   }
   #
-  alias gpff='eval-quiet git pff'
+  git-rebase-main() {
+    eval-quiet git fetch \
+    && eval-quiet git co main \
+    && eval-quiet git pull --ff-only --progress \
+    && eval-quiet git co - \
+    && eval-quiet git rebase main \
+    && eval-quiet git log -n 5
+  }
   #
-  alias gr-dev='eval-quiet git rebase develop'
-  alias gr-main='eval-quiet git rebase main'
-  alias gr-ab='eval-quiet git rebase --abort'
+  alias gl='eval-quiet git log -n 5'
+  alias glo='eval-quiet git log1 -n 5'
+  alias glog='eval-quiet git log2 -n 5'
+  #
+  alias gpff='eval-quiet git pull --ff-only --progress'
+  #
+  alias git-rebase-develop='eval-quiet git fetch && eval-quiet git rebase origin/develop'
+  # alias git-rebase-main='eval-quiet git fetch && eval-quiet git co main && eval-quiet git pull --ff-only --progress && eval-quiet git rebase origin/main'
+  alias git-rebase-abort='eval-quiet git rebase --abort'
   #
   alias gs='eval-quiet git stash'
-  alias gsh='eval-quiet git stash -h'
-  alias gsl='eval-quiet git stash list' 
-  alias gsld='eval-quiet git stash list --date=short' 
-  alias gsa='eval-quiet git stash apply' 
-  alias gss='eval-quiet git stash show'
+  alias gs-help='eval-quiet git stash -h'
+  alias gs-list='eval-quiet git stash list' 
+  alias gs-listd='eval-quiet git stash list --date=short' 
+  alias gs-lists='eval-quiet git stash list --stat' 
+  alias gs-apply='eval-quiet git stash apply' 
+  alias gs-show='eval-quiet git stash show'
+  #
+  alias gsa='eval-quiet gs-apply'
+  alias gsl='eval-quiet gs-list' 
+  alias gsld='eval-quiet gs-listd' 
+  alias gsls='eval-quiet gs-list --stat' 
+  alias gss='eval-quiet gs-show' 
+  #
+  alias gst='eval-quiet git st'
+  alias gsta='eval-quiet git st1'
+  alias gstat='eval-quiet git st2'
+  alias gstatu='eval-quiet git st3'
 
   #
   ### JENV

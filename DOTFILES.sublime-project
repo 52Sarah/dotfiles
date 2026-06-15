@@ -73,14 +73,6 @@
         "zsh*"
       ],
     },
-    {
-      "name": "onyx-jvm/scripts/env",
-      "path": "~/Workspace/onyx-jvm/scripts/env",
-    },
-    {
-      "name": "onyx-zendesk-connector/scripts/env",
-      "path": "~/Workspace/onyx-zendesk-connector/scripts/env",
-    },
 	]
 }
 

@@ -20,8 +20,8 @@
   fi
   [[ -e ~/.tick.disabled ]] && return 1
   [[ -e ~/.tick.enabled ]] && return 0
-  .tick.stdout-enabled && return 0
-  .tick.stderr-enabled && return 0
+  [[ -e ~/.tick.stdout ]] && return 0
+  [[ -e ~/.tick.stderr ]] && return 0
   return 1
 }
 #

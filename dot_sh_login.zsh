@@ -180,7 +180,7 @@ source ~/.sh_bootstrap
         export JAVA_HOME="$jenv_javahome"
       fi
 
-      .tick-sh-login -e tilde "[end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
+      .tick-sh-login -e "tilde [end] .setup-java-jenv, JAVA_HOME=[$JAVA_HOME], PATH=$PATH"
     }
     .setup-java-jenv
   fi

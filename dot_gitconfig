@@ -192,7 +192,5 @@
 
 [user]
   name = Todd Pierzina
-  email = todd.pierzina@group1001.com
+  email = todd.pierzina@gmail.com
 
-[http]
-	sslcainfo = /Users/todd.pierzina/.onyx-env/onyx-truststore.pem

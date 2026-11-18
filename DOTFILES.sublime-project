@@ -62,7 +62,12 @@
       "file_exclude_patterns": [
         ".zcompdump*", ".zsh_history"
       ],
-    },    {
+    },    
+    {
+      "name": "~/bin",
+      "path": "~/bin",
+    },
+    {
       "name": "/etc",
       "path": "/etc",
       "folder_exclude_patterns": ["*"],
